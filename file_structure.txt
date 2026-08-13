@@ -1,0 +1,231 @@
+cds-connect/
+│
+├── backend/
+│   ├── src/
+│   │   ├── config/
+│   │   │   ├── db.js                        
+│   │   │   └── env.js                       
+│   │   │
+│   │   ├── modules/
+│   │   │   ├── auth/
+│   │   │   │   ├── auth.routes.js
+│   │   │   │   ├── auth.controller.js
+│   │   │   │   └── auth.service.js          
+│   │   │   │
+│   │   │   ├── members/
+│   │   │   │   ├── members.routes.js
+│   │   │   │   ├── members.controller.js
+│   │   │   │   └── members.service.js       
+│   │   │   │
+│   │   │   ├── pin/
+│   │   │   │   ├── pin.routes.js
+│   │   │   │   ├── pin.controller.js
+│   │   │   │   └── pin.service.js           
+│   │   │   │
+│   │   │   ├── device/
+│   │   │   │   ├── device.routes.js
+│   │   │   │   ├── device.controller.js
+│   │   │   │   └── device.service.js        
+│   │   │   │
+│   │   │   ├── meetings/
+│   │   │   │   ├── meetings.routes.js
+│   │   │   │   ├── meetings.controller.js
+│   │   │   │   └── meetings.service.js      
+│   │   │   │
+│   │   │   ├── attendance/
+│   │   │   │   ├── attendance.routes.js
+│   │   │   │   ├── attendance.controller.js
+│   │   │   │   └── attendance.service.js    
+│   │   │   │
+│   │   │   ├── signout/
+│   │   │   │   ├── signout.routes.js
+│   │   │   │   ├── signout.controller.js
+│   │   │   │   └── signout.service.js       
+│   │   │   │
+│   │   │   ├── tokens/
+│   │   │   │   ├── tokens.routes.js
+│   │   │   │   ├── tokens.controller.js
+│   │   │   │   └── tokens.service.js        
+│   │   │   │
+│   │   │   ├── excuses/
+│   │   │   │   ├── excuses.routes.js
+│   │   │   │   ├── excuses.controller.js
+│   │   │   │   └── excuses.service.js       
+│   │   │   │
+│   │   │   ├── expenses/
+│   │   │   │   ├── expenses.routes.js
+│   │   │   │   ├── expenses.controller.js
+│   │   │   │   └── expenses.service.js      
+│   │   │   │
+│   │   │   ├── clearance/
+│   │   │   │   ├── clearance.routes.js
+│   │   │   │   ├── clearance.controller.js
+│   │   │   │   └── clearance.service.js     
+│   │   │   │
+│   │   │   ├── notifications/
+│   │   │   │   ├── notifications.routes.js
+│   │   │   │   ├── notifications.controller.js
+│   │   │   │   └── notifications.service.js 
+│   │   │   │
+│   │   │   └── verify/
+│   │   │       ├── verify.routes.js
+│   │   │       ├── verify.controller.js
+│   │   │       └── verify.service.js        
+│   │   │
+│   │   ├── middlewares/
+│   │   │   ├── auth.middleware.js           
+│   │   │   ├── role.middleware.js           
+│   │   │   ├── dev.middleware.js            
+│   │   │   ├── device.middleware.js         
+│   │   │   ├── vpn.middleware.js            
+│   │   │   └── error.middleware.js          
+│   │   │
+│   │   ├── utils/
+│   │   │   ├── geofence.js                  
+│   │   │   ├── qrcode.js                    
+│   │   │   ├── pdf.js                       
+│   │   │   ├── jwt.js                       
+│   │   │   ├── pin.js                       
+│   │   │   └── logger.js                    
+│   │   │
+│   │   └── app.js                           
+│   │
+│   ├── database/
+│   │   ├── migrations/
+│   │   │   ├── 001_create_members.sql
+│   │   │   ├── 002_create_meetings.sql
+│   │   │   ├── 003_create_attendance.sql
+│   │   │   ├── 004_create_topups.sql
+│   │   │   ├── 005_create_expenses.sql
+│   │   │   ├── 006_create_excuse_requests.sql
+│   │   │   ├── 007_create_clearance_slips.sql
+│   │   │   └── 008_create_notifications.sql
+│   │   │
+│   │   └── seeds/
+│   │       └── 001_dev_member.seed.js       
+│   │
+│   ├── .env
+│   ├── .env.example
+│   ├── .gitignore
+│   ├── package.json
+│   └── server.js                            
+│
+├── frontend/
+│   ├── public/
+│   │   ├── index.html
+│   │   └── logo.png
+│   │
+│   ├── src/
+│   │   ├── assets/
+│   │   │   └── images/
+│   │   │
+│   │   ├── components/
+│   │   │   ├── common/
+│   │   │   │   ├── BottomNav.jsx            
+│   │   │   │   ├── MeetingCard.jsx          
+│   │   │   │   ├── Loader.jsx
+│   │   │   │   ├── Modal.jsx
+│   │   │   │   ├── Toast.jsx                
+│   │   │   │   ├── EmptyState.jsx
+│   │   │   │   └── ProtectedRoute.jsx       
+│   │   │   │
+│   │   │   ├── member/
+│   │   │   │   ├── SignInButton.jsx          
+│   │   │   │   ├── CheckedInCard.jsx        
+│   │   │   │   ├── ClearedCard.jsx          
+│   │   │   │   ├── TokenBalance.jsx
+│   │   │   │   └── AttendanceRow.jsx        
+│   │   │   │
+│   │   │   ├── signout/
+│   │   │   │   ├── SignOutList.jsx           
+│   │   │   │   └── SignOutRow.jsx            
+│   │   │   │
+│   │   │   ├── treasurer/
+│   │   │   │   ├── MemberTopUpRow.jsx
+│   │   │   │   └── TopUpForm.jsx
+│   │   │   │
+│   │   │   ├── coordinator/
+│   │   │   │   ├── ExcuseRequestRow.jsx
+│   │   │   │   ├── ExpenseForm.jsx
+│   │   │   │   └── TreasuryCard.jsx
+│   │   │   │
+│   │   │   └── dev/
+│   │   │       ├── MemberManageRow.jsx
+│   │   │       ├── RoleSelector.jsx
+│   │   │       └── MeetingForm.jsx
+│   │   │
+│   │   ├── pages/
+│   │   │   ├── auth/
+│   │   │   │   ├── Login.jsx                
+│   │   │   │   └── Register.jsx             
+│   │   │   │
+│   │   │   ├── member/
+│   │   │   │   ├── Dashboard.jsx            
+│   │   │   │   ├── AttendanceHistory.jsx    
+│   │   │   │   ├── ExcuseForm.jsx           
+│   │   │   │   ├── ClearanceSlip.jsx        
+│   │   │   │   ├── ResetPin.jsx             
+│   │   │   │   └── Profile.jsx              
+│   │   │   │
+│   │   │   ├── treasurer/
+│   │   │   │   ├── TreasurerDashboard.jsx
+│   │   │   │   └── TopUp.jsx                
+│   │   │   │
+│   │   │   ├── coordinator/
+│   │   │   │   ├── CoordinatorDashboard.jsx
+│   │   │   │   ├── ExcuseRequests.jsx       
+│   │   │   │   ├── Expenses.jsx             
+│   │   │   │   └── Treasury.jsx             
+│   │   │   │
+│   │   │   ├── signout/
+│   │   │   │   └── SignOutPanel.jsx          
+│   │   │   │
+│   │   │   ├── dev/
+│   │   │   │   ├── MemberManagement.jsx     
+│   │   │   │   ├── CreateMeeting.jsx        
+│   │   │   │   ├── RegistrationToggle.jsx   
+│   │   │   │   └── Settings.jsx             
+│   │   │   │
+│   │   │   └── public/
+│   │   │       └── VerifySlip.jsx           
+│   │   │
+│   │   ├── hooks/
+│   │   │   ├── useAuth.js                   
+│   │   │   ├── useGeolocation.js            
+│   │   │   ├── useDeviceFingerprint.js      
+│   │   │   ├── useMeeting.js                
+│   │   │   └── useNotifications.js          
+│   │   │
+│   │   ├── services/
+│   │   │   ├── api.js                       
+│   │   │   ├── auth.service.js
+│   │   │   ├── members.service.js
+│   │   │   ├── meetings.service.js
+│   │   │   ├── attendance.service.js
+│   │   │   ├── signout.service.js
+│   │   │   ├── tokens.service.js
+│   │   │   ├── excuses.service.js
+│   │   │   ├── expenses.service.js
+│   │   │   ├── clearance.service.js
+│   │   │   └── notifications.service.js
+│   │   │
+│   │   ├── context/
+│   │   │   ├── AuthContext.jsx              
+│   │   │   └── MeetingContext.jsx           
+│   │   │
+│   │   ├── utils/
+│   │   │   ├── fingerprint.js               
+│   │   │   ├── time.js                      
+│   │   │   └── roles.js                     
+│   │   │
+│   │   ├── constants.js                     
+│   │   ├── App.jsx                          
+│   │   └── main.jsx                         
+│   │
+│   ├── .env
+│   ├── .gitignore
+│   ├── package.json
+│   └── vite.config.js
+│
+├── .gitignore
+└── README.md

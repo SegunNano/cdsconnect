@@ -1,0 +1,22 @@
+CREATE TABLE members (
+    id SERIAL PRIMARY KEY,
+    first_name VARCHAR(50) NOT NULL,
+    last_name VARCHAR(50) NOT NULL,
+    state_code VARCHAR(20) UNIQUE NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    pin_hash TEXT NOT NULL,
+    device_fingerprint TEXT,
+    token_balance INTEGER DEFAULT 0,
+    role VARCHAR(50) DEFAULT 'member',
+    is_dev BOOLEAN DEFAULT false,
+    gender VARCHAR(10) NOT NULL,
+    batch_year INTEGER NOT NULL,
+    batch VARCHAR(5) NOT NULL,
+    stream INTEGER NOT NULL,
+    breakout_session VARCHAR(50) NOT NULL,
+    date_of_callup DATE NOT NULL,
+    service_end DATE NOT NULL,
+    extension_reason TEXT,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
