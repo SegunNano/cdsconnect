@@ -25,12 +25,8 @@ async function seedDevMember() {
             role,
             is_dev,
             gender,
-            batch_year,
-            batch,
-            stream,
             breakout_session,
-            date_of_callup,
-            service_end,
+            stream_id,
             is_active
         ) VALUES (
             'CDS',
@@ -41,12 +37,8 @@ async function seedDevMember() {
             'member',
             true,
             'male',
-            2024,
-            'A',
-            1,
             'Web Development',
-            '2024-01-01',
-            '2099-12-31',
+            NULL,
             true
         )
     `, [pinHash])

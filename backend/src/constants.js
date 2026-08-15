@@ -1,7 +1,7 @@
 export const RATE = 500 // 1 token = ₦500
 
-export const DEFAULT_VENUE_LAT = 6.4915112784336815,
-export const DEFAULT_VENUE_LNG = 3.348958728660544
+export const DEFAULT_VENUE_LAT = 6.524379
+export const DEFAULT_VENUE_LNG = 3.379206
 export const DEFAULT_RADIUS_METERS = 100
 
 export const BREAKOUT_SESSIONS = [
@@ -12,9 +12,6 @@ export const BREAKOUT_SESSIONS = [
     "Mobile Development",
     "UI/UX Design"
 ]
-
-export const BATCHES = ["A", "B", "C"]
-export const STREAMS = [1, 2]
 
 export const ROLES = [
     "member",
@@ -43,14 +40,4 @@ export const EXCUSE_STATUS = {
     APPROVED: 'approved',
     APPROVED_NOT_NEEDED: 'approved_not_needed',
     REJECTED: 'rejected'
-}
-
-export const MEMBER_STATUS = {
-    ACTIVE: 'active',
-    COMPLETED: 'completed'
-}
-
-export const GENDER = {
-    MALE: 'male',
-    FEMALE: 'female'
 }

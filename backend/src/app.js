@@ -8,6 +8,8 @@ dotenv.config()
 import authRoutes from './modules/auth/auth.routes.js'
 import memberRoutes from './modules/members/members.routes.js'
 import meetingRoutes from './modules/meetings/meetings.routes.js'
+import streamsRoutes from './modules/streams/streams.routes.js'
+import settingsRoutes from './modules/settings/settings.routes.js'
 // import attendanceRoutes from './modules/attendance/attendance.routes.js'
 // import signoutRoutes from './modules/signout/signout.routes.js'
 // import tokenRoutes from './modules/tokens/tokens.routes.js'
@@ -69,6 +71,8 @@ app.use(express.json())
 app.use('/api/auth', authRoutes)
 app.use('/api/members', memberRoutes)
 app.use('/api/meetings', meetingRoutes)
+app.use('/api/streams', streamsRoutes)
+app.use('/api/settings', settingsRoutes)
 // app.use('/api/attendance', attendanceRoutes)
 // app.use('/api/signout', signoutRoutes)
 // app.use('/api/tokens', tokenRoutes)
