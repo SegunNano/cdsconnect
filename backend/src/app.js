@@ -13,7 +13,7 @@ import settingsRoutes from './modules/settings/settings.routes.js'
 import attendanceRoutes from './modules/attendance/attendance.routes.js'
 import signoutRoutes from './modules/signout/signout.routes.js'
 import tokenRoutes from './modules/tokens/tokens.routes.js'
-// import excuseRoutes from './modules/excuses/excuses.routes.js'
+import excuseRoutes from './modules/excuses/excuses.routes.js'
 // import expenseRoutes from './modules/expenses/expenses.routes.js'
 // import clearanceRoutes from './modules/clearance/clearance.routes.js'
 // import notificationRoutes from './modules/notifications/notifications.routes.js'
@@ -76,7 +76,7 @@ app.use('/api/settings', settingsRoutes)
 app.use('/api/attendance', attendanceRoutes)
 app.use('/api/signout', signoutRoutes)
 app.use('/api/tokens', tokenRoutes)
-// app.use('/api/excuses', excuseRoutes)
+app.use('/api/excuses', excuseRoutes)
 // app.use('/api/expenses', expenseRoutes)
 // app.use('/api/clearance', clearanceRoutes)
 // app.use('/api/notifications', notificationRoutes)
