@@ -170,6 +170,8 @@ export const getMeetingAttendance = async (meetingId) => {
 }
 
 export const getTodayAttendanceStatus = async (memberId) => {
+
+    
     // Get today's meeting
     const meetingResult = await pool.query(
         'SELECT * FROM meetings WHERE meeting_date::DATE = CURRENT_DATE'

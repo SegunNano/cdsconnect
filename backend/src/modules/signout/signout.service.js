@@ -1,9 +1,12 @@
 import pool from '../../config/db.js'
 
 const isSameDay = (meetingDate) => {
-    const today = new Date().toISOString().split('T')[0]
-    const meeting = new Date(meetingDate).toISOString().split('T')[0]
-    return today === meeting
+    const todayStr = new Date().toISOString().split('T')[0]
+    const meetingStr = typeof meetingDate === 'string'
+        ? meetingDate.split('T')[0]
+        : new Date(meetingDate).toISOString().split('T')[0]
+    
+     return todayStr === meetingStr
 }
 
 export const getMeetingSignOutList = async (meetingId) => {
