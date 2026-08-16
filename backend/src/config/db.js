@@ -18,7 +18,12 @@ pool.on('error', (err) => {
 })
 
 pool.on('connect', () => {
-    console.log('New client connected to PostgreSQL')
+    console.log('PostgreSQL connected')
 })
+
+// Test connection on startup
+pool.query('SELECT 1')
+    .then(() => console.log('Database is ready'))
+    .catch(err => console.error('Database connection failed:', err.message))
 
 export default pool

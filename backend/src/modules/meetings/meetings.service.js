@@ -14,8 +14,8 @@ export const createMeeting = async (data) => {
         lateness_cost
     } = data
 
-    // Fix date timezone
-    const fixedMeetingDate = new Date(meeting_date + 'T00:00:00.000Z')
+   
+
 
     const result = await pool.query(
         `INSERT INTO meetings (
@@ -24,10 +24,10 @@ export const createMeeting = async (data) => {
             venue_lat, venue_lng, radius_meters,
             meeting_cost, lateness_cost
         ) VALUES (
-            $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
+            $1, $2::DATE, $3, $4, $5, $6, $7, $8, $9, $10
         ) RETURNING *`,
         [
-            title, fixedMeetingDate, sign_in_open,
+            title, meeting_date, sign_in_open,
             late_threshold, sign_in_close,
             venue_lat, venue_lng, radius_meters || 100,
             meeting_cost || 1, lateness_cost || 1
