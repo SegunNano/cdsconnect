@@ -1,59 +1,70 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { registerService } from '../../services/auth.service'
-import { getDeviceFingerprint } from '../../utils/fingerprint'
-import { BREAKOUT_SESSIONS, BATCHES, STREAMS } from '../../constants'
+import { getActiveStreams } from '../../services/streams.service'
+import PinInput from '../../components/common/PinInput'
+import StateCodeInput from '../../components/common/StateCodeInput'
+import { BREAKOUT_SESSIONS } from '../../constants'
 
-
-const Register = () => {
+export default function Register() {
     const { login } = useAuth()
     const navigate = useNavigate()
 
+    const [streams, setStreams] = useState([])
     const [form, setForm] = useState({
         first_name: '',
         last_name: '',
         state_code: '',
         email: '',
         gender: '',
-        batch_year: '',
-        batch: '',
-        stream: '',
+        stream_id: '',
         breakout_session: '',
-        date_of_callup: '',
         pin: '',
         confirm_pin: ''
     })
+    const [selectedStream, setSelectedStream] = useState(null)
     const [error, setError] = useState('')
     const [loading, setLoading] = useState(false)
 
+    useEffect(() => {
+        const fetchStreams = async () => {
+            try {
+                const result = await getActiveStreams()
+                setStreams(result.data)
+            } catch (err) {
+                console.error('Failed to load streams')
+            }
+        }
+        fetchStreams()
+    }, [])
+
     const handleChange = (e) => {
         const { name, value } = e.target
-    
-        setForm({
-            ...form,
-            [name]: name === 'state_code'
-                ? value.toUpperCase()
-                : value
-        })
-    
+        setForm({ ...form, [name]: value })
         setError('')
+
+        if (name === 'stream_id') {
+            const stream = streams.find(s => s.id === parseInt(value))
+            setSelectedStream(stream || null)
+        }
     }
 
     const handleSubmit = async (e) => {
         e.preventDefault()
+        if (form.pin !== form.confirm_pin) {
+            setError('PINs do not match')
+            return
+        }
+        if (form.pin.length < 4) {
+            setError('PIN must be at least 4 digits')
+            return
+        }
         setLoading(true)
         setError('')
 
-        if (form.pin !== form.confirm_pin) {
-            setError('PINs do not match')
-            setLoading(false)
-            return
-        }
-
         try {
-            const device_fingerprint = await getDeviceFingerprint()
-            const result = await registerService({ ...form, device_fingerprint })
+            const result = await registerService(form)
             login(result.data.member, result.data.token)
             navigate('/dashboard')
         } catch (err) {
@@ -78,9 +89,7 @@ const Register = () => {
     const selectStyle = {
         appearance: 'none',
         WebkitAppearance: 'none',
-        MozAppearance: 'none',
-        height: '48px',
-        paddingRight: '40px'
+        height: '48px'
     }
 
     const labelStyle = {
@@ -128,10 +137,7 @@ const Register = () => {
                         color: '#0d1b12',
                         marginBottom: '4px'
                     }}>Create account</h1>
-                    <p style={{
-                        fontSize: '0.82rem',
-                        color: '#8fa396'
-                    }}>Join CDSConnect</p>
+                    <p style={{ fontSize: '0.82rem', color: '#8fa396' }}>Join CDSConnect</p>
                 </div>
 
                 {/* CARD */}
@@ -141,7 +147,6 @@ const Register = () => {
                     padding: '24px',
                     boxShadow: '0 2px 12px rgba(0,0,0,0.07)'
                 }}>
-
                     {error && (
                         <div style={{
                             background: '#fff0f0',
@@ -189,14 +194,9 @@ const Register = () => {
                         {/* STATE CODE */}
                         <div style={fieldStyle}>
                             <label style={labelStyle}>State Code</label>
-                            <input
-                                type="text"
-                                name="state_code"
+                            <StateCodeInput
                                 value={form.state_code}
-                                onChange={handleChange}
-                                placeholder="e.g. LA/24A/0142"
-                                required
-                                style={inputStyle}
+                                onChange={(val) => setForm({ ...form, state_code: val })}
                             />
                         </div>
 
@@ -230,50 +230,37 @@ const Register = () => {
                             </select>
                         </div>
 
-                        {/* BATCH YEAR + BATCH + STREAM */}
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginBottom: '16px' }}>
-                            <div>
-                                <label style={labelStyle}>Year</label>
-                                <input
-                                    type="number"
-                                    name="batch_year"
-                                    value={form.batch_year}
-                                    onChange={handleChange}
-                                    placeholder="2025"
-                                    required
-                                    style={{...inputStyle, ...selectStyle}}
-                                />
-                            </div>
-                            <div>
-                                <label style={labelStyle}>Batch</label>
-                                <select
-                                    name="batch"
-                                    value={form.batch}
-                                    onChange={handleChange}
-                                    required
-                                    style={{...inputStyle, ...selectStyle}}
-                                >
-                                    <option value="">--</option>
-                                    {BATCHES.map(b => (
-                                        <option key={b} value={b}>{b}</option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div>
-                                <label style={labelStyle}>Stream</label>
-                                <select
-                                    name="stream"
-                                    value={form.stream}
-                                    onChange={handleChange}
-                                    required
-                                    style={{...inputStyle, ...selectStyle}}
-                                >
-                                    <option value="">--</option>
-                                    {STREAMS.map(s => (
-                                        <option key={s} value={s}>{s}</option>
-                                    ))}
-                                </select>
-                            </div>
+                        {/* STREAM */}
+                        <div style={fieldStyle}>
+                            <label style={labelStyle}>Batch & Stream</label>
+                            <select
+                                name="stream_id"
+                                value={form.stream_id}
+                                onChange={handleChange}
+                                required
+                                style={{ ...inputStyle, ...selectStyle, color: form.stream_id ? '#0d1b12' : '#8fa396' }}
+                            >
+                                <option value="">Select your batch</option>
+                                {streams.map(stream => (
+                                    <option key={stream.id} value={stream.id}>
+                                        {stream.year} Batch {stream.batch} Stream {stream.stream}
+                                    </option>
+                                ))}
+                            </select>
+
+                            {/* Show callup and service end dates */}
+                            {selectedStream && (
+                                <div style={{
+                                    background: '#e6f4ee',
+                                    borderRadius: '10px',
+                                    padding: '10px 14px',
+                                    marginTop: '8px',
+                                    fontSize: '0.75rem',
+                                    color: '#008751'
+                                }}>
+                                    📅 Call up: {selectedStream.callup_date} · Service ends: {selectedStream.service_end}
+                                </div>
+                            )}
                         </div>
 
                         {/* BREAKOUT SESSION */}
@@ -284,7 +271,7 @@ const Register = () => {
                                 value={form.breakout_session}
                                 onChange={handleChange}
                                 required
-                                style={{...inputStyle, ...selectStyle}}
+                                style={{ ...inputStyle, ...selectStyle, color: form.breakout_session ? '#0d1b12' : '#8fa396' }}
                             >
                                 <option value="">Select your session</option>
                                 {BREAKOUT_SESSIONS.map(session => (
@@ -293,46 +280,21 @@ const Register = () => {
                             </select>
                         </div>
 
-                        {/* DATE OF CALLUP */}
-                        <div style={fieldStyle}>
-                            <label style={labelStyle}>Date of Call Up</label>
-                            <input
-                                type="date"
-                                name="date_of_callup"
-                                value={form.date_of_callup}
-                                onChange={handleChange}
-                                required
-                                style={{...inputStyle, ...selectStyle}}
-                            />
-                        </div>
-
                         {/* PIN */}
                         <div style={fieldStyle}>
                             <label style={labelStyle}>PIN</label>
-                            <input
-                                type="password"
-                                name="pin"
+                            <PinInput
                                 value={form.pin}
-                                onChange={handleChange}
-                                placeholder="4 to 6 digits"
-                                maxLength={6}
-                                required
-                                style={{...inputStyle, ...selectStyle}}
+                                onChange={(val) => { setForm({ ...form, pin: val }); setError('') }}
                             />
                         </div>
 
                         {/* CONFIRM PIN */}
                         <div style={{ marginBottom: '24px' }}>
                             <label style={labelStyle}>Confirm PIN</label>
-                            <input
-                                type="password"
-                                name="confirm_pin"
+                            <PinInput
                                 value={form.confirm_pin}
-                                onChange={handleChange}
-                                placeholder="Repeat PIN"
-                                maxLength={6}
-                                required
-                                style={{...inputStyle, ...selectStyle}}
+                                onChange={(val) => { setForm({ ...form, confirm_pin: val }); setError('') }}
                             />
                         </div>
 
@@ -350,17 +312,14 @@ const Register = () => {
                                 fontSize: '0.9rem',
                                 fontWeight: 700,
                                 cursor: loading ? 'not-allowed' : 'pointer',
-                                fontFamily: "'Plus Jakarta Sans', sans-serif",
-                                transition: 'background 0.2s'
+                                fontFamily: "'Plus Jakarta Sans', sans-serif"
                             }}
                         >
                             {loading ? 'Creating account...' : 'Create Account'}
                         </button>
-
                     </form>
                 </div>
 
-                {/* LOGIN LINK */}
                 <p style={{
                     textAlign: 'center',
                     fontSize: '0.82rem',
@@ -377,10 +336,7 @@ const Register = () => {
                         Sign in
                     </Link>
                 </p>
-
             </div>
         </div>
     )
 }
-
-export default Register

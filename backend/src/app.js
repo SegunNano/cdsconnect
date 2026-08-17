@@ -26,10 +26,7 @@ const app = express()
 
 // ── SECURITY ─────────────────────────────────────
 app.use(helmet())
-const allowedOrigins = [
-    'http://localhost:5173',
-    process.env.FRONTEND_URL,
-]
+// console.log(process.env.NODE_ENV)
 
 if (process.env.NODE_ENV === 'development') {
     // Bypass ngrok browser warning
@@ -39,21 +36,36 @@ if (process.env.NODE_ENV === 'development') {
     })
 }
 
+const allowedOrigins = [
+    'http://localhost:5173',
+    ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : [])
+]
+
 app.use(cors({
     origin: (origin, callback) => {
-        // Allow all origins in development
+        // Allow all in development
         if (process.env.NODE_ENV === 'development') {
             return callback(null, true)
         }
-        // Restrict in production
-        if (!origin || allowedOrigins.includes(origin)) {
-            callback(null, true)
-        } else {
-            callback(new Error('Not allowed by CORS'))
+        
+        // Allow allowed origins or handle non-browser requests
+        if (allowedOrigins.includes(origin)) {
+            return callback(null, true)
         }
+        
+        // Allow requests without an origin (like mobile apps/cURL) ONLY if intended, otherwise block them in production:
+        if (!origin) {
+            return process.env.NODE_ENV === 'development'
+                ? callback(null, true)
+                : callback(new Error('Origin required'))
+        }
+
+        return callback(new Error('Not allowed by CORS'))
     },
     credentials: true
 }))
+
+
 // ── RATE LIMITING ────────────────────────────────
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000,

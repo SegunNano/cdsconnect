@@ -2,30 +2,28 @@ import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { loginService } from '../../services/auth.service'
-import { getDeviceFingerprint } from '../../utils/fingerprint'
+import PinInput from '../../components/common/PinInput'
 
-
-const Login = () => {
+export default function Login() {
     const { login } = useAuth()
     const navigate = useNavigate()
 
-    const [form, setForm] = useState({ email: '', pin: '' })
+    const [email, setEmail] = useState('')
+    const [pin, setPin] = useState('')
     const [error, setError] = useState('')
     const [loading, setLoading] = useState(false)
 
-    const handleChange = (e) => {
-        setForm({ ...form, [e.target.name]: e.target.value })
-        setError('')
-    }
-
     const handleSubmit = async (e) => {
         e.preventDefault()
+        if (pin.length < 4) {
+            setError('Enter your 4-digit PIN')
+            return
+        }
         setLoading(true)
         setError('')
 
         try {
-            const deviceFingerprint = await getDeviceFingerprint()
-            const result = await loginService(form.email, form.pin, deviceFingerprint)
+            const result = await loginService(email, pin)
             login(result.data.member, result.data.token)
             navigate('/dashboard')
         } catch (err) {
@@ -33,6 +31,28 @@ const Login = () => {
         } finally {
             setLoading(false)
         }
+    }
+
+    const inputStyle = {
+        width: '100%',
+        background: '#f2f4f7',
+        border: 'none',
+        borderRadius: '12px',
+        padding: '14px 16px',
+        fontSize: '0.88rem',
+        color: '#0d1b12',
+        outline: 'none',
+        fontFamily: "'Plus Jakarta Sans', sans-serif"
+    }
+
+    const labelStyle = {
+        display: 'block',
+        fontSize: '0.68rem',
+        fontWeight: 600,
+        color: '#4a5e52',
+        textTransform: 'uppercase',
+        letterSpacing: '0.8px',
+        marginBottom: '8px'
     }
 
     return (
@@ -68,11 +88,9 @@ const Login = () => {
                         color: '#0d1b12',
                         marginBottom: '4px'
                     }}>Welcome back</h1>
-                    <p style={{
-                        fontSize: '0.82rem',
-                        color: '#8fa396',
-                        fontWeight: 400
-                    }}>Sign in to CDSConnect</p>
+                    <p style={{ fontSize: '0.82rem', color: '#8fa396' }}>
+                        Sign in to CDSConnect
+                    </p>
                 </div>
 
                 {/* CARD */}
@@ -82,8 +100,6 @@ const Login = () => {
                     padding: '24px',
                     boxShadow: '0 2px 12px rgba(0,0,0,0.07)'
                 }}>
-
-                    {/* ERROR */}
                     {error && (
                         <div style={{
                             background: '#fff0f0',
@@ -99,73 +115,26 @@ const Login = () => {
                     )}
 
                     <form onSubmit={handleSubmit}>
-
-                        {/* EMAIL */}
-                        <div style={{ marginBottom: '16px' }}>
-                            <label style={{
-                                display: 'block',
-                                fontSize: '0.68rem',
-                                fontWeight: 600,
-                                color: '#4a5e52',
-                                textTransform: 'uppercase',
-                                letterSpacing: '0.8px',
-                                marginBottom: '8px'
-                            }}>Email</label>
+                        <div style={{ marginBottom: '20px' }}>
+                            <label style={labelStyle}>Email</label>
                             <input
                                 type="email"
-                                name="email"
-                                value={form.email}
-                                onChange={handleChange}
+                                value={email}
+                                onChange={e => { setEmail(e.target.value); setError('') }}
                                 placeholder="your@email.com"
                                 required
-                                style={{
-                                    width: '100%',
-                                    background: '#f2f4f7',
-                                    border: 'none',
-                                    borderRadius: '12px',
-                                    padding: '14px 16px',
-                                    fontSize: '0.88rem',
-                                    color: '#0d1b12',
-                                    outline: 'none',
-                                    fontFamily: "'Plus Jakarta Sans', sans-serif"
-                                }}
+                                style={inputStyle}
                             />
                         </div>
 
-                        {/* PIN */}
                         <div style={{ marginBottom: '24px' }}>
-                            <label style={{
-                                display: 'block',
-                                fontSize: '0.68rem',
-                                fontWeight: 600,
-                                color: '#4a5e52',
-                                textTransform: 'uppercase',
-                                letterSpacing: '0.8px',
-                                marginBottom: '8px'
-                            }}>PIN</label>
-                            <input
-                                type="password"
-                                name="pin"
-                                value={form.pin}
-                                onChange={handleChange}
-                                placeholder="Enter your PIN"
-                                maxLength={6}
-                                required
-                                style={{
-                                    width: '100%',
-                                    background: '#f2f4f7',
-                                    border: 'none',
-                                    borderRadius: '12px',
-                                    padding: '14px 16px',
-                                    fontSize: '0.88rem',
-                                    color: '#0d1b12',
-                                    outline: 'none',
-                                    fontFamily: "'Plus Jakarta Sans', sans-serif"
-                                }}
+                            <label style={labelStyle}>PIN</label>
+                            <PinInput
+                                value={pin}
+                                onChange={(val) => { setPin(val); setError('') }}
                             />
                         </div>
 
-                        {/* BUTTON */}
                         <button
                             type="submit"
                             disabled={loading}
@@ -179,17 +148,14 @@ const Login = () => {
                                 fontSize: '0.9rem',
                                 fontWeight: 700,
                                 cursor: loading ? 'not-allowed' : 'pointer',
-                                fontFamily: "'Plus Jakarta Sans', sans-serif",
-                                transition: 'background 0.2s'
+                                fontFamily: "'Plus Jakarta Sans', sans-serif"
                             }}
                         >
                             {loading ? 'Signing in...' : 'Sign In'}
                         </button>
-
                     </form>
                 </div>
 
-                {/* REGISTER LINK */}
                 <p style={{
                     textAlign: 'center',
                     fontSize: '0.82rem',
@@ -205,12 +171,7 @@ const Login = () => {
                         Create account
                     </Link>
                 </p>
-
             </div>
         </div>
     )
 }
-
-export default Login
-
-

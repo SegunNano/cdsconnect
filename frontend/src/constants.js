@@ -7,6 +7,4 @@ export const BREAKOUT_SESSIONS = [
     "UI/UX Design"
 ]
 
-export const BATCHES = ["A", "B", "C"]
-export const STREAMS = [1, 2]
 export const RATE = 500

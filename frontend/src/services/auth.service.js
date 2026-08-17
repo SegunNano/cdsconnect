@@ -1,11 +1,7 @@
 import api from './api.js'
 
-export const loginService = async (email, pin, device_fingerprint) => {
-    const response = await api.post('/auth/login', {
-        email,
-        pin,
-        device_fingerprint
-    })
+export const loginService = async (email, pin) => {
+    const response = await api.post('/auth/login/pin', { email, pin })
     return response.data
 }
 
