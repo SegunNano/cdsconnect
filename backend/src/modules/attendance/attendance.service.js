@@ -204,3 +204,83 @@ export const getTodayAttendanceStatus = async (memberId) => {
         excuse: excuseResult.rows[0] || null
     }
 }
+
+export const markMemberPresent = async (devId, memberId, meetingId, reason) => {
+    // Dev cannot mark themselves
+    if (parseInt(devId) === parseInt(memberId)) {
+        throw { status: 403, message: 'You cannot mark yourself present.' }
+    }
+
+    // Get meeting
+    const meetingResult = await pool.query(
+        'SELECT * FROM meetings WHERE id = $1',
+        [meetingId]
+    )
+
+    if (meetingResult.rows.length === 0) {
+        throw { status: 404, message: 'Meeting not found.' }
+    }
+
+    const meeting = meetingResult.rows[0]
+
+    // Check member exists
+    const memberResult = await pool.query(
+        'SELECT * FROM members WHERE id = $1',
+        [memberId]
+    )
+
+    if (memberResult.rows.length === 0) {
+        throw { status: 404, message: 'Member not found.' }
+    }
+
+    // Check not already present
+    const existing = await pool.query(
+        'SELECT id FROM attendance WHERE member_id = $1 AND meeting_id = $2',
+        [memberId, meetingId]
+    )
+
+    if (existing.rows.length > 0) {
+        throw { status: 409, message: 'Member already has an attendance record for this meeting.' }
+    }
+
+    // Get meeting cost
+    const totalCost = meeting.meeting_cost
+
+    // Check member has enough tokens
+    const member = memberResult.rows[0]
+    if (member.token_balance < totalCost) {
+        throw { status: 400, message: 'Member has insufficient tokens.' }
+    }
+
+    // Deduct token
+    await pool.query(
+        'UPDATE members SET token_balance = token_balance - $1 WHERE id = $2',
+        [totalCost, memberId]
+    )
+
+    // Get next sequence number
+    const seqResult = await pool.query(
+        `SELECT COALESCE(MAX(sequence_number), 0) + 1 AS next_seq
+        FROM attendance WHERE meeting_id = $1`,
+        [meetingId]
+    )
+
+    // Create attendance record
+    const result = await pool.query(
+        `INSERT INTO attendance (
+            member_id, meeting_id, sequence_number,
+            signed_in_at, signed_out_at,
+            tokens_deducted, is_late,
+            marked_present_by, mark_reason
+        ) VALUES ($1, $2, $3, $4, $4, $5, false, $6, $7)
+        RETURNING *`,
+        [
+            memberId, meetingId,
+            seqResult.rows[0].next_seq,
+            new Date(), totalCost,
+            devId, reason
+        ]
+    )
+
+    return result.rows[0]
+}

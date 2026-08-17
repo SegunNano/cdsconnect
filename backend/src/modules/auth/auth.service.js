@@ -70,14 +70,16 @@ export const registerMember = async (data) => {
     const result = await pool.query(`
         INSERT INTO members (
             first_name, last_name, state_code, email,
-            pin_hash, gender, stream_id, breakout_session
+            pin_hash, gender, stream_id, breakout_session,
+            member_type
         ) VALUES (
-            $1, $2, $3, $4, $5, $6, $7, $8
+            $1, $2, $3, $4, $5, $6, $7, $8, 'corps_member'
         ) RETURNING
             id, first_name, last_name, state_code,
             email, role, is_dev, gender,
             stream_id, breakout_session,
-            token_balance, is_active, created_at
+            token_balance, is_active, member_type,
+            created_at
     `, [
         first_name.trim(), last_name.trim(),
         state_code.trim(), email,
@@ -90,7 +92,8 @@ export const registerMember = async (data) => {
     const token = generateToken({
         id: member.id,
         role: member.role,
-        is_dev: member.is_dev
+        is_dev: member.is_dev,
+        member_type: member.member_type
     })
 
     return { member, token }
@@ -241,7 +244,8 @@ export const verifyAuthentication = async (email, credential) => {
     const token = generateToken({
         id: member.id,
         role: member.role,
-        is_dev: member.is_dev
+        is_dev: member.is_dev,
+        member_type: member.member_type
     })
 
     const { pin_hash, public_key, credential_id, webauthn_challenge, ...safeMember } = member
@@ -252,33 +256,46 @@ export const verifyAuthentication = async (email, credential) => {
 // ── PIN LOGIN (fallback) ──────────────────────────
 
 export const loginWithPin = async (email, pin) => {
-    const result = await pool.query(
-        `SELECT m.*, 
-            s.callup_date, s.service_end,
-            s.year, s.batch, s.stream
-        FROM members m
-        JOIN streams s ON m.stream_id = s.id
-        WHERE m.email = $1`,
+    // First get member without JOIN
+    const memberResult = await pool.query(
+        'SELECT * FROM members WHERE email = $1',
         [email]
     )
 
-    if (result.rows.length === 0) {
+    if (memberResult.rows.length === 0) {
         throw { status: 404, message: 'Member not found' }
     }
 
-    const member = result.rows[0]
+    const member = memberResult.rows[0]
 
-
-
+    // Verify PIN
     const pinMatch = await comparePin(pin, member.pin_hash)
     if (!pinMatch) {
         throw { status: 401, message: 'Incorrect PIN' }
     }
 
+    // Only check service end for corps members
+    if (member.member_type === 'corps_member' && member.stream_id) {
+        const streamResult = await pool.query(
+            'SELECT * FROM streams WHERE id = $1',
+            [member.stream_id]
+        )
+        if (streamResult.rows.length > 0) {
+            const stream = streamResult.rows[0]
+            // if (new Date() > new Date(stream.service_end)) {
+            //     throw { status: 403, message: 'Your service year has ended.' }
+            // }
+        }
+
+        // Add stream data to member object
+        member.stream = streamResult.rows[0]
+    }
+
     const token = generateToken({
         id: member.id,
         role: member.role,
-        is_dev: member.is_dev
+        is_dev: member.is_dev,
+        member_type: member.member_type
     })
 
     const { pin_hash, public_key, credential_id, webauthn_challenge, sign_count, ...safeMember } = member

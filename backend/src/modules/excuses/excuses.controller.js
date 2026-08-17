@@ -8,7 +8,6 @@ import {
 
 export const file = async (req, res, next) => {
     try {
-        console.log(req.body)
         const { meetingId, reason, evidenceUrl } = req.body
         const result = await fileExcuse(req.member.id, meetingId, reason, evidenceUrl)
         res.status(201).json({

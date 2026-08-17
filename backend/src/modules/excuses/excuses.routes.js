@@ -3,6 +3,7 @@ import supabase from '../../config/supabase.js'
 import { Router } from 'express'
 import { file, getMyExcuseList, getPending, getAll, review } from './excuses.controller.js'
 import authMiddleware from '../../middlewares/auth.middleware.js'
+import staffMiddleware from '../../middlewares/staff.middleware.js'
 import { requireRole } from '../../middlewares/role.middleware.js'
 import devMiddleware from '../../middlewares/dev.middleware.js'
 
@@ -21,18 +22,18 @@ router.post('/upload', upload.single('evidence'), async (req, res, next) => {
         const fileName = `${Date.now()}_${file.originalname}`
 
         const { data, error } = await supabase.storage
-            .from('evidence')
+        .from('evidence')
             .upload(fileName, file.buffer, {
                 contentType: file.mimetype
             })
-
+            
         if (error) throw { status: 500, message: error.message }
-
+        
         const { data: urlData } = supabase.storage
             .from('evidence')
             .getPublicUrl(fileName)
 
-        res.status(200).json({
+            res.status(200).json({
             success: true,
             data: { url: urlData.publicUrl }
         })
@@ -46,8 +47,8 @@ router.get('/me', getMyExcuseList)
 
 
 // Coordinator
-router.get('/pending', requireRole('coordinator'), getPending)
-router.post('/review', requireRole('coordinator'), review)
+router.get('/pending', staffMiddleware, getPending)
+router.post('/review', staffMiddleware, review)
 
 // Dev
 router.get('/', devMiddleware, getAll)

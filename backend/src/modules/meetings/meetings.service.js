@@ -1,3 +1,5 @@
+import { createNotificationForAll } from '../notifications/notifications.service.js'
+import { NOTIFICATION_TYPES } from '../../constants.js'
 import pool from '../../config/db.js'
 
 const formatMeeting = (meeting) => ({
@@ -42,7 +44,15 @@ export const createMeeting = async (data) => {
         ]
     )
 
-    return formatMeeting(result.rows[0])
+        const meeting = result.rows[0]
+    // Notify all members
+    await createNotificationForAll(
+        'New Meeting Scheduled',
+        `${meeting.title} has been scheduled for ${meeting.meeting_date}. Sign-in opens at ${new Date(meeting.sign_in_open).toLocaleTimeString()}.`,
+        NOTIFICATION_TYPES.MEETING_CREATED
+    )
+
+    return formatMeeting(meeting)
 }
 
 export const getActiveMeeting = async () => {

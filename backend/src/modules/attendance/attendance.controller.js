@@ -2,7 +2,8 @@ import {
     signIn,
     getMemberAttendance,
     getMeetingAttendance,
-    getTodayAttendanceStatus
+    getTodayAttendanceStatus,
+    markMemberPresent
 } from './attendance.service.js'
 
 export const memberSignIn = async (req, res, next) => {
@@ -43,6 +44,22 @@ export const getTodayStatus = async (req, res, next) => {
     try {
         const status = await getTodayAttendanceStatus(req.member.id)
         res.status(200).json({ success: true, data: status })
+    } catch (err) {
+        next(err)
+    }
+}
+
+export const manualMarkPresent = async (req, res, next) => {
+    try {
+        const { memberId, meetingId, reason } = req.body
+        const result = await markMemberPresent(
+            req.member.id, memberId, meetingId, reason
+        )
+        res.status(200).json({
+            success: true,
+            message: 'Member marked as present.',
+            data: result
+        })
     } catch (err) {
         next(err)
     }

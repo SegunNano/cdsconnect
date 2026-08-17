@@ -14,12 +14,12 @@ import attendanceRoutes from './modules/attendance/attendance.routes.js'
 import signoutRoutes from './modules/signout/signout.routes.js'
 import tokenRoutes from './modules/tokens/tokens.routes.js'
 import excuseRoutes from './modules/excuses/excuses.routes.js'
-// import expenseRoutes from './modules/expenses/expenses.routes.js'
-// import clearanceRoutes from './modules/clearance/clearance.routes.js'
-// import notificationRoutes from './modules/notifications/notifications.routes.js'
-// import pinRoutes from './modules/pin/pin.routes.js'
-// import deviceRoutes from './modules/device/device.routes.js'
-// import verifyRoutes from './modules/verify/verify.routes.js'
+import expenseRoutes from './modules/expenses/expenses.routes.js'
+import clearanceRoutes from './modules/clearance/clearance.routes.js'
+import notificationRoutes from './modules/notifications/notifications.routes.js'
+import pinRoutes from './modules/pin/pin.routes.js'
+import deviceRoutes from './modules/device/device.routes.js'
+import verifyRoutes from './modules/verify/verify.routes.js'
 import errorMiddleware from './middlewares/error.middleware.js'
 
 const app = express()
@@ -77,12 +77,12 @@ app.use('/api/attendance', attendanceRoutes)
 app.use('/api/signout', signoutRoutes)
 app.use('/api/tokens', tokenRoutes)
 app.use('/api/excuses', excuseRoutes)
-// app.use('/api/expenses', expenseRoutes)
-// app.use('/api/clearance', clearanceRoutes)
-// app.use('/api/notifications', notificationRoutes)
-// app.use('/api/pin', pinRoutes)
-// app.use('/api/device', deviceRoutes)
-// app.use('/api/verify', verifyRoutes)
+app.use('/api/expenses', expenseRoutes)
+app.use('/api/clearance', clearanceRoutes)
+app.use('/api/notifications', notificationRoutes)
+app.use('/api/pin', pinRoutes)
+app.use('/api/device', deviceRoutes)
+app.use('/api/verify', verifyRoutes)
 
 // ── ERROR HANDLER ────────────────────────────────
 app.use(errorMiddleware)

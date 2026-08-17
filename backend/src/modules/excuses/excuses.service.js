@@ -1,4 +1,6 @@
 import pool from '../../config/db.js'
+import { createNotification } from '../notifications/notifications.service.js'
+import { NOTIFICATION_TYPES } from '../../constants.js'
 
 export const fileExcuse = async (memberId, meetingId, reason, evidenceUrl) => {
     // Check meeting exists
@@ -190,6 +192,13 @@ export const reviewExcuse = async (coordinatorId, excuseId, decision) => {
             [coordinatorId, new Date(), excuseId]
         )
 
+        await createNotification(
+        excuse.member_id,
+        'Excuse Approved',
+        `Your excuse for ${meeting.title} has been approved.`,
+        NOTIFICATION_TYPES.EXCUSE_APPROVED
+    )
+
         return { status: 'approved', message: 'Excuse approved. Token deducted and member marked present.' }
     }
 
@@ -201,6 +210,12 @@ export const reviewExcuse = async (coordinatorId, excuseId, decision) => {
             reviewed_at = $2
         WHERE id = $3`,
         [coordinatorId, new Date(), excuseId]
+    )
+    await createNotification(
+        excuse.member_id,
+        'Excuse Rejected',
+        `Your excuse for ${meeting.title} has been rejected. You can contact the coordinaotor for clarity.`,
+        NOTIFICATION_TYPES.EXCUSE_REJECTED
     )
 
     return { status: 'rejected', message: 'Excuse rejected.' }

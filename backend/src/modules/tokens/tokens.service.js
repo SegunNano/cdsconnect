@@ -1,5 +1,6 @@
 import pool from '../../config/db.js'
-import { RATE } from '../../constants.js'
+import { RATE, NOTIFICATION_TYPES } from '../../constants.js'
+import { createNotification } from '../notifications/notifications.service.js'
 
 export const topUpTokens = async (treasurerId, memberId, tokensToAdd) => {
     // Verify treasurer exists
@@ -37,6 +38,13 @@ export const topUpTokens = async (treasurerId, memberId, tokensToAdd) => {
         `INSERT INTO topups (member_id, tokens_added, naira_value, performed_by)
         VALUES ($1, $2, $3, $4)`,
         [memberId, tokensToAdd, nairaValue, treasurerId]
+    )
+
+    await createNotification(
+        memberId,
+        'Tokens Added',
+        `${tokensToAdd} token(s) have been added to your account. New balance: ${updatedMember.rows[0].token_balance} tokens.`,
+        NOTIFICATION_TYPES.TOPUP
     )
 
     return {
