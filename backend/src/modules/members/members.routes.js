@@ -10,6 +10,7 @@ import {
 } from './members.controller.js'
 import authMiddleware from '../../middlewares/auth.middleware.js'
 import devMiddleware from '../../middlewares/dev.middleware.js'
+import { devOrRole } from '../../middlewares/devOrRole.middleware.js'
 
 const router = Router()
 
@@ -20,7 +21,7 @@ router.use(authMiddleware)
 router.get('/me', getMyProfile)
 
 // Dev only routes
-router.get('/', devMiddleware, getMembers)
+router.get('/', devOrRole('treasurer', 'financial_secretary'), getMembers)
 router.patch('/:id/role', devMiddleware, updateRole)
 router.patch('/:id/dev', devMiddleware, toggleDev)
 router.patch('/:id/device', devMiddleware, resetDevice)

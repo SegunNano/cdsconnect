@@ -256,9 +256,22 @@ export const verifyAuthentication = async (email, credential) => {
 // ── PIN LOGIN (fallback) ──────────────────────────
 
 export const loginWithPin = async (email, pin) => {
-    // First get member without JOIN
     const memberResult = await pool.query(
-        'SELECT * FROM members WHERE email = $1',
+        `SELECT 
+            m.id, m.first_name, m.last_name, m.state_code,
+            m.email, m.role, m.is_dev, m.gender,
+            m.stream_id, m.breakout_session,
+            m.token_balance, m.is_active, m.member_type,
+            m.created_at, m.pin_hash, m.public_key,
+            m.credential_id, m.webauthn_challenge, m.sign_count,
+            s.year AS stream_year,
+            s.batch AS stream_batch,
+            s.stream AS stream_number,
+            s.callup_date,
+            s.service_end
+        FROM members m
+        LEFT JOIN streams s ON m.stream_id = s.id
+        WHERE m.email = $1`,
         [email]
     )
 
@@ -274,23 +287,6 @@ export const loginWithPin = async (email, pin) => {
         throw { status: 401, message: 'Incorrect PIN' }
     }
 
-    // Only check service end for corps members
-    if (member.member_type === 'corps_member' && member.stream_id) {
-        const streamResult = await pool.query(
-            'SELECT * FROM streams WHERE id = $1',
-            [member.stream_id]
-        )
-        if (streamResult.rows.length > 0) {
-            const stream = streamResult.rows[0]
-            // if (new Date() > new Date(stream.service_end)) {
-            //     throw { status: 403, message: 'Your service year has ended.' }
-            // }
-        }
-
-        // Add stream data to member object
-        member.stream = streamResult.rows[0]
-    }
-
     const token = generateToken({
         id: member.id,
         role: member.role,
@@ -298,7 +294,11 @@ export const loginWithPin = async (email, pin) => {
         member_type: member.member_type
     })
 
-    const { pin_hash, public_key, credential_id, webauthn_challenge, sign_count, ...safeMember } = member
+    const { 
+        pin_hash, public_key, credential_id, 
+        webauthn_challenge, sign_count, 
+        ...safeMember 
+    } = member
 
     return { member: safeMember, token }
 }

@@ -8,8 +8,11 @@ export const getMe = async (memberId) => {
             m.stream_id, m.breakout_session,
             m.token_balance, m.is_active, m.member_type,
             m.created_at,
-            s.year, s.batch, s.stream,
-            s.callup_date, s.service_end
+            s.year AS stream_year,
+            s.batch AS stream_batch,
+            s.stream AS stream_number,
+            s.callup_date,
+            s.service_end
         FROM members m
         LEFT JOIN streams s ON m.stream_id = s.id
         WHERE m.id = $1`,
@@ -26,17 +29,23 @@ export const getMe = async (memberId) => {
 export const getAllMembers = async () => {
     const result = await pool.query(
         `SELECT 
-            id, first_name, last_name, state_code,
-            email, role, is_dev, gender,
-            batch_year, batch, stream,
-            breakout_session, date_of_callup,
-            service_end, token_balance, is_active,
-            created_at
-        FROM members
-        ORDER BY created_at DESC`
+            m.id, m.first_name, m.last_name, m.state_code,
+            m.email, m.role, m.is_dev, m.gender,
+            m.stream_id, m.breakout_session,
+            m.token_balance, m.is_active, m.member_type,
+            m.created_at,
+            s.year AS stream_year,
+            s.batch AS stream_batch,
+            s.stream AS stream_number,
+            s.callup_date,
+            s.service_end
+        FROM members m
+        LEFT JOIN streams s ON m.stream_id = s.id
+        ORDER BY m.created_at DESC`
     )
     return result.rows
 }
+
 
 export const updateMemberRole = async (memberId, role) => {
     const result = await pool.query(

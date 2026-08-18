@@ -12,3 +12,9 @@ body {
   background: #f2f4f7;
   color: #0d1b12;
 }
+
+
+.custom-leaflet-pin {
+  background: transparent !important;
+  border: none !important;
+}

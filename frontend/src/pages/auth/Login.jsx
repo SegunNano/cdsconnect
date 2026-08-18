@@ -25,7 +25,7 @@ export default function Login() {
         try {
             const result = await loginService(email, pin)
             login(result.data.member, result.data.token)
-            navigate('/dashboard')
+            navigate('/')
         } catch (err) {
             setError(err.response?.data?.message || 'Something went wrong')
         } finally {

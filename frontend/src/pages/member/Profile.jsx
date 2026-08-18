@@ -2,8 +2,46 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import {
     ArrowLeft, User, Mail, Hash,
-    Calendar, Layers, LogOut
+    Calendar, Layers, LogOut, Wallet
 } from 'lucide-react'
+
+const InfoRow = ({ icon, label, value }) => (
+    <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '12px',
+        padding: '14px 0',
+        borderBottom: '1px solid #f2f4f7'
+    }}>
+        <div style={{
+            width: '36px',
+            height: '36px',
+            background: '#e6f4ee',
+            borderRadius: '10px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0
+        }}>
+            {icon}
+        </div>
+        <div style={{ flex: 1 }}>
+            <div style={{
+                fontSize: '0.68rem',
+                color: '#8fa396',
+                fontWeight: 600,
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px',
+                marginBottom: '2px'
+            }}>
+                {label}
+            </div>
+            <div style={{ fontSize: '0.88rem', color: '#0d1b12', fontWeight: 500 }}>
+                {value || '—'}
+            </div>
+        </div>
+    </div>
+)
 
 export default function Profile() {
     const { member, logout } = useAuth()
@@ -14,40 +52,11 @@ export default function Profile() {
         navigate('/login')
     }
 
-    const InfoRow = ({ icon, label, value }) => (
-        <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            padding: '14px 0',
-            borderBottom: '1px solid #f2f4f7'
-        }}>
-            <div style={{
-                width: '36px',
-                height: '36px',
-                background: '#e6f4ee',
-                borderRadius: '10px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0
-            }}>
-                {icon}
-            </div>
-            <div style={{ flex: 1 }}>
-                <div style={{ fontSize: '0.68rem', color: '#8fa396', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px' }}>
-                    {label}
-                </div>
-                <div style={{ fontSize: '0.88rem', color: '#0d1b12', fontWeight: 500 }}>
-                    {value}
-                </div>
-            </div>
-        </div>
-    )
-
-    const initials = member
+    const initials = member?.first_name && member?.last_name
         ? `${member.first_name[0]}${member.last_name[0]}`.toUpperCase()
         : '??'
+
+    const tokenBalance = member?.token_balance ?? 0
 
     return (
         <div style={{
@@ -58,7 +67,6 @@ export default function Profile() {
             margin: '0 auto',
             paddingBottom: '40px'
         }}>
-
             {/* HEADER */}
             <div style={{
                 background: '#ffffff',
@@ -90,7 +98,6 @@ export default function Profile() {
             </div>
 
             <div style={{ padding: '20px' }}>
-
                 {/* AVATAR */}
                 <div style={{ textAlign: 'center', marginBottom: '20px' }}>
                     <div style={{
@@ -153,15 +160,20 @@ export default function Profile() {
                     <InfoRow
                         icon={<Calendar size={16} color="#008751" />}
                         label="Batch"
-                        value={member?.stream
-                            ? `${member.year} Batch ${member.batch} Stream ${member.stream}`
+                        value={member?.stream_year
+                            ? `${member.stream_year} Batch ${member.stream_batch} Stream ${member.stream_number}`
                             : '—'
                         }
                     />
                     <InfoRow
                         icon={<User size={16} color="#008751" />}
                         label="Gender"
-                        value={member?.gender === 'male' ? 'Male' : 'Female'}
+                        value={member?.gender ? member.gender.charAt(0).toUpperCase() + member.gender.slice(1) : '—'}
+                    />
+                    <InfoRow
+                        icon={<Wallet size={16} color="#008751" />}
+                        label="Token Balance"
+                        value={`${tokenBalance} token${tokenBalance !== 1 ? 's' : ''} — ₦${(tokenBalance * 500).toLocaleString()}`}
                     />
                 </div>
 
