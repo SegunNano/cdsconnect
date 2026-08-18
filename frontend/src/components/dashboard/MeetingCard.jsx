@@ -8,14 +8,15 @@ function RecenterAutomatically({ venueLat, venueLng, userLocation }) {
     const map = useMap()
 
     useEffect(() => {
-        if (userLocation) {
+        // Add optional chaining and null check
+        if (userLocation && userLocation.lat && userLocation.lng) {
             const bounds = [
                 [venueLat, venueLng],
                 [userLocation.lat, userLocation.lng]
             ]
             map.fitBounds(bounds, { padding: [30, 30] })
         } else {
-            map.setView([venueLat, venueLng], 17)
+            map.setView([venueLat, venueLng], 16)
         }
     }, [venueLat, venueLng, userLocation, map])
 
@@ -126,7 +127,8 @@ export function MeetingCard({ meeting, member, handleSignIn, signingIn, signInEr
     const venueLng = parseFloat(meeting.venue_lng)
 
     // Calculate distance if user location is available
-    const distanceMeters = userLocation
+    // Safely compute distance only if userLocation exists
+    const distanceMeters = (userLocation && userLocation.lat && userLocation.lng)
         ? getDistanceInMeters(userLocation.lat, userLocation.lng, venueLat, venueLng)
         : null
 
@@ -212,16 +214,19 @@ export function MeetingCard({ meeting, member, handleSignIn, signingIn, signInEr
                         radius={meeting.radius_meters}
                         pathOptions={{ color: '#008751', fillColor: '#008751', fillOpacity: 0.15 }}
                     />
+                    {userLocation && userLocation.lat && userLocation.lng && (
+                            <>
+                                {/* Explicit user position marker */}
+                                <Marker position={[userLocation.lat, userLocation.lng]} icon={userPin} />    
 
-                    {/* Explicit user position marker */}
-                    <Marker position={[userLocation.lat, userLocation.lng]} icon={userPin} />    
-
-                    {/* Dynamic bounds handler */}
-                    <RecenterAutomatically
-                        venueLat={venueLat}
-                        venueLng={venueLng}
-                        userLocation={userLocation}
-                    />
+                                {/* Dynamic bounds handler */}
+                                <RecenterAutomatically
+                                    venueLat={venueLat}
+                                    venueLng={venueLng}
+                                    userLocation={userLocation}
+                                />
+                            </>
+                    )}
                 </MapContainer>
 
                 {/* RECTANGULAR BUTTON & INFO OVERLAY */}
@@ -242,22 +247,30 @@ export function MeetingCard({ meeting, member, handleSignIn, signingIn, signInEr
                     gap: '10px'
                 }}>
                     <div style={{ flex: 1 }}>
-                        {/* DISTANCE DISPLAY */}
-                        {formattedDistance && (
-                            <div style={{
-                                fontSize: '0.78rem',
-                                fontWeight: 700,
-                                color: isWithinGeofence ? '#008751' : '#e53e3e',
-                                marginBottom: '2px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '4px'
-                            }}>
-                                📍 You are {formattedDistance}
-                            </div>
-                        )}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
+                            {formattedDistance && (
+                                <span style={{
+                                    fontSize: '0.75rem',
+                                    fontWeight: 700,
+                                    color: isWithinGeofence ? '#008751' : '#e53e3e'
+                                }}>
+                                    📍 {formattedDistance}
+                                </span>
+                            )}
 
-                        <div style={{ fontSize: '0.68rem', color: '#4a5e52', fontWeight: 500 }}>
+                            <span style={{
+                                fontSize: '0.62rem',
+                                fontWeight: 700,
+                                background: isLate ? '#fff8e6' : '#e6f4ee',
+                                color: isLate ? '#d4900a' : '#008751',
+                                padding: '2px 6px',
+                                borderRadius: '6px'
+                            }}>
+                                {totalCost} Token{totalCost !== 1 ? 's' : ''}
+                            </span>
+                        </div>
+                        
+                        <div style={{ fontSize: '0.65rem', color: '#8fa396' }}>
                             Closes at {formatTime(signInClose)}
                         </div>
                     </div>
