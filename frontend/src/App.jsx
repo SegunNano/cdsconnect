@@ -10,6 +10,9 @@ import Profile from './pages/member/Profile'
 import ExcuseForm from './pages/member/ExcuseForm'
 import ClearanceSlip from './pages/member/ClearanceSlip'
 import CoordinatorDashboard from './pages/coordinator/CoordinatorDashboard'
+import TopUp from './pages/treasurer/TopUp'
+import SignOutPanel from './pages/member/SignOutPanel'
+
 
 function RootRedirect() {
     const { member } = useAuth()
@@ -34,6 +37,9 @@ export default function App() {
                     <Route path="/excuse" element={<ProtectedRoute><ExcuseForm /></ProtectedRoute>} />
                     <Route path="/clearance" element={<ProtectedRoute><ClearanceSlip /></ProtectedRoute>} />
                     <Route path="/clearance/:meetingId" element={<ProtectedRoute><ClearanceSlip /></ProtectedRoute>} />
+                    <Route path="/topup" element={<ProtectedRoute><TopUp /></ProtectedRoute>} />
+                    <Route path="/signout" element={<ProtectedRoute><SignOutPanel /></ProtectedRoute>} />
+
 
                     {/* Coordinator */}
                     <Route path="/coordinator" element={<ProtectedRoute><CoordinatorDashboard /></ProtectedRoute>} />

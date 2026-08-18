@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { getMyProfile } from '../../services/members.service'
 import { getActiveMeeting } from '../../services/meetings.service'
+import NotificationsModal from '../../components/common/NotificationsModal'
 import {
     Bell, FileText, FilePlus,
     KeyRound, ClipboardList, Wallet,
@@ -360,6 +361,20 @@ export default function Dashboard() {
     const [unreadCount, setUnreadCount] = useState(0)
     const [loading, setLoading] = useState(true)
     const [activeTab, setActiveTab] = useState('home')
+    const [showNotifications, setShowNotifications] = useState(false)
+    // In the tabs array, update onClick handlers
+// Replace setActiveTab with navigate for role-specific pages
+
+    const handleTabClick = (tab) => {
+        if (tab.key === 'home') setActiveTab('home')
+        else if (tab.key === 'meetings') setActiveTab('meetings')
+        else if (tab.key === 'clearance') navigate('/clearance')
+        else if (tab.key === 'profile') navigate('/profile')
+        else if (tab.key === 'topup') navigate('/topup')
+        else if (tab.key === 'signout') navigate('/signout')
+        else if (tab.key === 'dev') navigate('/dev')
+        else setActiveTab(tab.key)
+    }
 
     useEffect(() => {
         const fetchData = async () => {
@@ -378,6 +393,17 @@ export default function Dashboard() {
         }
         fetchData()
     }, [])
+    useEffect(() => {
+    const fetchUnread = async () => {
+        try {
+            const result = await api.get('/notifications/unread')
+            setUnreadCount(result.data.data.count)
+        } catch (err) {
+            console.error(err)
+        }
+    }
+    fetchUnread()
+}, [])
 
     if (loading) {
         return (
@@ -448,10 +474,15 @@ export default function Dashboard() {
                         </div>
                     </div>
                     <div style={s.topbarRight}>
-                        <div style={s.notifWrap} onClick={() => navigate('/notifications')}>
+                       <div style={s.notifWrap} onClick={() => setShowNotifications(true)}>
                             <Bell size={20} color="#4a5e52" />
                             {unreadCount > 0 && <div style={s.notifPip} />}
                         </div>
+                        <NotificationsModal
+                            isOpen={showNotifications}
+                            onClose={() => setShowNotifications(false)}
+                            onRead={(count) => setUnreadCount(count)}
+                        />
                         <div style={s.avatar}>{initials}</div>
                     </div>
                 </div>
@@ -568,7 +599,7 @@ export default function Dashboard() {
                     return (
                         <div
                             key={tab.key}
-                            onClick={() => setActiveTab(tab.key)}
+                            onClick={() => handleTabClick(tab)}
                             style={{
                                 flex: 1,
                                 display: 'flex',
