@@ -3,6 +3,13 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { getMyProfile } from '../../services/members.service'
 import { getActiveMeeting } from '../../services/meetings.service'
+import {
+    Bell, FileText, FilePlus,
+    KeyRound, ClipboardList, Wallet,
+    Home, Calendar, FileCheck, User,
+    Coins, LayoutDashboard, LogOut,
+    Settings2, MapPin, CalendarOff
+} from 'lucide-react'
 
 const s = {
     page: {
@@ -14,7 +21,6 @@ const s = {
         position: 'relative',
         paddingBottom: '90px'
     },
-    // TOP BAR
     topbar: {
         display: 'flex',
         alignItems: 'center',
@@ -72,7 +78,6 @@ const s = {
         fontSize: '0.78rem',
         color: '#008751'
     },
-    // CHIPS
     chipRow: {
         background: '#ffffff',
         padding: '0 20px 16px',
@@ -96,7 +101,6 @@ const s = {
         background: color,
         borderRadius: '50%'
     }),
-    // CONTENT
     content: { padding: '16px 20px 0' },
     sectionHead: {
         fontSize: '0.75rem',
@@ -119,7 +123,6 @@ const s = {
         padding: '16px',
         boxShadow: '0 2px 12px rgba(0,0,0,0.07)',
     },
-    // BOTTOM NAV
     bottomNav: {
         position: 'fixed',
         bottom: 0,
@@ -134,39 +137,13 @@ const s = {
         zIndex: 100,
         boxShadow: '0 -4px 20px rgba(0,0,0,0.06)'
     },
-    navTab: (active) => ({
-        flex: 1,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        gap: '4px',
-        cursor: 'pointer'
-    }),
-    navIcon: (active) => ({
-        width: '28px',
-        height: '28px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontSize: '1.1rem',
-        background: active ? '#e6f4ee' : 'transparent',
-        borderRadius: active ? '8px' : '0'
-    }),
-    navLabel: (active) => ({
-        fontSize: '0.58rem',
-        fontWeight: 600,
-        color: active ? '#008751' : '#8fa396',
-        textTransform: 'uppercase',
-        letterSpacing: '0.5px'
-    })
 }
 
-// Meeting card states
 const MeetingCard = ({ meeting, member }) => {
     if (!meeting) {
         return (
             <div style={{ ...s.card, textAlign: 'center', padding: '30px 20px' }}>
-                <div style={{ fontSize: '1.5rem', marginBottom: '8px' }}>📅</div>
+                <CalendarOff size={32} color="#c2e0cf" style={{ marginBottom: '8px' }} />
                 <div style={{ fontSize: '0.88rem', fontWeight: 600, color: '#0d1b12', marginBottom: '4px' }}>
                     No upcoming meeting
                 </div>
@@ -178,8 +155,8 @@ const MeetingCard = ({ meeting, member }) => {
     }
 
     const meetingDate = new Date(meeting.meeting_date)
-    const day = meetingDate.getDate()
-    const month = meetingDate.toLocaleString('default', { month: 'short' })
+    const day = meetingDate.getUTCDate()
+    const month = meetingDate.toLocaleString('default', { month: 'short', timeZone: 'UTC' })
     const signInOpen = new Date(meeting.sign_in_open)
     const signInClose = new Date(meeting.sign_in_close)
     const lateThreshold = new Date(meeting.late_threshold)
@@ -189,7 +166,6 @@ const MeetingCard = ({ meeting, member }) => {
         minute: '2-digit'
     })
 
-    // Upcoming meeting card
     if (meeting.state === 'upcoming') {
         return (
             <div style={s.card}>
@@ -231,7 +207,6 @@ const MeetingCard = ({ meeting, member }) => {
         )
     }
 
-    // Today not open yet
     if (meeting.state === 'today_not_open') {
         return (
             <div style={s.card}>
@@ -241,12 +216,7 @@ const MeetingCard = ({ meeting, member }) => {
                 <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0d1b12', marginBottom: '12px' }}>
                     {meeting.title}
                 </div>
-                <div style={{
-                    background: '#f2f4f7',
-                    borderRadius: '10px',
-                    padding: '12px',
-                    textAlign: 'center'
-                }}>
+                <div style={{ background: '#f2f4f7', borderRadius: '10px', padding: '12px', textAlign: 'center' }}>
                     <div style={{ fontSize: '0.8rem', color: '#4a5e52', fontWeight: 500 }}>
                         Sign-in opens at <strong style={{ color: '#008751' }}>{formatTime(signInOpen)}</strong>
                     </div>
@@ -255,7 +225,6 @@ const MeetingCard = ({ meeting, member }) => {
         )
     }
 
-    // Sign-in open — on time or late
     if (meeting.state === 'open_on_time' || meeting.state === 'open_late') {
         const isLate = meeting.state === 'open_late'
         const totalCost = isLate
@@ -287,14 +256,13 @@ const MeetingCard = ({ meeting, member }) => {
                         borderRadius: '20px',
                         whiteSpace: 'nowrap'
                     }}>
-                        {isLate ? '⚠️ Late' : '✅ On time'}
+                        {isLate ? 'Late' : 'On time'}
                     </div>
                 </div>
 
                 {/* RIPPLE BUTTON */}
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px' }}>
                     <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        {/* Ripple rings */}
                         <div style={{
                             position: 'absolute',
                             width: '140px',
@@ -313,27 +281,29 @@ const MeetingCard = ({ meeting, member }) => {
                             animationDelay: '0.5s'
                         }} />
                         <button
+                            disabled={member.token_balance < totalCost}
                             style={{
                                 width: '110px',
                                 height: '110px',
                                 borderRadius: '50%',
-                                background: '#008751',
+                                background: member.token_balance < totalCost ? '#c2e0cf' : '#008751',
                                 border: 'none',
                                 cursor: member.token_balance < totalCost ? 'not-allowed' : 'pointer',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 flexDirection: 'column',
-                                gap: '4px',
-                                boxShadow: '0 4px 20px rgba(0,135,81,0.35)',
-                                opacity: member.token_balance < totalCost ? 0.5 : 1,
+                                gap: '6px',
+                                boxShadow: member.token_balance < totalCost
+                                    ? 'none'
+                                    : '0 4px 20px rgba(0,135,81,0.35)',
                                 position: 'relative',
                                 zIndex: 1
                             }}
                         >
-                            <span style={{ fontSize: '1.6rem' }}>📍</span>
+                            <MapPin size={28} color="white" />
                             <span style={{
-                                fontSize: '0.6rem',
+                                fontSize: '0.58rem',
                                 fontWeight: 700,
                                 color: 'rgba(255,255,255,0.9)',
                                 letterSpacing: '0.5px',
@@ -360,7 +330,6 @@ const MeetingCard = ({ meeting, member }) => {
         )
     }
 
-    // Sign-in closed
     if (meeting.state === 'sign_in_closed') {
         return (
             <div style={s.card}>
@@ -370,12 +339,7 @@ const MeetingCard = ({ meeting, member }) => {
                 <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0d1b12', marginBottom: '12px' }}>
                     {meeting.title}
                 </div>
-                <div style={{
-                    background: '#fff0f0',
-                    borderRadius: '10px',
-                    padding: '12px',
-                    textAlign: 'center'
-                }}>
+                <div style={{ background: '#fff0f0', borderRadius: '10px', padding: '12px', textAlign: 'center' }}>
                     <div style={{ fontSize: '0.8rem', color: '#e53e3e', fontWeight: 500 }}>
                         Sign-in is closed
                     </div>
@@ -386,12 +350,14 @@ const MeetingCard = ({ meeting, member }) => {
 
     return null
 }
-const Dashboard = () => {
+
+export default function Dashboard() {
     const { member: authMember, logout } = useAuth()
     const navigate = useNavigate()
 
     const [member, setMember] = useState(null)
     const [meeting, setMeeting] = useState(null)
+    const [unreadCount, setUnreadCount] = useState(0)
     const [loading, setLoading] = useState(true)
     const [activeTab, setActiveTab] = useState('home')
 
@@ -410,7 +376,6 @@ const Dashboard = () => {
                 setLoading(false)
             }
         }
-
         fetchData()
     }, [])
 
@@ -440,23 +405,26 @@ const Dashboard = () => {
         year: 'numeric'
     })
 
-    // Tabs based on role
+    const quickActions = [
+        { icon: <FileCheck size={18} color="#008751" />, label: 'Clearance Slip', bg: '#e6f4ee', path: '/clearance' },
+        { icon: <FilePlus size={18} color="#e53e3e" />, label: 'File Excuse', bg: '#fff0f0', path: '/excuse' },
+        { icon: <KeyRound size={18} color="#d4900a" />, label: 'Reset PIN', bg: '#fff8e6', path: '/reset-pin' },
+        { icon: <ClipboardList size={18} color="#4f46e5" />, label: 'My Record', bg: '#eef2ff', path: '/attendance' }
+    ]
+
     const tabs = [
-        { key: 'home', label: 'Home', icon: '🏠' },
-        { key: 'meetings', label: 'Meetings', icon: '📅' },
-        { key: 'clearance', label: 'Clearance', icon: '📄' },
-        { key: 'profile', label: 'Profile', icon: '👤' },
+        { key: 'home', label: 'Home', icon: Home },
+        { key: 'meetings', label: 'Meetings', icon: Calendar },
+        { key: 'clearance', label: 'Clearance', icon: FileText },
+        { key: 'profile', label: 'Profile', icon: User },
         ...(member.role === 'treasurer' || member.role === 'financial_secretary'
-            ? [{ key: 'topup', label: 'Top Up', icon: '🪙' }]
-            : []),
-        ...(member.role === 'coordinator'
-            ? [{ key: 'coordinator', label: 'Manage', icon: '⚙️' }]
+            ? [{ key: 'topup', label: 'Top Up', icon: Coins }]
             : []),
         ...(member.role === 'president' || member.role === 'vice_president'
-            ? [{ key: 'signout', label: 'Sign Out', icon: '✅' }]
+            ? [{ key: 'signout', label: 'Sign Out', icon: LogOut }]
             : []),
         ...(member.is_dev
-            ? [{ key: 'dev', label: 'Dev', icon: '🛠️' }]
+            ? [{ key: 'dev', label: 'Dev', icon: Settings2 }]
             : [])
     ]
 
@@ -480,12 +448,9 @@ const Dashboard = () => {
                         </div>
                     </div>
                     <div style={s.topbarRight}>
-                        <div style={s.notifWrap}>
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4a5e52" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-                                <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-                            </svg>
-                            <div style={s.notifPip} />
+                        <div style={s.notifWrap} onClick={() => navigate('/notifications')}>
+                            <Bell size={20} color="#4a5e52" />
+                            {unreadCount > 0 && <div style={s.notifPip} />}
                         </div>
                         <div style={s.avatar}>{initials}</div>
                     </div>
@@ -498,7 +463,7 @@ const Dashboard = () => {
                         {member.state_code}
                     </div>
                     <div style={s.chip('#d4900a', '#fff8e6')}>
-                        <div style={s.chipDot('#d4900a')} />
+                        <Wallet size={10} color="#d4900a" />
                         {member.token_balance} Token{member.token_balance !== 1 ? 's' : ''}
                     </div>
                 </div>
@@ -538,12 +503,7 @@ const Dashboard = () => {
                     {/* QUICK ACTIONS */}
                     <div style={s.sectionHead}>Quick Actions</div>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', marginBottom: '14px' }}>
-                        {[
-                            { icon: '📄', label: 'Clearance Slip', bg: '#e6f4ee', path: '/clearance' },
-                            { icon: '🙋', label: 'File Excuse', bg: '#fff0f0', path: '/excuse' },
-                            { icon: '🔑', label: 'Reset PIN', bg: '#fff8e6', path: '/reset-pin' },
-                            { icon: '📊', label: 'My Record', bg: '#eef2ff', path: '/attendance' }
-                        ].map((action) => (
+                        {quickActions.map((action) => (
                             <div
                                 key={action.label}
                                 onClick={() => navigate(action.path)}
@@ -566,8 +526,7 @@ const Dashboard = () => {
                                     background: action.bg,
                                     display: 'flex',
                                     alignItems: 'center',
-                                    justifyContent: 'center',
-                                    fontSize: '1rem'
+                                    justifyContent: 'center'
                                 }}>
                                     {action.icon}
                                 </div>
@@ -603,27 +562,49 @@ const Dashboard = () => {
 
             {/* BOTTOM NAV */}
             <nav style={s.bottomNav}>
-                {tabs.map(tab => (
-                    <div
-                        key={tab.key}
-                        onClick={() => setActiveTab(tab.key)}
-                        style={s.navTab(activeTab === tab.key)}
-                    >
-                        <div style={s.navIcon(activeTab === tab.key)}>
-                            {tab.icon}
+                {tabs.map(tab => {
+                    const Icon = tab.icon
+                    const isActive = activeTab === tab.key
+                    return (
+                        <div
+                            key={tab.key}
+                            onClick={() => setActiveTab(tab.key)}
+                            style={{
+                                flex: 1,
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                gap: '4px',
+                                cursor: 'pointer'
+                            }}
+                        >
+                            <div style={{
+                                width: '32px',
+                                height: '32px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                background: isActive ? '#e6f4ee' : 'transparent',
+                                borderRadius: '8px'
+                            }}>
+                                <Icon
+                                    size={18}
+                                    color={isActive ? '#008751' : '#8fa396'}
+                                />
+                            </div>
+                            <div style={{
+                                fontSize: '0.58rem',
+                                fontWeight: 600,
+                                color: isActive ? '#008751' : '#8fa396',
+                                textTransform: 'uppercase',
+                                letterSpacing: '0.5px'
+                            }}>
+                                {tab.label}
+                            </div>
                         </div>
-                        <div style={s.navLabel(activeTab === tab.key)}>
-                            {tab.label}
-                        </div>
-                    </div>
-                ))}
+                    )
+                })}
             </nav>
         </>
     )
 }
-
-export default Dashboard
-
-
-
-
