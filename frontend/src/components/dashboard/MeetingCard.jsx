@@ -3,6 +3,8 @@ import { MapPin, CalendarOff, CheckCircle2, Clock } from 'lucide-react'
 import { MapContainer, TileLayer, Marker, Circle, useMap } from 'react-leaflet'
 import { QRCodeSVG } from 'qrcode.react'
 import { venuePin, userPin, getDistanceInMeters } from './leafletIcons'
+import { useState } from 'react'
+import { getMyAttendance } from '../../services/attendance.service'
 
 // Helper component to dynamically adjust map bounds to include both venue and user location
 function RecenterAutomatically({ venueLat, venueLng, userLocation }) {
@@ -23,7 +25,9 @@ function RecenterAutomatically({ venueLat, venueLng, userLocation }) {
     return null
 }
 
-export function MeetingCard({ meeting, member, attendance, handleSignIn, signingIn, signInError, userLocation, locationLoading }) {
+export function MeetingCard({ meeting, member, attendance,  handleSignIn, signingIn, signInError, userLocation, locationLoading }) {
+    
+    
     const cardStyle = {
         background: '#ffffff',
         borderRadius: '18px',
@@ -60,6 +64,7 @@ export function MeetingCard({ meeting, member, attendance, handleSignIn, signing
     // Check attendance status flags
     const hasSignedIn = Boolean(attendance?.signed_in_at)
     const hasSignedOut = Boolean(attendance?.signed_out_at)
+    console.log({hasSignedIn, attendance})
 
     // ==========================================
     // 1. SIGNED-IN / SIGNED-OUT CARD STATES

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { getMyProfile } from '../../services/members.service'
 import { getActiveMeeting } from '../../services/meetings.service'
-import { signIn } from '../../services/attendance.service'
+import { signIn, getMyAttendance } from '../../services/attendance.service'
 import api from '../../services/api'
 
 import { UserTopBar } from '../../components/dashboard/UserTopBar'
@@ -27,7 +27,9 @@ export default function Dashboard() {
     const [signInError, setSignInError] = useState('')
     const [userLocation, setUserLocation] = useState(null)
     const [locationLoading, setLocationLoading] = useState(false)
-
+    const [attendance, setAttendance] = useState(null)
+    
+    // Update fetchData to include today's attendance
     useEffect(() => {
         const fetchData = async () => {
             try {
@@ -39,37 +41,29 @@ export default function Dashboard() {
                 ])
                 setMember(memberRes.data)
                 setMeeting(meetingRes.data)
-                setRecentAttendance(attendanceRes.data.data.slice(0, 3))
                 setUnreadCount(unreadRes.data.data.count)
+            
+                const allAttendance = attendanceRes.data.data
+                setRecentAttendance(allAttendance.slice(0, 3))
+            
+                // Find today's attendance record
+                const today = new Date().toISOString().split('T')[0]
+                const todayRecord = allAttendance.find(a => {
+                    const recordDate = new Date(a.meeting_date).toISOString().split('T')[0]
+                    return recordDate === today
+                })
+                setAttendance(todayRecord || null)
+            
             } catch (err) {
                 console.error(err)
             } finally {
                 setLoading(false)
             }
         }
-
         fetchData()
     }, [])
-
-    useEffect(() => {
-        if (meeting?.state === 'open_on_time' || meeting?.state === 'open_late') {
-            setLocationLoading(true)
-            navigator.geolocation.getCurrentPosition(
-                (pos) => {
-                    setUserLocation({
-                        lat: pos.coords.latitude,
-                        lng: pos.coords.longitude
-                    })
-                    setLocationLoading(false)
-                },
-                () => {
-                    setLocationLoading(false)
-                },
-                { enableHighAccuracy: true }
-            )
-        }
-    }, [meeting?.state])
-
+    
+    // Update handleSignIn to refresh attendance
     const handleSignIn = async () => {
         if (!userLocation) {
             setSignInError('Could not get your location. Please enable GPS.')
@@ -78,19 +72,26 @@ export default function Dashboard() {
         setSigningIn(true)
         setSignInError('')
         try {
-            const result = await signIn(userLocation.lat, userLocation.lng)
-            
-            // Refresh everything after sign in
-            const [memberRes, meetingRes, todayRes, attendanceRes] = await Promise.all([
+            await signIn(userLocation.lat, userLocation.lng)
+        
+            const [memberRes, meetingRes, attendanceRes] = await Promise.all([
                 getMyProfile(),
                 getActiveMeeting(),
-                api.get('/attendance/today'),
                 api.get('/attendance/me')
             ])
+        
             setMember(memberRes.data)
             setMeeting(meetingRes.data)
-            setTodayStatus(todayRes.data.data)
-            setRecentAttendance(attendanceRes.data.data.slice(0, 3))
+        
+            const allAttendance = attendanceRes.data.data
+            setRecentAttendance(allAttendance.slice(0, 3))
+        
+            const today = new Date().toISOString().split('T')[0]
+            const todayRecord = allAttendance.find(a => {
+                const recordDate = new Date(a.meeting_date).toISOString().split('T')[0]
+                return recordDate === today
+            })
+            setAttendance(todayRecord || null)
         
         } catch (err) {
             setSignInError(err.response?.data?.message || 'Sign in failed')
@@ -152,14 +153,16 @@ export default function Dashboard() {
                 />
 
                 <div style={{ padding: '16px 20px 0' }}>
-                    <MeetingCard
-                        meeting={meeting}
-                        member={member}
-                        handleSignIn={handleSignIn}
-                        signingIn={signingIn}
-                        signInError={signInError}
-                        userLocation={userLocation}
-                        locationLoading={locationLoading}
+                   // Inside parent (e.g., Dashboard.jsx)
+                    <MeetingCard 
+                        meeting={meeting} 
+                        member={member} 
+                        attendance={attendance} 
+                        handleSignIn={handleSignIn} 
+                        signingIn={signingIn} 
+                        signInError={signInError} 
+                        userLocation={userLocation} 
+                        locationLoading={locationLoading} 
                     />
 
                     {/* STATS ROW */}
