@@ -2,7 +2,8 @@ export const RATE = 500 // 1 token = ₦500
 
 export const DEFAULT_VENUE_LAT = 6.524379
 export const DEFAULT_VENUE_LNG = 3.379206
-export const DEFAULT_RADIUS_METERS = 100
+export const DEFAULT_RADIUS_METERS = 1000
+// export const DEFAULT_RADIUS_METERS = 100
 
 export const BREAKOUT_SESSIONS = [
     "Web Development",

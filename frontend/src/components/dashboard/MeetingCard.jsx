@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
-import { MapPin, CalendarOff } from 'lucide-react'
+import { MapPin, CalendarOff, CheckCircle2, Clock } from 'lucide-react'
 import { MapContainer, TileLayer, Marker, Circle, useMap } from 'react-leaflet'
+import { QRCodeSVG } from 'qrcode.react'
 import { venuePin, userPin, getDistanceInMeters } from './leafletIcons'
 
 // Helper component to dynamically adjust map bounds to include both venue and user location
@@ -8,7 +9,6 @@ function RecenterAutomatically({ venueLat, venueLng, userLocation }) {
     const map = useMap()
 
     useEffect(() => {
-        // Add optional chaining and null check
         if (userLocation && userLocation.lat && userLocation.lng) {
             const bounds = [
                 [venueLat, venueLng],
@@ -23,7 +23,7 @@ function RecenterAutomatically({ venueLat, venueLng, userLocation }) {
     return null
 }
 
-export function MeetingCard({ meeting, member, handleSignIn, signingIn, signInError, userLocation, locationLoading }) {
+export function MeetingCard({ meeting, member, attendance, handleSignIn, signingIn, signInError, userLocation, locationLoading }) {
     const cardStyle = {
         background: '#ffffff',
         borderRadius: '18px',
@@ -51,13 +51,103 @@ export function MeetingCard({ meeting, member, handleSignIn, signingIn, signInEr
     const month = meetingDate.toLocaleString('default', { month: 'short', timeZone: 'UTC' })
     const signInOpen = new Date(meeting.sign_in_open)
     const signInClose = new Date(meeting.sign_in_close)
-    const lateThreshold = new Date(meeting.late_threshold)
 
     const formatTime = (date) => date.toLocaleTimeString('en-US', {
         hour: '2-digit',
         minute: '2-digit'
     })
 
+    // Check attendance status flags
+    const hasSignedIn = Boolean(attendance?.signed_in_at)
+    const hasSignedOut = Boolean(attendance?.signed_out_at)
+
+    // ==========================================
+    // 1. SIGNED-IN / SIGNED-OUT CARD STATES
+    // ==========================================
+    if (hasSignedIn) {
+        return (
+            <div style={cardStyle}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                    <div>
+                        <div style={{ fontSize: '0.7rem', fontWeight: 600, color: '#8fa396', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '2px' }}>
+                            Today's Meeting
+                        </div>
+                        <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0d1b12' }}>
+                            {meeting.title}
+                        </div>
+                    </div>
+
+                    {hasSignedOut ? (
+                        <div style={{ background: '#e6f4ee', color: '#008751', fontSize: '0.7rem', fontWeight: 700, padding: '4px 10px', borderRadius: '20px', whiteSpace: 'nowrap' }}>
+                            Completed
+                        </div>
+                    ) : (
+                        <div style={{ background: '#fef3c7', color: '#b45309', fontSize: '0.7rem', fontWeight: 700, padding: '4px 10px', borderRadius: '20px', display: 'flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap' }}>
+                            <Clock size={12} /> Awaiting Sign-out
+                        </div>
+                    )}
+                </div>
+
+                {hasSignedOut ? (
+                    <div style={{ background: '#e6f4ee', borderRadius: '12px', padding: '14px', display: 'flex', alignItems: 'center', gap: '8px', color: '#008751', fontSize: '0.8rem', fontWeight: 600 }}>
+                        <CheckCircle2 size={18} />
+                        Successfully signed out at {new Date(attendance.signed_out_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                ) : (
+                    <div style={{ background: '#f8faf9', borderRadius: '14px', padding: '14px', border: '1px solid #e8ece9' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                            <div>
+                                <div style={{ fontSize: '0.68rem', fontWeight: 600, color: '#8fa396', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                    Attendance No.
+                                </div>
+                                <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#008751' }}>
+                                    #{String(attendance.attendance_number || attendance.id).padStart(3, '0')}
+                                </div>
+                            </div>
+
+                            <div style={{ textAlign: 'right' }}>
+                                <div style={{ fontSize: '0.68rem', fontWeight: 600, color: '#8fa396', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                    Signed In At
+                                </div>
+                                <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0d1b12' }}>
+                                    {new Date(attendance.signed_in_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* EXCO CONTINUOUS SCANNER QR CODE */}
+                        <div style={{ background: '#ffffff', padding: '14px', borderRadius: '12px', textAlign: 'center', border: '1px solid #e2e8f0' }}>
+                            <div style={{ fontSize: '0.72rem', fontWeight: 600, color: '#4a5e52', marginBottom: '10px' }}>
+                                Present QR Code to EXCO to Sign Out
+                            </div>
+
+                            <div style={{ display: 'flex', justifyContent: 'center', padding: '4px' }}>
+                                <QRCodeSVG
+                                    value={JSON.stringify({
+                                    attendance_id: attendance.id,
+                                    member_id: member.id,
+                                    meeting_id: meeting.id,
+                                    sequence_number: attendance.sequence_number || attendance.attendance_number
+                                })}
+                                    size={140}
+                                    level="M"
+                                    includeMargin={true}
+                                />
+                            </div>
+
+                            <div style={{ fontSize: '0.65rem', color: '#8fa396', marginTop: '6px' }}>
+                                Token: {attendance.sign_out_token?.slice(0, 8) || 'VAL-OK'}
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+        )
+    }
+
+    // ==========================================
+    // 2. UPCOMING MEETING STATE
+    // ==========================================
     if (meeting.state === 'upcoming') {
         return (
             <div style={cardStyle}>
@@ -99,6 +189,9 @@ export function MeetingCard({ meeting, member, handleSignIn, signingIn, signInEr
         )
     }
 
+    // ==========================================
+    // 3. TODAY (NOT YET OPEN) STATE
+    // ==========================================
     if (meeting.state === 'today_not_open') {
         return (
             <div style={cardStyle}>
@@ -117,34 +210,36 @@ export function MeetingCard({ meeting, member, handleSignIn, signingIn, signInEr
         )
     }
 
+    // ==========================================
+    // 4. SIGN-IN OPEN (ON TIME / LATE) STATE
+    // ==========================================
     if (meeting.state === 'open_on_time' || meeting.state === 'open_late') {
-    const isLate = meeting.state === 'open_late'
-    const totalCost = isLate
-        ? meeting.meeting_cost + meeting.lateness_cost
-        : meeting.meeting_cost
+        const isLate = meeting.state === 'open_late'
+        const totalCost = isLate
+            ? meeting.meeting_cost + meeting.lateness_cost
+            : meeting.meeting_cost
 
-    const venueLat = parseFloat(meeting.venue_lat)
-    const venueLng = parseFloat(meeting.venue_lng)
+        const venueLat = parseFloat(meeting.venue_lat)
+        const venueLng = parseFloat(meeting.venue_lng)
 
-    // Calculate distance if user location is available
-    // Safely compute distance only if userLocation exists
-    const distanceMeters = (userLocation && userLocation.lat && userLocation.lng)
-        ? getDistanceInMeters(userLocation.lat, userLocation.lng, venueLat, venueLng)
-        : null
+        // Calculate distance if user location is available
+        const distanceMeters = (userLocation && userLocation.lat && userLocation.lng)
+            ? getDistanceInMeters(userLocation.lat, userLocation.lng, venueLat, venueLng)
+            : null
 
-    // Format distance string (e.g., "120m away" or "1.4km away")
-    const formattedDistance = distanceMeters !== null
-        ? distanceMeters >= 1000
-            ? `${(distanceMeters / 1000).toFixed(1)}km away`
-            : `${distanceMeters}m away`
-        : null
+        // Format distance string
+        const formattedDistance = distanceMeters !== null
+            ? distanceMeters >= 1000
+                ? `${(distanceMeters / 1000).toFixed(1)}km away`
+                : `${distanceMeters}m away`
+            : null
 
-    // Check if user is within the geofence radius
-    const isWithinGeofence = distanceMeters !== null && distanceMeters <= meeting.radius_meters
+        // Check if user is within the geofence radius
+        const isWithinGeofence = distanceMeters !== null && distanceMeters <= meeting.radius_meters
 
-    return (
-        <div style={{ ...cardStyle, padding: '16px' }}>
-              <div style={{
+        return (
+            <div style={{ ...cardStyle, padding: '16px' }}>
+                <div style={{
                     display: 'flex',
                     alignItems: 'flex-start',
                     justifyContent: 'space-between',
@@ -185,39 +280,39 @@ export function MeetingCard({ meeting, member, handleSignIn, signingIn, signInEr
                     </div>
                 )}
 
-
-            <div style={{
-                position: 'relative',
-                borderRadius: '14px',
-                overflow: 'hidden',
-                height: '260px'
-            }}>
-                <MapContainer
-                    center={[venueLat, venueLng]}
-                    zoom={16}
-                    style={{ height: '100%', width: '100%' }}
-                    zoomControl={false}
-                    scrollWheelZoom={true}
-                    dragging={true}
-                >
-                    <TileLayer
-                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                        attribution=""
-                    />
-
-                    {/* Venue location marker */}
-                    <Marker position={[venueLat, venueLng]} icon={venuePin} />            
-
-                    {/* Geofence area */}
-                    <Circle
+                <div style={{
+                    position: 'relative',
+                    borderRadius: '14px',
+                    overflow: 'hidden',
+                    height: '260px'
+                }}>
+                    <MapContainer
                         center={[venueLat, venueLng]}
-                        radius={meeting.radius_meters}
-                        pathOptions={{ color: '#008751', fillColor: '#008751', fillOpacity: 0.15 }}
-                    />
-                    {userLocation && userLocation.lat && userLocation.lng && (
+                        zoom={16}
+                        style={{ height: '100%', width: '100%' }}
+                        zoomControl={false}
+                        scrollWheelZoom={true}
+                        dragging={true}
+                    >
+                        <TileLayer
+                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                            attribution=""
+                        />
+
+                        {/* Venue location marker */}
+                        <Marker position={[venueLat, venueLng]} icon={venuePin} />
+
+                        {/* Geofence area */}
+                        <Circle
+                            center={[venueLat, venueLng]}
+                            radius={meeting.radius_meters}
+                            pathOptions={{ color: '#008751', fillColor: '#008751', fillOpacity: 0.15 }}
+                        />
+
+                        {userLocation && userLocation.lat && userLocation.lng && (
                             <>
                                 {/* Explicit user position marker */}
-                                <Marker position={[userLocation.lat, userLocation.lng]} icon={userPin} />    
+                                <Marker position={[userLocation.lat, userLocation.lng]} icon={userPin} />
 
                                 {/* Dynamic bounds handler */}
                                 <RecenterAutomatically
@@ -226,87 +321,90 @@ export function MeetingCard({ meeting, member, handleSignIn, signingIn, signInEr
                                     userLocation={userLocation}
                                 />
                             </>
-                    )}
-                </MapContainer>
+                        )}
+                    </MapContainer>
 
-                {/* RECTANGULAR BUTTON & INFO OVERLAY */}
-                <div style={{
-                    position: 'absolute',
-                    bottom: '10px',
-                    left: '10px',
-                    right: '10px',
-                    zIndex: 1000,
-                    background: 'rgba(255, 255, 255, 0.40)',
-                    backdropFilter: 'blur(4px)',
-                    padding: '10px 12px',
-                    borderRadius: '12px',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: '10px'
-                }}>
-                    <div style={{ flex: 1 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
-                            {formattedDistance && (
+                    {/* RECTANGULAR BUTTON & INFO OVERLAY */}
+                    <div style={{
+                        position: 'absolute',
+                        bottom: '10px',
+                        left: '10px',
+                        right: '10px',
+                        zIndex: 1000,
+                        background: 'rgba(255, 255, 255, 0.40)',
+                        backdropFilter: 'blur(4px)',
+                        padding: '10px 12px',
+                        borderRadius: '12px',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '10px'
+                    }}>
+                        <div style={{ flex: 1 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
+                                {formattedDistance && (
+                                    <span style={{
+                                        fontSize: '0.75rem',
+                                        fontWeight: 700,
+                                        color: isWithinGeofence ? '#008751' : '#e53e3e'
+                                    }}>
+                                        📍 {formattedDistance}
+                                    </span>
+                                )}
+
                                 <span style={{
-                                    fontSize: '0.75rem',
+                                    fontSize: '0.62rem',
                                     fontWeight: 700,
-                                    color: isWithinGeofence ? '#008751' : '#e53e3e'
+                                    background: isLate ? '#fff8e6' : '#e6f4ee',
+                                    color: isLate ? '#d4900a' : '#008751',
+                                    padding: '2px 6px',
+                                    borderRadius: '6px'
                                 }}>
-                                    📍 {formattedDistance}
+                                    {totalCost} Token{totalCost !== 1 ? 's' : ''}
                                 </span>
-                            )}
+                            </div>
 
-                            <span style={{
-                                fontSize: '0.62rem',
+                            <div style={{ fontSize: '0.65rem', color: '#8fa396' }}>
+                                Closes at {formatTime(signInClose)}
+                            </div>
+                        </div>
+
+                        <button
+                            onClick={handleSignIn}
+                            disabled={member.token_balance < totalCost || signingIn || !userLocation}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                padding: '10px 16px',
+                                borderRadius: '8px',
+                                background: member.token_balance < totalCost || !userLocation
+                                    ? '#c2e0cf' : '#008751',
+                                color: '#ffffff',
+                                border: 'none',
                                 fontWeight: 700,
-                                background: isLate ? '#fff8e6' : '#e6f4ee',
-                                color: isLate ? '#d4900a' : '#008751',
-                                padding: '2px 6px',
-                                borderRadius: '6px'
-                            }}>
-                                {totalCost} Token{totalCost !== 1 ? 's' : ''}
-                            </span>
-                        </div>
-                        
-                        <div style={{ fontSize: '0.65rem', color: '#8fa396' }}>
-                            Closes at {formatTime(signInClose)}
-                        </div>
+                                fontSize: '0.75rem',
+                                cursor: member.token_balance < totalCost || signingIn || !userLocation
+                                    ? 'not-allowed' : 'pointer',
+                                boxShadow: '0 2px 8px rgba(0,135,81,0.25)'
+                            }}
+                        >
+                            <MapPin size={16} color="white" />
+                            {signingIn ? 'Signing in...'
+                                : member.token_balance < totalCost ? 'No Tokens'
+                                : !userLocation ? 'No GPS'
+                                : 'Sign In'}
+                        </button>
                     </div>
-
-                    <button
-                        onClick={handleSignIn}
-                        disabled={member.token_balance < totalCost || signingIn || !userLocation}
-                        style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            padding: '10px 16px',
-                            borderRadius: '8px',
-                            background: member.token_balance < totalCost || !userLocation
-                                ? '#c2e0cf' : '#008751',
-                            color: '#ffffff',
-                            border: 'none',
-                            fontWeight: 700,
-                            fontSize: '0.75rem',
-                            cursor: member.token_balance < totalCost || signingIn || !userLocation
-                                ? 'not-allowed' : 'pointer',
-                            boxShadow: '0 2px 8px rgba(0,135,81,0.25)'
-                        }}
-                    >
-                        <MapPin size={16} color="white" />
-                        {signingIn ? 'Signing in...'
-                            : member.token_balance < totalCost ? 'No Tokens'
-                            : !userLocation ? 'No GPS'
-                            : 'Sign In'}
-                    </button>
                 </div>
             </div>
-        </div>
-    )
-}
+        )
+    }
 
+    // ==========================================
+    // 5. SIGN-IN CLOSED STATE
+    // ==========================================
     if (meeting.state === 'sign_in_closed') {
         return (
             <div style={cardStyle}>

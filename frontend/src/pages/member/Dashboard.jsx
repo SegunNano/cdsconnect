@@ -78,13 +78,20 @@ export default function Dashboard() {
         setSigningIn(true)
         setSignInError('')
         try {
-            await signIn(userLocation.lat, userLocation.lng)
-            const [memberRes, meetingRes] = await Promise.all([
+            const result = await signIn(userLocation.lat, userLocation.lng)
+            
+            // Refresh everything after sign in
+            const [memberRes, meetingRes, todayRes, attendanceRes] = await Promise.all([
                 getMyProfile(),
-                getActiveMeeting()
+                getActiveMeeting(),
+                api.get('/attendance/today'),
+                api.get('/attendance/me')
             ])
             setMember(memberRes.data)
             setMeeting(meetingRes.data)
+            setTodayStatus(todayRes.data.data)
+            setRecentAttendance(attendanceRes.data.data.slice(0, 3))
+        
         } catch (err) {
             setSignInError(err.response?.data?.message || 'Sign in failed')
         } finally {
