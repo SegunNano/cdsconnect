@@ -1,9 +1,12 @@
-import { Navigate } from 'react-router-dom'
+import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import MemberLayout from './MemberLayout'
 
+const NO_LAYOUT_PATHS = ['/dev', '/coordinator']
+
 export default function ProtectedRoute({ children }) {
     const { member, loading } = useAuth()
+    const location = useLocation()
 
     if (loading) return (
         <div style={{
@@ -21,8 +24,10 @@ export default function ProtectedRoute({ children }) {
 
     if (!member) return <Navigate to="/login" replace />
 
-    // Coordinator goes straight to their page — no MemberLayout
-    if (member.member_type === 'staff') return children
+    // Staff and pages with their own layout skip MemberLayout
+    if (member.member_type === 'staff' || NO_LAYOUT_PATHS.includes(location.pathname)) {
+        return children
+    }
 
     return <MemberLayout>{children}</MemberLayout>
 }
