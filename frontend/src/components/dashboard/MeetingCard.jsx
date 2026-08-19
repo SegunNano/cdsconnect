@@ -106,7 +106,7 @@ export function MeetingCard({ meeting, member, attendance,  handleSignIn, signin
                                     Attendance No.
                                 </div>
                                 <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#008751' }}>
-                                    #{String(attendance.attendance_number || attendance.id).padStart(3, '0')}
+                                    #{String(attendance.sequence_number || attendance.id).padStart(3, '0')}
                                 </div>
                             </div>
 
@@ -129,10 +129,10 @@ export function MeetingCard({ meeting, member, attendance,  handleSignIn, signin
                             <div style={{ display: 'flex', justifyContent: 'center', padding: '4px' }}>
                                 <QRCodeSVG
                                     value={JSON.stringify({
-                                    attendance_id: attendance.id,
-                                    member_id: member.id,
-                                    meeting_id: meeting.id,
-                                    sequence_number: attendance.sequence_number || attendance.attendance_number
+                                    meetingId: meeting.id,
+                                    attendanceId: attendance.id,
+                                    confirmedName: `${member.first_name} ${member.last_name}`,
+                                    confirmedStateCode: member.state_code
                                 })}
                                     size={140}
                                     level="M"

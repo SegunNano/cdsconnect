@@ -153,7 +153,7 @@ export default function Dashboard() {
                 />
 
                 <div style={{ padding: '16px 20px 0' }}>
-                   // Inside parent (e.g., Dashboard.jsx)
+     
                     <MeetingCard 
                         meeting={meeting} 
                         member={member} 
