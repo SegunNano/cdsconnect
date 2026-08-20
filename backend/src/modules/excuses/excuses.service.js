@@ -198,6 +198,7 @@ export const reviewExcuse = async (coordinatorId, excuseId, decision) => {
         `Your excuse for ${meeting.title} has been approved.`,
         NOTIFICATION_TYPES.EXCUSE_APPROVED
     )
+    await issueClearance(excuse.member_id, excuse.meeting_id)
 
         return { status: 'approved', message: 'Excuse approved. Token deducted and member marked present.' }
     }

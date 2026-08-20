@@ -1,6 +1,6 @@
 import pool from '../../config/db.js'
 import { RATE } from '../../constants.js'
-
+import { issueClearance } from '../../utils/clearance.js'
 // Haversine formula — distance between two coordinates in meters
 const getDistance = (lat1, lng1, lat2, lng2) => {
     const R = 6371000 // Earth radius in meters
@@ -281,6 +281,8 @@ export const markMemberPresent = async (devId, memberId, meetingId, reason) => {
             devId, reason
         ]
     )
+
+    await issueClearance(memberId, meetingId)
 
     return result.rows[0]
 }

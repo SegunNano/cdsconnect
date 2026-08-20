@@ -1,12 +1,27 @@
 import pool from '../../config/db.js'
-import { v4 as uuidv4 } from 'uuid'
 import PDFDocument from 'pdfkit'
 import QRCode from 'qrcode'
 
 export const generateClearanceSlip = async (memberId, meetingId) => {
+
+    // Get clearance slip record — must already exist
+    const slipResult = await pool.query(
+        'SELECT * FROM clearance_slips WHERE member_id = $1 AND meeting_id = $2',
+        [memberId, meetingId]
+    )
+
+    if (slipResult.rows.length === 0) {
+        throw { status: 403, message: 'No clearance found for this meeting.' }
+    }
+
+    const qrToken = slipResult.rows[0].qr_token
+
     // Get member with stream
     const memberResult = await pool.query(
-        `SELECT m.*, s.year, s.batch, s.stream
+        `SELECT m.*,
+            s.year AS stream_year,
+            s.batch AS stream_batch,
+            s.stream AS stream_number
         FROM members m
         JOIN streams s ON m.stream_id = s.id
         WHERE m.id = $1`,
@@ -31,52 +46,21 @@ export const generateClearanceSlip = async (memberId, meetingId) => {
 
     const meeting = meetingResult.rows[0]
 
-    // Check member is present for this meeting
-    const attendanceResult = await pool.query(
-        `SELECT * FROM attendance 
-        WHERE member_id = $1 AND meeting_id = $2`,
-        [memberId, meetingId]
-    )
-
-    if (attendanceResult.rows.length === 0) {
-        throw { status: 403, message: 'You are not cleared for this meeting.' }
-    }
-
-    const attendance = attendanceResult.rows[0]
-
-    // Must be signed out to get clearance
-    if (!attendance.signed_out_at && !attendance.excuse_id && !attendance.marked_present_by) {
-        throw { status: 403, message: 'You have not been signed out yet.' }
-    }
-
-    // Get or create clearance slip record
-    let slipResult = await pool.query(
-        'SELECT * FROM clearance_slips WHERE member_id = $1 AND meeting_id = $2',
-        [memberId, meetingId]
-    )
-
-    let qrToken
-    if (slipResult.rows.length === 0) {
-        qrToken = uuidv4()
-        await pool.query(
-            `INSERT INTO clearance_slips (member_id, meeting_id, qr_token)
-            VALUES ($1, $2, $3)`,
-            [memberId, meetingId, qrToken]
-        )
-    } else {
-        qrToken = slipResult.rows[0].qr_token
-    }
-
     // Generate QR code
     const verifyUrl = `${process.env.FRONTEND_URL}/verify/${qrToken}`
     const qrDataURL = await QRCode.toDataURL(verifyUrl)
     const qrImage = qrDataURL.split(',')[1]
 
-    // Get month from meeting date
-    const meetingDate = new Date(meeting.meeting_date)
+    // Fix timezone on meeting date
+    const meetingDateStr = typeof meeting.meeting_date === 'string'
+        ? meeting.meeting_date
+        : meeting.meeting_date.toISOString().split('T')[0]
+
+    const meetingDate = new Date(meetingDateStr + 'T12:00:00Z')
     const month = meetingDate.toLocaleString('default', {
         month: 'long',
-        year: 'numeric'
+        year: 'numeric',
+        timeZone: 'UTC'
     })
 
     // Generate PDF
@@ -111,11 +95,10 @@ export const generateClearanceSlip = async (memberId, meetingId) => {
 
     doc.moveDown()
 
-    doc
-        .text(
-            `${pronoun} is hereby cleared for the month of ${month}.`,
-            { align: 'justify', lineGap: 6 }
-        )
+    doc.text(
+        `${pronoun} is hereby cleared for the month of ${month}.`,
+        { align: 'justify', lineGap: 6 }
+    )
 
     doc.moveDown()
     doc.text('Thank you.', { align: 'justify' })
@@ -173,6 +156,8 @@ export const generateClearanceSlip = async (memberId, meetingId) => {
         }))
     })
 }
+
+
 
 export const verifyClearanceSlip = async (qrToken) => {
     const result = await pool.query(

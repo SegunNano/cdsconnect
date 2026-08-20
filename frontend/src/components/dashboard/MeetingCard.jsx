@@ -350,15 +350,30 @@ export function MeetingCard({ meeting, member, attendance,  handleSignIn, signin
                     }}>
                         <div style={{ flex: 1 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
-                                {formattedDistance && (
-                                    <span style={{
+                             {formattedDistance && (
+                                <>
+                                    <span
+                                    style={{
                                         fontSize: '0.75rem',
                                         fontWeight: 700,
-                                        color: isWithinGeofence ? '#008751' : '#e53e3e'
-                                    }}>
-                                        📍 {formattedDistance}
+                                        color: isWithinGeofence ? '#008751' : '#e53e3e',
+                                    }}
+                                    >
+                                    📍 {formattedDistance}
                                     </span>
-                                )}
+                                
+                                    <div
+                                    style={{
+                                        fontSize: '0.65rem',
+                                        color: '#8fa396',
+                                        textAlign: 'center',
+                                        marginTop: '4px',
+                                    }}
+                                    >
+                                    GPS accuracy: ±{Math.round(userLocation?.accuracy || 0)}m
+                                    </div>
+                                </>
+                            )}
 
                                 <span style={{
                                     fontSize: '0.62rem',

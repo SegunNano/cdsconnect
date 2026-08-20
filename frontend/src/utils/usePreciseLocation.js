@@ -1,53 +1,62 @@
-export const GEO_OPTIONS = {
-  enableHighAccuracy: true, // Forces physical GPS hardware where available
-  timeout: 10000,           // Max wait time (ms) for a fix
-  maximumAge: 0             // Stops browser caching; forces fresh readings
-};
-
-/**
- * Promise-based precise location getter.
- * Listens for GPS updates up to maxWaitMs, resolving early if accuracy <= targetAccuracy.
- */
-export function getPreciseLocation(targetAccuracy = 15, maxWaitMs = 10000) {
+export const getStableLocation = (targetAccuracy = 20, maxWaitMs = 10000) => {
   return new Promise((resolve, reject) => {
-    let bestFix = null;
-    let watchId = null;
+    const readings = []
+    let watchId = null
 
+    // Hard safety timer to prevent hung promises
     const timer = setTimeout(() => {
-      if (watchId !== null) navigator.geolocation.clearWatch(watchId);
-      
-      // Reject if even our best fix is too inaccurate
-      if (bestFix && bestFix.coords.accuracy <= 25) {
-        resolve(bestFix);
+      cleanup()
+      if (readings.length > 0) {
+        // Return the best reading collected before timing out
+        const best = readings.reduce((prev, curr) =>
+          curr.accuracy < prev.accuracy ? curr : prev
+        )
+        resolve(best)
       } else {
-        const currentAcc = bestFix ? Math.round(bestFix.coords.accuracy) : 'unknown';
-        reject(new Error(`Weak GPS signal (±${currentAcc}m accuracy). Please step outside or near a window.`));
+        reject(new Error(`Could not obtain a precise GPS fix within ${maxWaitMs / 1000}s.`))
       }
-    }, maxWaitMs);
+    }, maxWaitMs)
+
+    const cleanup = () => {
+      clearTimeout(timer)
+      if (watchId !== null) {
+        navigator.geolocation.clearWatch(watchId)
+      }
+    }
 
     watchId = navigator.geolocation.watchPosition(
-      (pos) => {
-        if (!bestFix || pos.coords.accuracy < bestFix.coords.accuracy) {
-          bestFix = pos;
+      (position) => {
+        const { latitude: lat, longitude: lng, accuracy } = position.coords
+
+        const currentReading = { lat, lng, accuracy }
+        readings.push(currentReading)
+
+        // Resolve immediately if high accuracy threshold is reached early
+        if (accuracy <= targetAccuracy) {
+          cleanup()
+          resolve(currentReading)
+          return
         }
 
-        // Lock onto exact location early if target met
-        if (pos.coords.accuracy <= targetAccuracy) {
-          clearTimeout(timer);
-          navigator.geolocation.clearWatch(watchId);
-          resolve(pos);
+        // Once 3 readings are collected, pick and resolve the most accurate
+        if (readings.length >= 3) {
+          cleanup()
+          const best = readings.reduce((prev, curr) =>
+            curr.accuracy < prev.accuracy ? curr : prev
+          )
+          resolve(best)
         }
       },
       (err) => {
-        clearTimeout(timer);
-        if (watchId !== null) navigator.geolocation.clearWatch(watchId);
-        reject(err);
+        cleanup()
+        reject(err)
       },
       {
         enableHighAccuracy: true,
         timeout: maxWaitMs,
         maximumAge: 0
       }
-    );
-  });
+    )
+  })
 }
+
