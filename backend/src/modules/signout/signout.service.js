@@ -1,4 +1,6 @@
 import pool from '../../config/db.js'
+import { v4 as uuidv4 } from 'uuid'
+import { createNotification } from '../notifications/notifications.service.js'
 
 const isSameDay = (meetingDate) => {
     const todayStr = new Date().toISOString().split('T')[0]
@@ -104,6 +106,25 @@ export const signOutMember = async (officerId, meetingId, attendanceId, confirme
         RETURNING *`,
         [new Date(), attendanceId]
     )
+
+
+    const qrToken = uuidv4()
+    await pool.query(
+        `INSERT INTO clearance_slips (member_id, meeting_id, qr_token)
+        VALUES ($1, $2, $3)
+        ON CONFLICT (member_id, meeting_id) DO NOTHING`,
+        [signedOutRecord.member_id, meetingId, qrToken]
+    )
+
+  
+    // Notify member
+    await createNotification(
+        signedOutRecord.member_id,
+        'Clearance Ready 🎉',
+        `You have been signed out of ${meetingResult.rows[0].title}. Your clearance slip is ready to download.`,
+        'clearance_ready'
+    )
+
 
     return result.rows[0]
 }

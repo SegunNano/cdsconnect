@@ -64,24 +64,61 @@ export default function Dashboard() {
     }, [])
 
     useEffect(() => {
-    if ('geolocation' in navigator) {
-        setLocationLoading(true)
-        navigator.geolocation.getCurrentPosition(
-            (position) => {
-                setUserLocation({
-                    lat: position.coords.latitude,
-                    lng: position.coords.longitude
-                })
-                setLocationLoading(false)
-            },
-            (error) => {
-                console.error('GPS error:', error)
-                setLocationLoading(false)
-            },
-            { enableHighAccuracy: true }
-        )
-    }
-}, [])
+        if ('geolocation' in navigator) {
+            setLocationLoading(true)
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    setUserLocation({
+                        lat: position.coords.latitude,
+                        lng: position.coords.longitude
+                    })
+                    setLocationLoading(false)
+                },
+                (error) => {
+                    console.error('GPS error:', error)
+                    setLocationLoading(false)
+                },
+                { enableHighAccuracy: true }
+            )
+        }
+    }, [])
+    // useEffect(() => {
+    //     if (!('geolocation' in navigator)) {
+    //         console.error('Geolocation is not supported by this browser.')
+    //         return
+    //     }
+    
+    //     let isMounted = true
+    //     setLocationLoading(true)
+    
+    //     const fetchLocation = async () => {
+    //         try {
+    //             // Get precise position within 6 seconds (target: <= 15m error margin)
+    //             const position = await getPreciseLocation(15, 6000)
+                
+    //             if (isMounted) {
+    //                 setUserLocation({
+    //                     lat: position.coords.latitude,
+    //                     lng: position.coords.longitude,
+    //                     accuracy: position.coords.accuracy
+    //                 })
+    //             }
+    //         } catch (error) {
+    //             console.error('GPS error:', error)
+    //         } finally {
+    //             if (isMounted) {
+    //                 setLocationLoading(false)
+    //             }
+    //         }
+    //     }
+    
+    //     fetchLocation()
+    
+    //     // Cleanup to prevent state updates if the component unmounts mid-fetch
+    //     return () => {
+    //         isMounted = false
+    //     }
+    // }, [])
     
     // Update handleSignIn to refresh attendance
     const handleSignIn = async () => {

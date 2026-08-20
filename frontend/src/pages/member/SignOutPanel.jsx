@@ -51,6 +51,17 @@ export default function SignOutPanel() {
     }
   }, [])
 
+  useEffect(() => {
+  if (scanFeedback) {
+    const timer = setTimeout(() => {
+      setScanFeedback(null) // or setScanFeedback('')
+      setIsScanning(true)
+    }, 3000)
+
+    return () => clearTimeout(timer)
+  }
+}, [scanFeedback])
+
   const handleDirectQrSignOut = useCallback(async (decodedText) => {
     setError('')
     try {
@@ -73,13 +84,8 @@ export default function SignOutPanel() {
       }
 
       setSigningOut(true)
-
-      await api.post('/signout/confirm', {
-        meetingId: payload.meetingId,
-        attendanceId: payload.attendanceId,
-        confirmedName: payload.confirmedName,
-        confirmedStateCode: payload.confirmedStateCode
-      })
+      const {meetingId, attendanceId, confirmedName, confirmedStateCode} =payload
+      await api.post('/signout/confirm', { meetingId, attendanceId, confirmedName, confirmedStateCode })
 
       setAttendance((prev) =>
         prev.map((a) =>
@@ -89,7 +95,7 @@ export default function SignOutPanel() {
         )
       )
 
-      setScanFeedback('Sign-out successful!')
+      setScanFeedback(`Signed-out ${confirmedName} successfully!`)
       setIsScanning(false)
     } catch (err) {
       console.error('Signout processing error:', err)
@@ -121,7 +127,6 @@ export default function SignOutPanel() {
             { facingMode: 'environment' },
             config,
             async (decodedText) => {
-              console.log('RAW QR DETECTED:', decodedText)
               setScanFeedback(`Scanned raw text: ${decodedText}`)
               await handleDirectQrSignOut(decodedText)
             },
@@ -322,15 +327,39 @@ export default function SignOutPanel() {
           {scanFeedback && (
             <div
               style={{
-                background: '#e6f4ee',
-                color: '#008751',
-                fontSize: '0.8rem',
-                padding: '12px 14px',
-                borderRadius: '12px',
-                marginBottom: '16px',
-                fontWeight: 600
+                position: 'fixed',
+                top: '20px',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                zIndex: 3000,
+                background: '#008751',
+                color: '#ffffff',
+                fontSize: '0.85rem',
+                fontWeight: 600,
+                padding: '12px 22px',
+                borderRadius: '50px',
+                boxShadow: '0 8px 24px rgba(0, 135, 81, 0.25)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                whiteSpace: 'nowrap',
+                fontFamily: "'Plus Jakarta Sans', sans-serif"
               }}
             >
+              <span
+                style={{
+                  background: 'rgba(255, 255, 255, 0.2)',
+                  width: '20px',
+                  height: '20px',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '0.75rem'
+                }}
+              >
+                ✓
+              </span>
               {scanFeedback}
             </div>
           )}
