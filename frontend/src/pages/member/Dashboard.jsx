@@ -12,6 +12,7 @@ import { MeetingCard } from '../../components/dashboard/MeetingCard'
 import { ServiceProgressCard } from '../../components/dashboard/ServiceProgressCard'
 import { QuickActionsGrid } from '../../components/dashboard/QuickActionsGrid'
 import { RecentAttendanceList } from '../../components/dashboard/RecentAttendanceList'
+import { getStableLocation } from '../../utils/usePreciseLocation'
 
 export default function Dashboard() {
     const { logout } = useAuth()
