@@ -3,8 +3,7 @@ import { MapPin, CalendarOff, CheckCircle2, Clock } from 'lucide-react'
 import { MapContainer, TileLayer, Marker, Circle, useMap } from 'react-leaflet'
 import { QRCodeSVG } from 'qrcode.react'
 import { venuePin, userPin, getDistanceInMeters } from './leafletIcons'
-import { useState } from 'react'
-import { getMyAttendance } from '../../services/attendance.service'
+
 
 // Helper component to dynamically adjust map bounds to include both venue and user location
 function RecenterAutomatically({ venueLat, venueLng, userLocation }) {
@@ -25,7 +24,15 @@ function RecenterAutomatically({ venueLat, venueLng, userLocation }) {
     return null
 }
 
-export function MeetingCard({ meeting, member, attendance,  handleSignIn, signingIn, signInError, userLocation, locationLoading }) {
+function TodaysMeeting () {
+    return (
+        <div style={{ fontSize: '0.7rem', fontWeight: 600, color: '#8fa396', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '4px' }}>
+            Today's Meeting
+        </div>
+    )
+}
+
+export function MeetingCard({ meeting, member, attendance,  handleSignIn, signingIn, signInError, userLocation }) {
     
     
     const cardStyle = {
@@ -64,7 +71,6 @@ export function MeetingCard({ meeting, member, attendance,  handleSignIn, signin
     // Check attendance status flags
     const hasSignedIn = Boolean(attendance?.signed_in_at)
     const hasSignedOut = Boolean(attendance?.signed_out_at)
-    console.log({hasSignedIn, attendance})
 
     // ==========================================
     // 1. SIGNED-IN / SIGNED-OUT CARD STATES
@@ -106,7 +112,7 @@ export function MeetingCard({ meeting, member, attendance,  handleSignIn, signin
                                     Attendance No.
                                 </div>
                                 <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#008751' }}>
-                                    #{String(attendance.sequence_number || attendance.id).padStart(3, '0')}
+                                    #{String(attendance.sequence_number).padStart(3, '0')}
                                 </div>
                             </div>
 
@@ -137,11 +143,9 @@ export function MeetingCard({ meeting, member, attendance,  handleSignIn, signin
                                     size={140}
                                     level="M"
                                     includeMargin={true}
+                                    fgColor="#008751" // Custom foreground color (e.g., Green)
+                                    bgColor="#FFFFFF"
                                 />
-                            </div>
-
-                            <div style={{ fontSize: '0.65rem', color: '#8fa396', marginTop: '6px' }}>
-                                Token: {attendance.sign_out_token?.slice(0, 8) || 'VAL-OK'}
                             </div>
                         </div>
                     </div>
@@ -200,9 +204,7 @@ export function MeetingCard({ meeting, member, attendance,  handleSignIn, signin
     if (meeting.state === 'today_not_open') {
         return (
             <div style={cardStyle}>
-                <div style={{ fontSize: '0.7rem', fontWeight: 600, color: '#8fa396', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '4px' }}>
-                    Today's Meeting
-                </div>
+                <TodaysMeeting />
                 <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0d1b12', marginBottom: '12px' }}>
                     {meeting.title}
                 </div>
@@ -413,9 +415,7 @@ export function MeetingCard({ meeting, member, attendance,  handleSignIn, signin
     if (meeting.state === 'sign_in_closed') {
         return (
             <div style={cardStyle}>
-                <div style={{ fontSize: '0.7rem', fontWeight: 600, color: '#8fa396', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '4px' }}>
-                    Today's Meeting
-                </div>
+                <TodaysMeeting />
                 <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0d1b12', marginBottom: '12px' }}>
                     {meeting.title}
                 </div>

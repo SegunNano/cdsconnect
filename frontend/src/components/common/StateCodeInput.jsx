@@ -16,7 +16,7 @@ export default function StateCodeInput({ value, onChange }) {
 
         if (part === 1) newParts[0] = val.toUpperCase().slice(0, 2)
         if (part === 2) newParts[1] = val.toUpperCase().slice(0, 3)
-        if (part === 3) newParts[2] = val.toUpperCase().slice(0, 4)
+        if (part === 3) newParts[2] = val.toUpperCase().slice(0, 5)
 
         // Auto advance to next input
         if (nextRef && val.length >= (part === 1 ? 2 : part === 2 ? 3 : 4)) {
@@ -92,7 +92,7 @@ export default function StateCodeInput({ value, onChange }) {
                 onChange={e => handleChange(3, e.target.value, null)}
                 onKeyDown={e => handleKeyDown(3, e, ref2)}
                 placeholder="4658"
-                maxLength={4}
+                maxLength={5}
                 style={inputStyle}
             />
         </div>

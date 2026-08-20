@@ -82,7 +82,7 @@ export default function NotificationsModal({ isOpen, onClose, onRead }) {
                     position: 'fixed',
                     inset: 0,
                     background: 'rgba(0,0,0,0.4)',
-                    zIndex: 200,
+                    zIndex: 2000,
                     backdropFilter: 'blur(2px)'
                 }}
             />
@@ -97,7 +97,7 @@ export default function NotificationsModal({ isOpen, onClose, onRead }) {
                 maxWidth: '390px',
                 background: '#ffffff',
                 borderRadius: '24px 24px 0 0',
-                zIndex: 201,
+                zIndex: 2002,
                 maxHeight: '80vh',
                 display: 'flex',
                 flexDirection: 'column',

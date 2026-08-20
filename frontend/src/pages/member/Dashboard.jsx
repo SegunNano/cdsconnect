@@ -62,6 +62,26 @@ export default function Dashboard() {
         }
         fetchData()
     }, [])
+
+    useEffect(() => {
+    if ('geolocation' in navigator) {
+        setLocationLoading(true)
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                setUserLocation({
+                    lat: position.coords.latitude,
+                    lng: position.coords.longitude
+                })
+                setLocationLoading(false)
+            },
+            (error) => {
+                console.error('GPS error:', error)
+                setLocationLoading(false)
+            },
+            { enableHighAccuracy: true }
+        )
+    }
+}, [])
     
     // Update handleSignIn to refresh attendance
     const handleSignIn = async () => {

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, CheckCircle, QrCode, X, AlertCircle, Loader } from 'lucide-react'
 import { Html5Qrcode } from 'html5-qrcode'
 import api from '../../services/api'
+import { ConfirmSignOutModal } from '../../components/dashboard/ConfirmSignOutModal'
 
 export default function SignOutPanel() {
   const navigate = useNavigate()
@@ -416,7 +417,7 @@ export default function SignOutPanel() {
           </div>
 
           {/* MANUAL CONFIRMATION PANEL */}
-          {confirming && (
+          {/* {confirming && (
             <div
               style={{
                 background: '#ffffff',
@@ -527,6 +528,22 @@ export default function SignOutPanel() {
                 </button>
               </div>
             </div>
+          )} */}
+          {confirming && (
+
+            <ConfirmSignOutModal
+              confirming={confirming}
+              form={form}
+              setForm={setForm}
+              signingOut={signingOut}
+              error={error}
+              onCancel={() => {
+                setConfirming(null)
+                setForm({ name: '', stateCode: '' })
+                setError('')
+              }}
+              onSubmit={() => handleConfirmSignOut(confirming)}
+            />
           )}
 
           {/* LIST */}
