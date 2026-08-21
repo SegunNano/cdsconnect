@@ -118,7 +118,8 @@ export const getRegistrationOptions = async (memberId) => {
     const options = await generateRegistrationOptions({
         rpName: RP_NAME,
         rpID: RP_ID,
-        userID: Buffer.from(String(member.id)),
+        // Pass userID as a plain string or Uint8Array
+        userID: new TextEncoder().encode(String(member.id)),
         userName: member.email,
         userDisplayName: `${member.first_name} ${member.last_name}`,
         attestationType: 'none',
@@ -141,7 +142,10 @@ export const getRegistrationOptions = async (memberId) => {
 // ── WEBAUTHN REGISTRATION VERIFY ─────────────────
 
 export const verifyRegistration = async (memberId, credential) => {
-    // 1. Fetch member from DB
+    if (!credential) {
+        throw { status: 400, message: 'WebAuthn response credential is required' }
+    }
+
     const result = await pool.query(
         'SELECT * FROM members WHERE id = $1',
         [memberId]
@@ -151,21 +155,18 @@ export const verifyRegistration = async (memberId, credential) => {
     if (!member) {
         throw { status: 404, message: 'Member not found' }
     }
-    console.log(member)
 
     if (!member.webauthn_challenge) {
         throw { status: 400, message: 'No registration challenge found for this member' }
     }
 
-    const expectedUserID = Buffer.from(String(member.id))
-
-    // 2. Verify registration response with SimpleWebAuthn
+    // Verify registration response with SimpleWebAuthn
     const verification = await verifyRegistrationResponse({
         response: credential,
         expectedChallenge: member.webauthn_challenge,
         expectedOrigin: ORIGIN,
         expectedRPID: RP_ID,
-        expectedUserID
+        expectedUserID: String(member.id)
     })
 
     if (!verification.verified || !verification.registrationInfo) {
@@ -182,7 +183,7 @@ export const verifyRegistration = async (memberId, credential) => {
              webauthn_challenge = NULL
          WHERE id = $4`,
         [
-            credentialID, // Base64URL string from SimpleWebAuthn
+            credentialID,
             Buffer.from(credentialPublicKey).toString('base64url'),
             counter,
             memberId
