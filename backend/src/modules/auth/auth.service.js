@@ -151,6 +151,7 @@ export const verifyRegistration = async (memberId, credential) => {
     if (!member) {
         throw { status: 404, message: 'Member not found' }
     }
+    console.log(member)
 
     if (!member.webauthn_challenge) {
         throw { status: 400, message: 'No registration challenge found for this member' }
