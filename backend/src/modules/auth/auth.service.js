@@ -141,34 +141,49 @@ export const getRegistrationOptions = async (memberId) => {
 // ── WEBAUTHN REGISTRATION VERIFY ─────────────────
 
 export const verifyRegistration = async (memberId, credential) => {
+    // 1. Fetch member from DB
     const result = await pool.query(
         'SELECT * FROM members WHERE id = $1',
         [memberId]
     )
     const member = result.rows[0]
 
+    if (!member) {
+        throw { status: 404, message: 'Member not found' }
+    }
+
+    if (!member.webauthn_challenge) {
+        throw { status: 400, message: 'No registration challenge found for this member' }
+    }
+
+    // 2. Verify registration response with SimpleWebAuthn
     const verification = await verifyRegistrationResponse({
         response: credential,
         expectedChallenge: member.webauthn_challenge,
         expectedOrigin: ORIGIN,
-        expectedRPID: RP_ID
+        expectedRPID: RP_ID,
+        // SimpleWebAuthn v10 requires expectedUserID as Uint8Array/Buffer
+        expectedUserID: Buffer.from(String(member.id))
     })
 
-    if (!verification.verified) {
-        throw { status: 400, message: 'WebAuthn registration failed' }
+    if (!verification.verified || !verification.registrationInfo) {
+        throw { status: 400, message: 'WebAuthn registration verification failed' }
     }
 
-    const { credentialID, credentialPublicKey, counter } =
-        verification.registrationInfo
+    const { credentialID, credentialPublicKey, counter } = verification.registrationInfo
 
-    // Save credential to member
+    // 3. Save credential data safely to PostgreSQL
+    // - credentialID is ALREADY a base64url string from @simplewebauthn/server.
+    // - credentialPublicKey is a Uint8Array, so Buffer.from() is safe here.
     await pool.query(
         `UPDATE members 
-        SET credential_id = $1, public_key = $2, sign_count = $3,
-            webauthn_challenge = NULL
-        WHERE id = $4`,
+         SET credential_id = $1, 
+             public_key = $2, 
+             sign_count = $3,
+             webauthn_challenge = NULL
+         WHERE id = $4`,
         [
-            Buffer.from(credentialID).toString('base64url'),
+            credentialID, // Already base64url string, do NOT wrap in Buffer.from()
             Buffer.from(credentialPublicKey).toString('base64url'),
             counter,
             memberId
