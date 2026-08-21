@@ -43,28 +43,25 @@ const allowedOrigins = [
 
 app.use(cors({
     origin: (origin, callback) => {
-        // Allow all in development
+        // 1. Allow non-browser / same-origin requests (Render health checks, cURL, server-to-server)
+        if (!origin) {
+            return callback(null, true)
+        }
+
+        // 2. Allow all during development
         if (process.env.NODE_ENV === 'development') {
             return callback(null, true)
         }
-        
-        // Allow allowed origins or handle non-browser requests
+
+        // 3. Check allowed origins in production
         if (allowedOrigins.includes(origin)) {
             return callback(null, true)
         }
-        
-        // Allow requests without an origin (like mobile apps/cURL) ONLY if intended, otherwise block them in production:
-        if (!origin) {
-            return process.env.NODE_ENV === 'development'
-                ? callback(null, true)
-                : callback(new Error('Origin required'))
-        }
 
-        return callback(new Error('Not allowed by CORS'))
+        return callback(new Error(`CORS policy blocked access for origin: ${origin}`))
     },
     credentials: true
 }))
-
 
 // ── RATE LIMITING ────────────────────────────────
 const limiter = rateLimit({
