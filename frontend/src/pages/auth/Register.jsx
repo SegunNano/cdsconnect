@@ -66,7 +66,7 @@ export default function Register() {
         try {
             const result = await registerService(form)
             login(result.data.member, result.data.token)
-            navigate('/dashboard')
+            navigate('/onboarding')
         } catch (err) {
             setError(err.response?.data?.message || 'Something went wrong')
         } finally {

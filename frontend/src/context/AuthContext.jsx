@@ -18,6 +18,12 @@ export const AuthProvider = ({ children }) => {
         setLoading(false)
     }, [])
 
+
+    const completeOnboarding = (updatedMemberData) => {
+        localStorage.setItem('member', JSON.stringify(updatedMemberData))
+        setMember(updatedMemberData)
+    }
+
     const login = (memberData, tokenData) => {
         setMember(memberData)
         setToken(tokenData)
@@ -33,7 +39,7 @@ export const AuthProvider = ({ children }) => {
     }
 
     return (
-        <AuthContext.Provider value={{ member, token, login, logout, loading }}>
+        <AuthContext.Provider value={{ member, token, login, logout, loading, completeOnboarding }}>
             {children}
         </AuthContext.Provider>
     )

@@ -14,6 +14,7 @@ import TopUp from './pages/treasurer/TopUp'
 import CoordinatorDashboard from './pages/coordinator/CoordinatorDashboard'
 import DevDashboard from './pages/dev/DevDashboard'
 import VerifySlip from './pages/public/VerifySlip'
+import Onboarding from './pages/auth/Onboarding'
 
 function HomeRedirect() {
     const { member, loading } = useAuth()
@@ -31,6 +32,7 @@ export default function App() {
                     {/* Public */}
                     <Route path="/login" element={<Login />} />
                     <Route path="/register" element={<Register />} />
+                    <Route path="/onboarding" element={<Onboarding />} />
 
                     {/* Root redirect */}
                     <Route path="/" element={<HomeRedirect />} />

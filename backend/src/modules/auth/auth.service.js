@@ -1,5 +1,6 @@
 import pool from '../../config/db.js'
 import { hashPin, comparePin, validatePin } from '../../utils/pin.js'
+import { getMe, getMemberForLogin } from '../members/members.service.js'
 import { generateToken } from '../../utils/jwt.js'
 import {
     generateRegistrationOptions,
@@ -11,6 +12,7 @@ import {
 const RP_NAME = 'CDSConnect'
 const RP_ID = process.env.RP_ID || 'localhost'
 const ORIGIN = process.env.FRONTEND_URL || 'http://localhost:5173'
+
 
 // ── REGISTRATION ─────────────────────────────────
 
@@ -86,7 +88,8 @@ export const registerMember = async (data) => {
         pin_hash, gender, stream_id, breakout_session
     ])
 
-    const member = result.rows[0]
+    const memberId = result.rows[0].id
+    const member = await getMe(memberId)
 
     // Generate JWT
     const token = generateToken({
@@ -115,7 +118,7 @@ export const getRegistrationOptions = async (memberId) => {
     const options = await generateRegistrationOptions({
         rpName: RP_NAME,
         rpID: RP_ID,
-        userID: String(member.id),
+        userID: Buffer.from(String(member.id)),
         userName: member.email,
         userDisplayName: `${member.first_name} ${member.last_name}`,
         attestationType: 'none',
@@ -217,17 +220,22 @@ export const verifyAuthentication = async (email, credential) => {
         'SELECT * FROM members WHERE email = $1',
         [email]
     )
-    const member = result.rows[0]
+
+    if (result.rows.length === 0) {
+        throw { status: 404, message: 'Member not found' }
+    }
+
+    const raw = result.rows[0]
 
     const verification = await verifyAuthenticationResponse({
         response: credential,
-        expectedChallenge: member.webauthn_challenge,
+        expectedChallenge: raw.webauthn_challenge,
         expectedOrigin: ORIGIN,
         expectedRPID: RP_ID,
         authenticator: {
-            credentialID: Buffer.from(member.credential_id, 'base64url'),
-            credentialPublicKey: Buffer.from(member.public_key, 'base64url'),
-            counter: member.sign_count
+            credentialID: Buffer.from(raw.credential_id, 'base64url'),
+            credentialPublicKey: Buffer.from(raw.public_key, 'base64url'),
+            counter: raw.sign_count
         }
     })
 
@@ -238,8 +246,11 @@ export const verifyAuthentication = async (email, credential) => {
     // Update sign count
     await pool.query(
         'UPDATE members SET sign_count = $1, webauthn_challenge = NULL WHERE id = $2',
-        [verification.authenticationInfo.newCounter, member.id]
+        [verification.authenticationInfo.newCounter, raw.id]
     )
+
+    // Get full member with stream data
+    const member = await getMe(raw.id)
 
     const token = generateToken({
         id: member.id,
@@ -248,44 +259,22 @@ export const verifyAuthentication = async (email, credential) => {
         member_type: member.member_type
     })
 
-    const { pin_hash, public_key, credential_id, webauthn_challenge, ...safeMember } = member
-
-    return { member: safeMember, token }
+    return { member, token }
 }
 
 // ── PIN LOGIN (fallback) ──────────────────────────
 
 export const loginWithPin = async (email, pin) => {
-    const memberResult = await pool.query(
-        `SELECT 
-            m.id, m.first_name, m.last_name, m.state_code,
-            m.email, m.role, m.is_dev, m.gender,
-            m.stream_id, m.breakout_session,
-            m.token_balance, m.is_active, m.member_type,
-            m.created_at, m.pin_hash, m.public_key,
-            m.credential_id, m.webauthn_challenge, m.sign_count,
-            s.year AS stream_year,
-            s.batch AS stream_batch,
-            s.stream AS stream_number,
-            s.callup_date,
-            s.service_end
-        FROM members m
-        LEFT JOIN streams s ON m.stream_id = s.id
-        WHERE m.email = $1`,
-        [email]
-    )
-
-    if (memberResult.rows.length === 0) {
-        throw { status: 404, message: 'Member not found' }
-    }
-
-    const member = memberResult.rows[0]
+    const authMember = await getMemberForLogin(email)
 
     // Verify PIN
-    const pinMatch = await comparePin(pin, member.pin_hash)
+    const pinMatch = await comparePin(pin, authMember.pin_hash)
     if (!pinMatch) {
         throw { status: 401, message: 'Incorrect PIN' }
     }
+
+    // Get full member data with stream
+    const member = await getMe(authMember.id)
 
     const token = generateToken({
         id: member.id,
@@ -294,11 +283,5 @@ export const loginWithPin = async (email, pin) => {
         member_type: member.member_type
     })
 
-    const { 
-        pin_hash, public_key, credential_id, 
-        webauthn_challenge, sign_count, 
-        ...safeMember 
-    } = member
-
-    return { member: safeMember, token }
+    return { member, token }
 }

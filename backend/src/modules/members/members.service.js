@@ -1,5 +1,29 @@
 import pool from '../../config/db.js'
 
+export const getMemberForLogin = async (email) => {
+    const result = await pool.query(
+        `SELECT
+            id,
+            email,
+            pin_hash,
+            role,
+            is_dev,
+            member_type
+        FROM members
+        WHERE email = $1`,
+        [email]
+    )
+
+    if (result.rows.length === 0) {
+        throw {
+            status: 401,
+            message: 'Invalid email or PIN'
+        }
+    }
+
+    return result.rows[0]
+}
+
 export const getMe = async (memberId) => {
     const result = await pool.query(
         `SELECT 
@@ -7,6 +31,7 @@ export const getMe = async (memberId) => {
             m.email, m.role, m.is_dev, m.gender,
             m.stream_id, m.breakout_session,
             m.token_balance, m.is_active, m.member_type,
+            m.credential_id,
             m.created_at,
             s.year AS stream_year,
             s.batch AS stream_batch,
@@ -25,6 +50,7 @@ export const getMe = async (memberId) => {
 
     return result.rows[0]
 }
+
 
 export const getAllMembers = async () => {
     const result = await pool.query(

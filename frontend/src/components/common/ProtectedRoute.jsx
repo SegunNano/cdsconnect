@@ -24,7 +24,10 @@ export default function ProtectedRoute({ children }) {
 
     if (!member) return <Navigate to="/login" replace />
 
-    // Staff and pages with their own layout skip MemberLayout
+    if (!member.credential_id && location.pathname !== '/onboarding') {
+        return <Navigate to="/onboarding" replace />
+    }
+
     if (member.member_type === 'staff' || NO_LAYOUT_PATHS.includes(location.pathname)) {
         return children
     }
