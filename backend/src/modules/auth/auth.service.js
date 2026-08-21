@@ -174,6 +174,7 @@ export const verifyRegistration = async (memberId, credential) => {
     }
 
     const { credentialID, credentialPublicKey, counter } = verification.registrationInfo
+    console.log(verification.registrationInfo)
 
     await pool.query(
         `UPDATE members 
