@@ -156,14 +156,15 @@ export const verifyRegistration = async (memberId, credential) => {
         throw { status: 400, message: 'No registration challenge found for this member' }
     }
 
+    const expectedUserID = Buffer.from(String(member.id))
+
     // 2. Verify registration response with SimpleWebAuthn
     const verification = await verifyRegistrationResponse({
         response: credential,
         expectedChallenge: member.webauthn_challenge,
         expectedOrigin: ORIGIN,
         expectedRPID: RP_ID,
-        // SimpleWebAuthn v10 requires expectedUserID as Uint8Array/Buffer
-        expectedUserID: Buffer.from(String(member.id))
+        expectedUserID
     })
 
     if (!verification.verified || !verification.registrationInfo) {
@@ -172,9 +173,6 @@ export const verifyRegistration = async (memberId, credential) => {
 
     const { credentialID, credentialPublicKey, counter } = verification.registrationInfo
 
-    // 3. Save credential data safely to PostgreSQL
-    // - credentialID is ALREADY a base64url string from @simplewebauthn/server.
-    // - credentialPublicKey is a Uint8Array, so Buffer.from() is safe here.
     await pool.query(
         `UPDATE members 
          SET credential_id = $1, 
@@ -183,7 +181,7 @@ export const verifyRegistration = async (memberId, credential) => {
              webauthn_challenge = NULL
          WHERE id = $4`,
         [
-            credentialID, // Already base64url string, do NOT wrap in Buffer.from()
+            credentialID, // Base64URL string from SimpleWebAuthn
             Buffer.from(credentialPublicKey).toString('base64url'),
             counter,
             memberId
@@ -213,7 +211,7 @@ export const getAuthenticationOptions = async (email) => {
     const options = await generateAuthenticationOptions({
         rpID: RP_ID,
         allowCredentials: [{
-            id: Buffer.from(member.credential_id, 'base64url'),
+            id: member.credential_id, // SimpleWebAuthn accepts Base64URL string directly here
             type: 'public-key'
         }],
         userVerification: 'preferred'
@@ -242,15 +240,19 @@ export const verifyAuthentication = async (email, credential) => {
 
     const raw = result.rows[0]
 
+    if (!raw.webauthn_challenge) {
+        throw { status: 400, message: 'No active login challenge found for this member' }
+    }
+
     const verification = await verifyAuthenticationResponse({
         response: credential,
         expectedChallenge: raw.webauthn_challenge,
         expectedOrigin: ORIGIN,
         expectedRPID: RP_ID,
         authenticator: {
-            credentialID: Buffer.from(raw.credential_id, 'base64url'),
+            credentialID: raw.credential_id, // Pass Base64URL string directly
             credentialPublicKey: Buffer.from(raw.public_key, 'base64url'),
-            counter: raw.sign_count
+            counter: Number(raw.sign_count)
         }
     })
 
