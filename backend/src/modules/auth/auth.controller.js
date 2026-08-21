@@ -30,8 +30,6 @@ export const getWebAuthnRegistrationOptions = async (req, res, next) => {
 }
 
 export const verifyWebAuthnRegistration = async (req, res, next) => {
-
-    console.log(req)
     try {
         const result = await verifyRegistration(req.member.id, req.body)
         res.status(200).json({ success: true, data: result })
