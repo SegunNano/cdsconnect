@@ -10,8 +10,10 @@ import {
 } from '@simplewebauthn/server'
 
 const RP_NAME = 'CDSConnect'
-const RP_ID = process.env.RP_ID || 'localhost'
-const ORIGIN = process.env.FRONTEND_URL || 'http://localhost:5173'
+// const RP_ID = process.env.RP_ID || 'localhost'
+// const ORIGIN = process.env.FRONTEND_URL || 'http://localhost:5173'
+const RP_ID = "cdsconnect.vercel.app" || 'localhost'
+const ORIGIN = "https://cdsconnect.vercel.app" || 'http://localhost:5173'
 
 
 // ── REGISTRATION ─────────────────────────────────
@@ -173,8 +175,7 @@ export const verifyRegistration = async (memberId, credential) => {
         throw { status: 400, message: 'WebAuthn registration verification failed' }
     }
 
-    const { credentialID, credentialPublicKey, counter } = verification.registrationInfo
-    console.log(verification.registrationInfo)
+    const { id, publicKey, counter } = verification.registrationInfo.credential
 
     await pool.query(
         `UPDATE members 
@@ -184,8 +185,8 @@ export const verifyRegistration = async (memberId, credential) => {
              webauthn_challenge = NULL
          WHERE id = $4`,
         [
-            credentialID,
-            Buffer.from(credentialPublicKey).toString('base64url'),
+            id,
+            Buffer.from(publicKey).toString('base64url'),
             counter,
             memberId
         ]
@@ -243,6 +244,7 @@ export const verifyAuthentication = async (email, credential) => {
 
     const raw = result.rows[0]
 
+
     if (!raw.webauthn_challenge) {
         throw { status: 400, message: 'No active login challenge found for this member' }
     }
@@ -252,9 +254,9 @@ export const verifyAuthentication = async (email, credential) => {
         expectedChallenge: raw.webauthn_challenge,
         expectedOrigin: ORIGIN,
         expectedRPID: RP_ID,
-        authenticator: {
-            credentialID: raw.credential_id, // Pass Base64URL string directly
-            credentialPublicKey: Buffer.from(raw.public_key, 'base64url'),
+        credential: {
+            id: raw.credential_id, // Pass Base64URL string directly
+            publicKey: Buffer.from(raw.public_key, 'base64url'),
             counter: Number(raw.sign_count)
         }
     })

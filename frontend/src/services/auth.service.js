@@ -1,7 +1,7 @@
 import api from './api.js'
 
-export const loginService = async (email, pin) => {
-    const response = await api.post('/auth/login/pin', { email, pin })
+export const loginService = async (email, pin, credentialId=null) => {
+    const response = await api.post('/auth/login/pin', { email, pin, credentialId })
     return response.data
 }
 

@@ -17,7 +17,6 @@ export default function Login() {
     const [showPin, setShowPin] = useState(false)   
     const [passkeyLoading, setPasskeyLoading] = useState(false)
 
-
     const handlePasskeyLogin = async () => {
         if (!email) {
             setError('Enter your email first')
@@ -30,13 +29,13 @@ export default function Login() {
             login(result.data.member, result.data.token)
             navigate('/')
         } catch (err) {
-            // Passkey failed — show PIN form
+            // WebAuthn failed or denied — show PIN form
             setShowPin(true)
-            setError('')
+            setError(err.response?.data?.message || '')
         } finally {
             setPasskeyLoading(false)
         }
-}
+    }
 
     const handleSubmit = async (e) => {
         e.preventDefault()
@@ -48,21 +47,11 @@ export default function Login() {
         setError('')
 
         try {
-            // Try WebAuthn first if browser supports it
-        if (window.PublicKeyCredential) {
-            try {
-                const result = await authenticateWithDevice(email)
-                login(result.data.member, result.data.token)
-                navigate('/')
-                return
-            } catch (webAuthnErr) {
-                // WebAuthn failed or not registered — fall through to PIN
-                console.log(`WebAuthn not available, using PIN ${webAuthnErr}`)
-            }
-        }
+            // Retrieve persistent credential_id bound to this device/browser
+            const clientCredentialId = localStorage.getItem('cds_credential_id')
 
-        // Fall back to PIN login
-            const result = await loginService(email, pin)
+            // Send email, PIN, and persistent device ID to login service
+            const result = await loginService(email, pin, clientCredentialId)
             login(result.data.member, result.data.token)
             navigate('/')
         } catch (err) {
@@ -71,6 +60,7 @@ export default function Login() {
             setLoading(false)
         }
     }
+
 
     const inputStyle = {
         width: '100%',

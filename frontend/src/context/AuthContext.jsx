@@ -18,7 +18,6 @@ export const AuthProvider = ({ children }) => {
         setLoading(false)
     }, [])
 
-
     const completeOnboarding = (updatedMemberData) => {
         localStorage.setItem('member', JSON.stringify(updatedMemberData))
         setMember(updatedMemberData)
@@ -29,6 +28,11 @@ export const AuthProvider = ({ children }) => {
         setToken(tokenData)
         localStorage.setItem('member', JSON.stringify(memberData))
         localStorage.setItem('token', tokenData)
+
+        // Persist credential_id across logouts if returned by the backend
+        if (memberData?.credential_id) {
+            localStorage.setItem('cds_credential_id', memberData.credential_id)
+        }
     }
 
     const logout = () => {
@@ -36,6 +40,7 @@ export const AuthProvider = ({ children }) => {
         setToken(null)
         localStorage.removeItem('member')
         localStorage.removeItem('token')
+        // NOTE: We deliberately DO NOT remove 'cds_credential_id' so device binding stays intact
     }
 
     return (
