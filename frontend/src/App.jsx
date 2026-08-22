@@ -15,6 +15,7 @@ import CoordinatorDashboard from './pages/coordinator/CoordinatorDashboard'
 import DevDashboard from './pages/dev/DevDashboard'
 import VerifySlip from './pages/public/VerifySlip'
 import Onboarding from './pages/auth/Onboarding'
+import TokenHistory from './pages/member/TokenHistory'
 
 function HomeRedirect() {
     const { member, loading } = useAuth()
@@ -48,6 +49,7 @@ export default function App() {
                     <Route path="/signout" element={<ProtectedRoute><SignOutPanel /></ProtectedRoute>} />
                     <Route path="/topup" element={<ProtectedRoute><TopUp /></ProtectedRoute>} />
                     <Route path="/dev" element={<ProtectedRoute><DevDashboard /></ProtectedRoute>} />
+                    <Route path="/tokens" element={<ProtectedRoute><TokenHistory /></ProtectedRoute>} />
                     <Route path="/verify/:qrToken" element={<VerifySlip />} />
 
                     {/* Coordinator */}

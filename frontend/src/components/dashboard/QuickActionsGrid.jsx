@@ -1,11 +1,11 @@
-import { FileCheck, FilePlus, KeyRound, ClipboardList } from 'lucide-react'
+import { Wallet, FilePlus, KeyRound, ClipboardList } from 'lucide-react'
 
 export function QuickActionsGrid({ onNavigate }) {
     const quickActions = [
-        { icon: <FileCheck size={18} color="#008751" />, label: 'Clearance Slip', bg: '#e6f4ee', path: '/clearance' },
         { icon: <FilePlus size={18} color="#e53e3e" />, label: 'File Excuse', bg: '#fff0f0', path: '/excuse' },
         { icon: <KeyRound size={18} color="#d4900a" />, label: 'Reset PIN', bg: '#fff8e6', path: '/reset-pin' },
-        { icon: <ClipboardList size={18} color="#4f46e5" />, label: 'My Record', bg: '#eef2ff', path: '/attendance' }
+        { icon: <ClipboardList size={18} color="#4f46e5" />, label: 'My Record', bg: '#eef2ff', path: '/attendance' },
+        { icon: <Wallet size={18} color="#008751" />, label: 'Transactions', bg: '#e6f4ee', path: '/tokens' }
     ]
 
     return (

@@ -1,4 +1,5 @@
 import { Search, Shield, Smartphone, UserX, ChevronDown, ChevronUp } from 'lucide-react'
+import ManualMarkPresent from './ManualMarkPresent'
 
 export default function MembersTab({
     members,
@@ -190,6 +191,22 @@ export default function MembersTab({
                                                 Deactivate Member
                                             </button>
                                         )}
+                                        <div style={{ marginTop: '8px' }}>
+                                            <div style={{
+                                                fontSize: '0.68rem',
+                                                fontWeight: 600,
+                                                color: '#4a5e52',
+                                                textTransform: 'uppercase',
+                                                letterSpacing: '0.5px',
+                                                marginBottom: '6px'
+                                            }}>
+                                                Mark Present
+                                            </div>
+                                            <ManualMarkPresent
+                                                member={m}
+                                                onSuccess={() => setSelectedMember(null)}
+                                            />
+                                        </div>
                                     </div>
                                 )}
                             </div>

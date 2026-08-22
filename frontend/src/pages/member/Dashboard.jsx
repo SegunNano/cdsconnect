@@ -163,7 +163,7 @@ export default function Dashboard() {
 
                 <MemberChips
                     stateCode={member.state_code}
-                    tokenBalance={member.token_balance}
+                    breakoutSession={member.breakout_session}
                 />
 
                 <div style={{ padding: '16px 20px 0' }}>

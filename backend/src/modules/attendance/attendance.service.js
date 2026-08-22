@@ -148,11 +148,24 @@ export const signIn = async (memberId, latitude, longitude) => {
 
 export const getMemberAttendance = async (memberId) => {
     const result = await pool.query(
-        `SELECT a.*, m.title, m.meeting_date
-        FROM attendance a
-        JOIN meetings m ON a.meeting_id = m.id
-        WHERE a.member_id = $1
-        ORDER BY a.signed_in_at DESC`,
+        `SELECT 
+            m.id AS meeting_id,
+            m.title,
+            m.meeting_date,
+            a.id AS attendance_id,
+            a.signed_in_at,
+            a.signed_out_at,
+            a.is_late,
+            a.tokens_deducted,
+            a.excuse_id,
+            a.marked_present_by,
+            er.status AS excuse_status
+        FROM meetings m
+        LEFT JOIN attendance a 
+            ON a.meeting_id = m.id AND a.member_id = $1
+        LEFT JOIN excuse_requests er 
+            ON er.meeting_id = m.id AND er.member_id = $1
+        ORDER BY m.meeting_date DESC`,
         [memberId]
     )
     return result.rows

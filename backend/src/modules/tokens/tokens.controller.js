@@ -1,6 +1,7 @@
 import {
     topUpTokens,
     getMemberTopUpHistory,
+    getMyTopUpHistory,
     getAllTopUps
 } from './tokens.service.js'
 
@@ -25,6 +26,14 @@ export const getMyTopUps = async (req, res, next) => {
     } catch (err) {
         next(err)
     }
+}
+export const history = async (req, res, next) => {
+    try {
+        const history = await getMyTopUpHistory(req.member.id)
+        res.status(200).json({ success: true, data: history })
+        } catch (err) {
+            next(err)
+        }
 }
 
 export const getAll = async (req, res, next) => {

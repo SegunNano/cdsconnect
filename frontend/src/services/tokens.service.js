@@ -14,3 +14,7 @@ export const getMyTopUps = async () => {
     const response = await api.get('/tokens/me')
     return response.data
 }
+export const getMyTokenHistory = async () => {
+    const response = await api.get('/tokens/history')
+    return response.data
+}

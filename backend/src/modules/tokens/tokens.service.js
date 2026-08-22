@@ -70,6 +70,51 @@ export const getMemberTopUpHistory = async (memberId) => {
     return result.rows
 }
 
+export const getMyTopUpHistory = async (memberId)=> {
+        // Get topups
+        const topupsResult = await pool.query(
+            `SELECT 
+                'topup' AS type,
+                t.tokens_added AS tokens,
+                t.naira_value,
+                t.created_at,
+                m.first_name AS performed_by_first,
+                m.last_name AS performed_by_last
+            FROM topups t
+            JOIN members m ON t.performed_by = m.id
+            WHERE t.member_id = $1`,
+            [memberId]
+        )
+
+        // Get deductions from attendance
+        const deductionsResult = await pool.query(
+            `SELECT 
+                'deduction' AS type,
+                a.tokens_deducted AS tokens,
+                (a.tokens_deducted * $2) AS naira_value,
+                a.signed_in_at AS created_at,
+                mt.title AS meeting_title,
+                a.is_late,
+                CASE 
+                    WHEN a.excuse_id IS NOT NULL THEN 'excuse'
+                    WHEN a.marked_present_by IS NOT NULL THEN 'manual'
+                    ELSE 'attendance'
+                END AS deduction_type
+            FROM attendance a
+            JOIN meetings mt ON a.meeting_id = mt.id
+            WHERE a.member_id = $1`,
+            [memberId, RATE]
+        )
+
+        // Combine and sort by date
+        const history = [
+            ...topupsResult.rows,
+            ...deductionsResult.rows
+        ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+
+     return history
+}
+
 export const getAllTopUps = async () => {
     const result = await pool.query(
         `SELECT t.*,

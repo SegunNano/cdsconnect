@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, CheckCircle, XCircle, Clock, FileText } from 'lucide-react'
+import { ArrowLeft, CheckCircle, XCircle, Clock, FileText, Calendar } from 'lucide-react'
 import { getMyAttendance } from '../../services/attendance.service'
 
 export default function AttendanceHistory() {
@@ -22,40 +22,51 @@ export default function AttendanceHistory() {
         fetch()
     }, [])
 
-    const getStatus = (record) => {
-        if (record.excuse_id) return 'excused'
-        if (record.signed_out_at) return 'present'
-        if (record.signed_in_at && !record.signed_out_at) return 'pending'
-        return 'absent'
-    }
+const getStatus = (record) => {
+     if (record.excuse_status === 'approved' || record.excuse_status === 'approved_not_needed') return 'excused'
 
-    const statusConfig = {
-        present: {
-            label: 'Present',
-            color: '#008751',
-            bg: '#e6f4ee',
-            icon: <CheckCircle size={16} color="#008751" />
-        },
-        excused: {
-            label: 'Excused',
-            color: '#d4900a',
-            bg: '#fff8e6',
-            icon: <Clock size={16} color="#d4900a" />
-        },
-        pending: {
-            label: 'Awaiting sign-out',
-            color: '#4f46e5',
-            bg: '#eef2ff',
-            icon: <Clock size={16} color="#4f46e5" />
-        },
-        absent: {
-            label: 'Absent',
-            color: '#e53e3e',
-            bg: '#fff0f0',
-            icon: <XCircle size={16} color="#e53e3e" />
-        }
-    }
+    if (record.signed_out_at || record.marked_present_by) return 'present'
 
+    if (record.signed_in_at && !record.signed_out_at) return 'pending'
+
+    const meetingDate = new Date(record.meeting_date + 'T12:00:00Z')
+    if (meetingDate > new Date()) return 'upcoming'
+  
+    return 'absent'
+}
+
+const statusConfig = {
+    present: {
+        label: 'Present',
+        color: '#008751',
+        bg: '#e6f4ee',
+        icon: <CheckCircle size={14} color="#008751" />
+    },
+    excused: {
+        label: 'Excused',
+        color: '#d4900a',
+        bg: '#fff8e6',
+        icon: <Clock size={14} color="#d4900a" />
+    },
+    pending: {
+        label: 'Awaiting sign-out',
+        color: '#4f46e5',
+        bg: '#eef2ff',
+        icon: <Clock size={14} color="#4f46e5" />
+    },
+    absent: {
+        label: 'Absent',
+        color: '#e53e3e',
+        bg: '#fff0f0',
+        icon: <XCircle size={14} color="#e53e3e" />
+    },
+    upcoming: {
+        label: 'Upcoming',
+        color: '#8fa396',
+        bg: '#f2f4f7',
+        icon: <Calendar size={14} color="#8fa396" />
+    }
+}
     return (
         <div style={{
             minHeight: '100vh',
@@ -170,10 +181,12 @@ export default function AttendanceHistory() {
                                         </div>
                                         <div style={{ fontSize: '0.7rem', color: '#8fa396' }}>
                                             {record.is_late ? 'Late · ' : ''}
-                                            {record.tokens_deducted} token{record.tokens_deducted !== 1 ? 's' : ''} deducted
+                                            {record.tokens_deducted
+                                                ? `${record.tokens_deducted} token${record.tokens_deducted !== 1 ? 's' : ''} deducted`
+                                                : ''}
                                             {record.marked_present_by ? ' · Manual' : ''}
                                         </div>
-                                    </div>
+                                    </div>      
 
                                     {/* STATUS + CLEARANCE */}
                                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>

@@ -1,6 +1,6 @@
-import { Wallet } from 'lucide-react'
+import { Users } from 'lucide-react'
 
-export function MemberChips({ stateCode, tokenBalance }) {
+export function MemberChips({ stateCode, breakoutSession }) {
     const chipStyle = (color = '#008751', bg = '#e6f4ee') => ({
         display: 'inline-flex',
         alignItems: 'center',
@@ -25,8 +25,8 @@ export function MemberChips({ stateCode, tokenBalance }) {
                 {stateCode}
             </div>
             <div style={chipStyle('#d4900a', '#fff8e6')}>
-                <Wallet size={10} color="#d4900a" />
-                {tokenBalance} Token{tokenBalance !== 1 ? 's' : ''}
+                <Users size={10} color="#d4900a" />
+                {breakoutSession}
             </div>
         </div>
     )
