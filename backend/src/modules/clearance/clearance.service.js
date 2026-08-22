@@ -1,12 +1,12 @@
-import pool from '../../config/db.js'
 import PDFDocument from 'pdfkit'
 import QRCode from 'qrcode'
+import pool from '../config/db.js'
 
 export const generateClearanceSlip = async (memberId, meetingId) => {
 
-    // Get clearance slip record — must already exist
+    // 1. Get clearance slip record — must already exist
     const slipResult = await pool.query(
-        'SELECT * FROM clearance_slips WHERE member_id = $1 AND meeting_id = $2',
+        'SELECT qr_token FROM clearance_slips WHERE member_id = $1 AND meeting_id = $2',
         [memberId, meetingId]
     )
 
@@ -16,144 +16,202 @@ export const generateClearanceSlip = async (memberId, meetingId) => {
 
     const qrToken = slipResult.rows[0].qr_token
 
-    // Get member with stream
-    const memberResult = await pool.query(
-        `SELECT m.*,
-            s.year AS stream_year,
-            s.batch AS stream_batch,
-            s.stream AS stream_number
-        FROM members m
-        JOIN streams s ON m.stream_id = s.id
-        WHERE m.id = $1`,
-        [memberId]
-    )
+    // 2. Fetch Member and Meeting data in parallel
+    const [memberResult, meetingResult] = await Promise.all([
+        pool.query(
+            `SELECT m.*,
+                s.year AS stream_year,
+                s.batch AS stream_batch,
+                s.stream AS stream_number
+            FROM members m
+            JOIN streams s ON m.stream_id = s.id
+            WHERE m.id = $1`,
+            [memberId]
+        ),
+        pool.query('SELECT * FROM meetings WHERE id = $1', [meetingId])
+    ])
 
     if (memberResult.rows.length === 0) {
         throw { status: 404, message: 'Member not found.' }
     }
-
-    const member = memberResult.rows[0]
-
-    // Get meeting
-    const meetingResult = await pool.query(
-        'SELECT * FROM meetings WHERE id = $1',
-        [meetingId]
-    )
-
     if (meetingResult.rows.length === 0) {
         throw { status: 404, message: 'Meeting not found.' }
     }
 
+    const member = memberResult.rows[0]
     const meeting = meetingResult.rows[0]
 
-    // Generate QR code
+    // 3. Generate QR code buffer directly
     const verifyUrl = `${process.env.FRONTEND_URL}/verify/${qrToken}`
-    const qrDataURL = await QRCode.toDataURL(verifyUrl)
-    const qrImage = qrDataURL.split(',')[1]
+    const qrBuffer = await QRCode.toBuffer(verifyUrl, {
+        width: 120,
+        margin: 1,
+        color: { dark: '#008751', light: '#FFFFFF' }
+    })
 
-    // Fix timezone on meeting date
+    // 4. Format meeting month/year safely
     const meetingDateStr = typeof meeting.meeting_date === 'string'
         ? meeting.meeting_date
         : meeting.meeting_date.toISOString().split('T')[0]
 
-    const meetingDate = new Date(meetingDateStr + 'T12:00:00Z')
-    const month = meetingDate.toLocaleString('default', {
+    const meetingDate = new Date(`${meetingDateStr}T12:00:00Z`)
+    const month = meetingDate.toLocaleString('en-US', {
         month: 'long',
         year: 'numeric',
         timeZone: 'UTC'
     })
 
-    // Generate PDF
-    const doc = new PDFDocument({ size: 'A4', margin: 70 })
+    // 5. Build PDF Document
+    const PAGE_WIDTH = 595.28 // A4 width in points
+    const PAGE_HEIGHT = 841.89 // A4 height in points
+    const MARGIN = 60
+
+    const doc = new PDFDocument({ size: 'A4', margin: MARGIN })
     const buffers = []
-    doc.on('data', buffers.push.bind(buffers))
+
+    doc.on('data', (chunk) => buffers.push(chunk))
+
+    // Top Accent Bar
+    doc
+        .rect(0, 0, PAGE_WIDTH, 8)
+        .fill('#008751')
+
+    doc.y = 50
 
     // Header
     doc
-        .fontSize(14)
+        .fontSize(16)
         .font('Helvetica-Bold')
-        .text('NYSC LAGOS STATE', { align: 'center' })
+        .fillColor('#000000')
+        .text('NATIONAL YOUTH SERVICE CORPS', { align: 'center' })
+
+    doc
+        .fontSize(11)
+        .font('Helvetica-Bold')
+        .fillColor('#008751')
+        .text('LAGOS STATE SECRETARIAT', { align: 'center' })
+
+    doc
+        .fontSize(10)
+        .font('Helvetica')
+        .fillColor('#4a5e52')
+        .text('InfoTech Community Development Service (CDS) Group', { align: 'center' })
+
+    doc.moveDown(1.5)
+
+    // Divider Line
+    doc
+        .moveTo(MARGIN, doc.y)
+        .lineTo(PAGE_WIDTH - MARGIN, doc.y)
+        .strokeColor('#d0d8d3')
+        .lineWidth(1)
+        .stroke()
+
+    doc.moveDown(2)
+
+    // Document Title
+    doc
+        .fontSize(13)
+        .font('Helvetica-Bold')
+        .fillColor('#000000')
+        .text('CLEARANCE SLIP', { align: 'center', underline: true })
+
+    doc.moveDown(2)
+
+    // Body Text
+    const pronoun = (member.gender || '').toLowerCase() === 'female' ? 'She' : 'He'
+    const fullName = `${member.first_name} ${member.last_name}`.toUpperCase()
 
     doc
         .fontSize(11)
         .font('Helvetica')
-        .text('InfoTech Community Development Service Group', { align: 'center' })
-
-    doc.moveDown(2)
-
-    // Body
-    const pronoun = member.gender === 'male' ? 'He' : 'She'
-    const fullName = `${member.first_name} ${member.last_name}`
-
-    doc
-        .fontSize(12)
+        .fillColor('#0d1b12')
+        .text(
+            `This is to certify that Corps Member `,
+            { align: 'justify', lineGap: 6, continued: true }
+        )
+        .font('Helvetica-Bold')
+        .text(`${fullName}`, { continued: true })
+        .font('Helvetica')
+        .text(` with State Code Number `, { continued: true })
+        .font('Helvetica-Bold')
+        .text(`${member.state_code}`, { continued: true })
         .font('Helvetica')
         .text(
-            `This is to certify that corps member ${fullName} with code ${member.state_code}, is a member of InfoTech CDS group.`,
-            { align: 'justify', lineGap: 6 }
+            `, assigned to ${member.stream_year} Batch ${member.stream_batch} Stream ${member.stream_number}, is an active member of the InfoTech CDS Group.`,
+            { lineGap: 6 }
         )
 
     doc.moveDown()
 
-    doc.text(
-        `${pronoun} is hereby cleared for the month of ${month}.`,
-        { align: 'justify', lineGap: 6 }
-    )
-
-    doc.moveDown()
-    doc.text('Thank you.', { align: 'justify' })
-
-    doc.moveDown(3)
-
-    // Signature line
     doc
-        .moveTo(70, doc.y)
-        .lineTo(250, doc.y)
+        .font('Helvetica')
+        .text(
+            `${pronoun} has fulfilled all attendance and financial obligations and is hereby `,
+            { align: 'justify', lineGap: 6, continued: true }
+        )
+        .font('Helvetica-Bold')
+        .text(`CLEARED`, { continued: true })
+        .font('Helvetica')
+        .text(` for the month of `, { continued: true })
+        .font('Helvetica-Bold')
+        .text(`${month}.`)
+
+    doc.moveDown(4)
+
+    // Signature Block
+    const sigY = doc.y
+    doc
+        .moveTo(MARGIN, sigY)
+        .lineTo(MARGIN + 180, sigY)
+        .strokeColor('#000000')
+        .lineWidth(1)
         .stroke()
 
     doc
         .fontSize(9)
-        .font('Helvetica')
-        .text("Coordinator's Signature", 70)
+        .font('Helvetica-Bold')
+        .fillColor('#0d1b12')
+        .text("CDS Executive / Coordinator Signature", MARGIN, sigY + 6)
 
-    doc.moveDown(2)
+    // QR Code Placement (Centered)
+    const qrSize = 110
+    const qrX = (PAGE_WIDTH - qrSize) / 2
+    const qrY = sigY + 50
 
-    // QR code
+    doc.image(qrBuffer, qrX, qrY, { width: qrSize, height: qrSize })
+
+    doc.y = qrY + qrSize + 10
+
     doc
-        .fontSize(10)
+        .fontSize(8)
         .font('Helvetica')
+        .fillColor('#555555')
         .text(
-            'Scan the QR code below to verify the authenticity of this slip. Any alteration to this document renders it invalid.',
-            { align: 'center', lineGap: 4 }
+            'Scan QR code to verify validity. Any alteration renders this slip void.',
+            { align: 'center' }
         )
-
-    doc.moveDown()
-
-    doc.image(Buffer.from(qrImage, 'base64'), {
-        width: 100,
-        height: 100,
-        align: 'center'
-    })
-
-    doc.moveDown(2)
 
     // Footer
     doc
         .fontSize(8)
-        .fillColor('grey')
+        .fillColor('#8fa396')
         .text(
-            `Generated on ${new Date().toLocaleString()} · CDSConnect · Lagos NYSC`,
-            { align: 'center' }
+            `Generated on ${new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })} · CDSConnect System · Lagos State NYSC`,
+            MARGIN,
+            PAGE_HEIGHT - 40,
+            { align: 'center', width: PAGE_WIDTH - (MARGIN * 2) }
         )
 
     doc.end()
 
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
         doc.on('end', () => resolve({
             buffer: Buffer.concat(buffers),
             member,
             month
         }))
+        doc.on('error', reject)
     })
 }
 
