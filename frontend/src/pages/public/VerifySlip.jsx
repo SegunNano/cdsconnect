@@ -12,7 +12,6 @@ export default function VerifySlip() {
         const verify = async () => {
             try {
                 const res = await api.get(`/clearance/verify/${qrToken}`)
-                console.log(res)
                 setResult({ valid: true, data: res.data.data.data })
             } catch (err) {
                 setResult({ valid: false })
