@@ -297,21 +297,21 @@ export const loginWithPin = async (email, pin, clientCredentialId = null) => {
 
     
 
-    if (member.credential_id || clientCredentialId) {
-        if (!clientCredentialId) {
-            throw {
-                status: 403,
-                message: 'Device not recognised. Log in with your passkey or contact your dev.'
-            }
-        }
+    // if (member.credential_id || clientCredentialId) {
+    //     if (!clientCredentialId) {
+    //         throw {
+    //             status: 403,
+    //             message: 'Device not recognised. Log in with your passkey or contact your dev.'
+    //         }
+    //     }
     
-        if (clientCredentialId !== member.credential_id) {
-            throw {
-                status: 403,
-                message: 'This device is not authorised for this account. Contact your dev.'
-            }
-        }
-    }
+    //     if (clientCredentialId !== member.credential_id) {
+    //         throw {
+    //             status: 403,
+    //             message: 'This device is not authorised for this account. Contact your dev.'
+    //         }
+    //     }
+    // }
     const token = generateToken({
         id: member.id,
         role: member.role,

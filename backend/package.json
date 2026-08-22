@@ -9,7 +9,8 @@
     "migrate": "node database/migrate.js",
     "seed:streams": "node database/seeds/002_streams.seed.js",
     "seed:dev": "node database/seeds/001_dev_member.seed.js",
-    "seed:coordinator": "node database/seeds/003_coordinator.seed.js"
+    "seed:coordinator": "node database/seeds/003_coordinator.seed.js",
+    "seed:clearance": "node database/seeds/004_clearance_slips.seed.js"
   },
   "keywords": [],
   "author": "",
@@ -19,6 +20,7 @@
     "@simplewebauthn/server": "^13.3.2",
     "@supabase/supabase-js": "^2.112.3",
     "bcryptjs": "^3.0.3",
+    "canvas": "^3.2.3",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
