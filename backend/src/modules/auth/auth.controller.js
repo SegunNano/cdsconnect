@@ -59,8 +59,8 @@ export const verifyWebAuthnLogin = async (req, res, next) => {
 
 export const pinLogin = async (req, res, next) => {
     try {
-        const { email, pin } = req.body
-        const result = await loginWithPin(email, pin)
+        const { email, pin, credentialId } = req.body
+        const result = await loginWithPin(email, pin, credentialId)
         res.status(200).json({ success: true, data: result })
     } catch (err) {
         next(err)

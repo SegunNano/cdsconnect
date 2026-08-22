@@ -47,10 +47,8 @@ export default function Login() {
         setError('')
 
         try {
-            // Retrieve persistent credential_id bound to this device/browser
             const clientCredentialId = localStorage.getItem('cds_credential_id')
 
-            // Send email, PIN, and persistent device ID to login service
             const result = await loginService(email, pin, clientCredentialId)
             login(result.data.member, result.data.token)
             navigate('/')

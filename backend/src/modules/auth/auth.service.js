@@ -10,10 +10,9 @@ import {
 } from '@simplewebauthn/server'
 
 const RP_NAME = 'CDSConnect'
-// const RP_ID = process.env.RP_ID || 'localhost'
-// const ORIGIN = process.env.FRONTEND_URL || 'http://localhost:5173'
-const RP_ID = "cdsconnect.vercel.app" || 'localhost'
-const ORIGIN = "https://cdsconnect.vercel.app" || 'http://localhost:5173'
+const RP_ID = process.env.RP_ID || 'localhost'
+const ORIGIN = process.env.FRONTEND_URL || 'http://localhost:5173'
+
 
 
 // ── REGISTRATION ─────────────────────────────────
@@ -286,18 +285,33 @@ export const verifyAuthentication = async (email, credential) => {
 
 // ── PIN LOGIN (fallback) ──────────────────────────
 
-export const loginWithPin = async (email, pin) => {
+export const loginWithPin = async (email, pin, clientCredentialId = null) => {
     const authMember = await getMemberForLogin(email)
 
-    // Verify PIN
     const pinMatch = await comparePin(pin, authMember.pin_hash)
     if (!pinMatch) {
         throw { status: 401, message: 'Incorrect PIN' }
     }
 
-    // Get full member data with stream
     const member = await getMe(authMember.id)
 
+    
+
+    if (member.credential_id || clientCredentialId) {
+        if (!clientCredentialId) {
+            throw {
+                status: 403,
+                message: 'Device not recognised. Log in with your passkey or contact your dev.'
+            }
+        }
+    
+        if (clientCredentialId !== member.credential_id) {
+            throw {
+                status: 403,
+                message: 'This device is not authorised for this account. Contact your dev.'
+            }
+        }
+    }
     const token = generateToken({
         id: member.id,
         role: member.role,

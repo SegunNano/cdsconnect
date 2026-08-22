@@ -5,15 +5,19 @@ import {
 import api from './api'
 
 export const registerDevice = async () => {
-    // Get options from server
     const optionsRes = await api.get('/auth/webauthn/register/options')
     const options = optionsRes.data.data
-
-    // Trigger browser to create credential
+    
     const credential = await startRegistration(options)
 
-    // Send credential to server to verify and save
     const verifyRes = await api.post('/auth/webauthn/register/verify', credential)
+
+    const credentialId = verifyRes.data?.data?.credentialId || credential.id
+    
+    if (credentialId) {
+        localStorage.setItem('cds_credential_id', credentialId)
+    }
+
     return verifyRes.data
 }
 
