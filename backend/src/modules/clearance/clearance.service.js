@@ -1,6 +1,6 @@
 import PDFDocument from 'pdfkit'
 import QRCode from 'qrcode'
-import pool from '../../config/db'
+import pool from '../../config/db.js'
 
 export const generateClearanceSlip = async (memberId, meetingId) => {
 
