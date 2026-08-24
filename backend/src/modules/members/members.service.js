@@ -157,3 +157,20 @@ export const deactivateMember = async (memberId) => {
     }
     return result.rows[0]
 }
+
+export const updateMemberProfile = async (memberId, data) => {
+    const { first_name, last_name, gender, breakout_session } = data
+
+    const result = await pool.query(
+        `UPDATE members SET
+            first_name = COALESCE($1, first_name),
+            last_name = COALESCE($2, last_name),
+            gender = COALESCE($3, gender),
+            breakout_session = COALESCE($4, breakout_session)
+        WHERE id = $5
+        RETURNING *`,
+        [first_name, last_name, gender, breakout_session, memberId]
+    )
+
+    return await getMe(memberId)
+}

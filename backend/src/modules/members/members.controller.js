@@ -5,7 +5,8 @@ import {
     toggleDevAccess,
     resetDeviceFingerprint,
     extendServiceYear,
-    deactivateMember
+    deactivateMember,
+    updateMemberProfile
 } from './members.service.js'
 
 export const getMyProfile = async (req, res, next) => {
@@ -66,6 +67,15 @@ export const extendService = async (req, res, next) => {
 export const deactivate = async (req, res, next) => {
     try {
         const member = await deactivateMember(req.params.id)
+        res.status(200).json({ success: true, data: member })
+    } catch (err) {
+        next(err)
+    }
+}
+
+export const updateProfile = async (req, res, next) => {
+    try {
+        const member = await updateMemberProfile(req.member.id, req.body)
         res.status(200).json({ success: true, data: member })
     } catch (err) {
         next(err)

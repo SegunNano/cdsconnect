@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../../context/AuthContext'
 import { getMyProfile } from '../../services/members.service'
 import { getActiveMeeting } from '../../services/meetings.service'
-import { signIn, getMyAttendance } from '../../services/attendance.service'
+import { signIn, getTodayStatus} from '../../services/attendance.service'
 import api from '../../services/api'
 
 import { UserTopBar } from '../../components/dashboard/UserTopBar'
@@ -15,7 +14,6 @@ import { RecentAttendanceList } from '../../components/dashboard/RecentAttendanc
 import { getStableLocation } from '../../utils/usePreciseLocation'
 
 export default function Dashboard() {
-    const { logout } = useAuth()
     const navigate = useNavigate()
 
     const [member, setMember] = useState(null)
@@ -29,20 +27,23 @@ export default function Dashboard() {
     const [userLocation, setUserLocation] = useState(null)
     const [locationLoading, setLocationLoading] = useState(false)
     const [attendance, setAttendance] = useState(null)
+    const [todayAttendance, setTodayAttendance] = useState(null)
     
     // Update fetchData to include today's attendance
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const [memberRes, meetingRes, attendanceRes, unreadRes] = await Promise.all([
+                const [memberRes, meetingRes, attendanceRes, unreadRes, todayAttendanceRes] = await Promise.all([
                     getMyProfile(),
                     getActiveMeeting(),
                     api.get('/attendance/me'),
-                    api.get('/notifications/unread')
+                    api.get('/notifications/unread'),
+                    getTodayStatus()
                 ])
                 setMember(memberRes.data)
                 setMeeting(meetingRes.data)
                 setUnreadCount(unreadRes.data.data.count)
+                setTodayAttendance(todayAttendanceRes.data.attendance)
             
                 const allAttendance = attendanceRes.data.data
                 setRecentAttendance(allAttendance.slice(0, 3))
@@ -88,14 +89,17 @@ export default function Dashboard() {
         try {
             await signIn(userLocation.lat, userLocation.lng)
         
-            const [memberRes, meetingRes, attendanceRes] = await Promise.all([
+            const [memberRes, meetingRes, attendanceRes, todayAttendanceRes] = await Promise.all([
                 getMyProfile(),
                 getActiveMeeting(),
-                api.get('/attendance/me')
+                api.get('/attendance/me'),
+                getTodayStatus()
             ])
         
             setMember(memberRes.data)
             setMeeting(meetingRes.data)
+            setTodayAttendance(todayAttendanceRes.data.attendance)
+
         
             const allAttendance = attendanceRes.data.data
             setRecentAttendance(allAttendance.slice(0, 3))
@@ -176,7 +180,8 @@ export default function Dashboard() {
                         signingIn={signingIn} 
                         signInError={signInError} 
                         userLocation={userLocation} 
-                        locationLoading={locationLoading} 
+                        locationLoading={locationLoading}
+                        todayAttendance={todayAttendance}
                     />
 
                     {/* STATS ROW */}

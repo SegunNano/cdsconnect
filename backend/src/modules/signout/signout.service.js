@@ -98,6 +98,7 @@ export const signOutMember = async (officerId, meetingId, attendanceId, confirme
             message: 'Name or state code does not match our records. Please verify.'
         }
     }
+    const now = new Date()
 
     // Sign out
     const result = await pool.query(
@@ -105,7 +106,7 @@ export const signOutMember = async (officerId, meetingId, attendanceId, confirme
         SET signed_out_at = $1
         WHERE id = $2
         RETURNING *`,
-        [new Date(), attendanceId]
+        [now, attendanceId]
     )
 
 

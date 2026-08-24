@@ -49,6 +49,35 @@ export const getTodayStatus = async (req, res, next) => {
     }
 }
 
+export const getTodayAttendance =  async (req, res, next) => {
+    try {
+        const result = await pool.query(
+            `SELECT 
+                a.id,
+                a.member_id,
+                a.meeting_id,
+                a.sequence_number,
+                a.signed_in_at,
+                a.signed_out_at,
+                a.tokens_deducted,
+                a.is_late,
+                a.excuse_id,
+                a.marked_present_by
+            FROM attendance a
+            JOIN meetings m ON a.meeting_id = m.id
+            WHERE a.member_id = $1
+            AND m.meeting_date = CURRENT_DATE`,
+            [req.member.id]
+        )
+        res.status(200).json({
+            success: true,
+            data: result.rows[0] || null
+        })
+    } catch (err) {
+        next(err)
+    }
+}
+
 export const manualMarkPresent = async (req, res, next) => {
     try {
         const { memberId, meetingId, reason } = req.body

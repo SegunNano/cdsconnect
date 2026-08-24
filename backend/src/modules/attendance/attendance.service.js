@@ -85,7 +85,7 @@ export const signIn = async (memberId, latitude, longitude) => {
     }
 
     // Check geofence
-    const distance = getDistance(
+    const distance = getDistances(
         parseFloat(latitude),
         parseFloat(longitude),
         parseFloat(meeting.venue_lat),

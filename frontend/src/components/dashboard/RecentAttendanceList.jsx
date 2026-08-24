@@ -30,7 +30,7 @@ export function RecentAttendanceList({ attendance, onNavigate }) {
                         const isPresent = record.signed_out_at || record.excuse_id || record.marked_present_by
                         const meetingDate = new Date(record.meeting_date)
                         return (
-                            <div key={record.id} style={{
+                            <div key={record.meeting_id} style={{
                                 background: '#ffffff',
                                 borderRadius: '12px',
                                 padding: '13px 16px',

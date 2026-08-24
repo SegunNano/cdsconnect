@@ -6,7 +6,8 @@ import {
     toggleDev,
     resetDevice,
     extendService,
-    deactivate
+    deactivate,
+    updateProfile
 } from './members.controller.js'
 import authMiddleware from '../../middlewares/auth.middleware.js'
 import devMiddleware from '../../middlewares/dev.middleware.js'
@@ -19,6 +20,7 @@ router.use(authMiddleware)
 
 // Member routes
 router.get('/me', getMyProfile)
+router.patch('/me', authMiddleware, updateProfile)
 
 // Dev only routes
 router.get('/', devOrRole('treasurer', 'financial_secretary'), getMembers)

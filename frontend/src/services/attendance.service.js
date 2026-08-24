@@ -14,3 +14,8 @@ export const getMyAttendance = async () => {
     const response = await api.get('/attendance/me')
     return response.data
 }
+
+export const getTodayAttendance = async () => {
+    const response = await api.get('/attendance/today/status')
+    return response.data
+}

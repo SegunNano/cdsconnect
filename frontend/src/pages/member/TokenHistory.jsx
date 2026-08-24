@@ -15,7 +15,6 @@ export default function TokenHistory() {
         const fetch = async () => {
             try {
                 const result = await getMyTokenHistory()
-                console.log({result})
                 setHistory(result.data)
             } catch (err) {
                 console.error(err)

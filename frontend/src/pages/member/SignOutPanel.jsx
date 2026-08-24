@@ -127,7 +127,6 @@ export default function SignOutPanel() {
             { facingMode: 'environment' },
             config,
             async (decodedText) => {
-              setScanFeedback(`Scanned raw text: ${decodedText}`)
               await handleDirectQrSignOut(decodedText)
             },
             () => {
