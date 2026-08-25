@@ -25,6 +25,13 @@ export const createMeeting = async (data) => {
 
     const dateOnly = meeting_date.split('T')[0]
 
+    // Ensure incoming time strings include the WAT (+01:00) timezone offset
+    const formatWAT = (val) => {
+        if (!val) return val
+        const s = String(val).trim().replace(' ', 'T')
+        return s.includes('+') || s.includes('Z') || s.includes('-') ? s : `${s}+01:00`
+    }
+
     // Force timezone in SQL
     const result = await pool.query(
         `INSERT INTO meetings (
@@ -37,14 +44,16 @@ export const createMeeting = async (data) => {
             $3, $4, $5, $6, $7, $8, $9, $10
         ) RETURNING *`,
         [
-            title, dateOnly + 'T12:00:00Z', sign_in_open,
-            late_threshold, sign_in_close,
+            title, dateOnly + 'T12:00:00Z', 
+            formatWAT(sign_in_open),
+            formatWAT(late_threshold), 
+            formatWAT(sign_in_close),
             venue_lat, venue_lng, radius_meters || 100,
             meeting_cost || 1, lateness_cost || 1
         ]
     )
 
-        const meeting = result.rows[0]
+    const meeting = result.rows[0]
     // Notify all members
     await createNotificationForAll(
         'New Meeting Scheduled',
@@ -92,8 +101,8 @@ export const getMeetingState = (meeting) => {
     const lateThreshold = new Date(meeting.late_threshold)
     const signInClose = new Date(meeting.sign_in_close)
 
-    // Compare dates as plain strings
-    const todayStr = now.toISOString().split('T')[0]
+    // Compare local dates in WAT (Africa/Lagos) rather than UTC ISO strings
+    const todayStr = now.toLocaleDateString('en-CA', { timeZone: 'Africa/Lagos' })
     const meetingStr = typeof meeting.meeting_date === 'string'
         ? meeting.meeting_date.split('T')[0]
         : new Date(meeting.meeting_date).toISOString().split('T')[0]
@@ -108,20 +117,4 @@ export const getMeetingState = (meeting) => {
     if (isToday && now >= signInClose) return 'sign_in_closed'
 
     return null
-}
-export const updateMemberProfile = async (memberId, data) => {
-    const { first_name, last_name, gender, breakout_session } = data
-
-    const result = await pool.query(
-        `UPDATE members SET
-            first_name = COALESCE($1, first_name),
-            last_name = COALESCE($2, last_name),
-            gender = COALESCE($3, gender),
-            breakout_session = COALESCE($4, breakout_session)
-        WHERE id = $5
-        RETURNING *`,
-        [first_name, last_name, gender, breakout_session, memberId]
-    )
-
-    return await getMe(memberId)
 }
