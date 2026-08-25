@@ -8,8 +8,8 @@ export const BREAKOUT_SESSIONS = [
 ]
 
 export const RATE = 500
-export const DEFAULT_VENUE_LAT = 6.524379
-export const DEFAULT_VENUE_LNG = 3.379206
+export const DEFAULT_VENUE_LAT = 6.4916551571223735
+export const DEFAULT_VENUE_LNG = 3.349012905489806
 
 export const ROLES = [
     "member",
