@@ -15,10 +15,10 @@ export default function Register() {
     const [form, setForm] = useState({
         first_name: '',
         last_name: '',
+        stream_id: '',
         state_code: '',
         email: '',
         gender: '',
-        stream_id: '',
         breakout_session: '',
         pin: '',
         confirm_pin: ''
@@ -41,17 +41,35 @@ export default function Register() {
 
     const handleChange = (e) => {
         const { name, value } = e.target
-        setForm({ ...form, [name]: value })
+        let updatedForm = { ...form, [name]: value }
         setError('')
 
         if (name === 'stream_id') {
             const stream = streams.find(s => s.id === parseInt(value))
             setSelectedStream(stream || null)
+
+            if (stream) {
+                // Extracts last 2 digits of year (e.g. 2026 -> 26) + Batch letter (e.g. B)
+                const shortYear = String(stream.year).slice(-2)
+                const generatedPrefix = `LA/${shortYear}${stream.batch}`
+                
+                // Preserve user's unique 4-5 digit code if already entered
+                const existingParts = form.state_code.split('/')
+                const userNumber = existingParts[2] || ''
+
+                updatedForm.state_code = `${generatedPrefix}/${userNumber}`
+            }
         }
+
+        setForm(updatedForm)
     }
 
     const handleSubmit = async (e) => {
         e.preventDefault()
+        if (!form.stream_id) {
+            setError('Please select your Batch & Stream')
+            return
+        }
         if (form.pin !== form.confirm_pin) {
             setError('PINs do not match')
             return
@@ -163,7 +181,7 @@ export default function Register() {
 
                     <form onSubmit={handleSubmit}>
 
-                        {/* FIRST + LAST NAME */}
+                        {/* 1. FIRST + LAST NAME */}
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
                             <div>
                                 <label style={labelStyle}>First Name</label>
@@ -191,46 +209,7 @@ export default function Register() {
                             </div>
                         </div>
 
-                        {/* STATE CODE */}
-                        <div style={fieldStyle}>
-                            <label style={labelStyle}>State Code</label>
-                            <StateCodeInput
-                                value={form.state_code}
-                                onChange={(val) => setForm({ ...form, state_code: val })}
-                            />
-                        </div>
-
-                        {/* EMAIL */}
-                        <div style={fieldStyle}>
-                            <label style={labelStyle}>Email</label>
-                            <input
-                                type="email"
-                                name="email"
-                                value={form.email}
-                                onChange={handleChange}
-                                placeholder="your@email.com"
-                                required
-                                style={inputStyle}
-                            />
-                        </div>
-
-                        {/* GENDER */}
-                        <div style={fieldStyle}>
-                            <label style={labelStyle}>Gender</label>
-                            <select
-                                name="gender"
-                                value={form.gender}
-                                onChange={handleChange}
-                                required
-                                style={{ ...inputStyle, ...selectStyle, color: form.gender ? '#0d1b12' : '#8fa396' }}
-                            >
-                                <option value="">Select gender</option>
-                                <option value="male">Male</option>
-                                <option value="female">Female</option>
-                            </select>
-                        </div>
-
-                        {/* STREAM */}
+                        {/* 2. BATCH & STREAM */}
                         <div style={fieldStyle}>
                             <label style={labelStyle}>Batch & Stream</label>
                             <select
@@ -248,7 +227,6 @@ export default function Register() {
                                 ))}
                             </select>
 
-                            {/* Show callup and service end dates */}
                             {selectedStream && (
                                 <div style={{
                                     background: '#e6f4ee',
@@ -263,7 +241,47 @@ export default function Register() {
                             )}
                         </div>
 
-                        {/* BREAKOUT SESSION */}
+                        {/* 3. STATE CODE (Auto-populated Prefix) */}
+                        <div style={fieldStyle}>
+                            <label style={labelStyle}>State Code</label>
+                            <StateCodeInput
+                                value={form.state_code}
+                                onChange={(val) => setForm({ ...form, state_code: val })}
+                                disabled={!form.stream_id}
+                            />
+                        </div>
+
+                        {/* 4. EMAIL */}
+                        <div style={fieldStyle}>
+                            <label style={labelStyle}>Email</label>
+                            <input
+                                type="email"
+                                name="email"
+                                value={form.email}
+                                onChange={handleChange}
+                                placeholder="your@email.com"
+                                required
+                                style={inputStyle}
+                            />
+                        </div>
+
+                        {/* 5. GENDER */}
+                        <div style={fieldStyle}>
+                            <label style={labelStyle}>Gender</label>
+                            <select
+                                name="gender"
+                                value={form.gender}
+                                onChange={handleChange}
+                                required
+                                style={{ ...inputStyle, ...selectStyle, color: form.gender ? '#0d1b12' : '#8fa396' }}
+                            >
+                                <option value="">Select gender</option>
+                                <option value="male">Male</option>
+                                <option value="female">Female</option>
+                            </select>
+                        </div>
+
+                        {/* 6. BREAKOUT SESSION */}
                         <div style={fieldStyle}>
                             <label style={labelStyle}>Breakout Session</label>
                             <select
@@ -280,7 +298,7 @@ export default function Register() {
                             </select>
                         </div>
 
-                        {/* PIN */}
+                        {/* 7. PIN */}
                         <div style={fieldStyle}>
                             <label style={labelStyle}>PIN</label>
                             <PinInput
@@ -289,7 +307,7 @@ export default function Register() {
                             />
                         </div>
 
-                        {/* CONFIRM PIN */}
+                        {/* 8. CONFIRM PIN */}
                         <div style={{ marginBottom: '24px' }}>
                             <label style={labelStyle}>Confirm PIN</label>
                             <PinInput
