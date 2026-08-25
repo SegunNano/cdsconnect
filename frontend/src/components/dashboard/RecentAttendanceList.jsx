@@ -1,3 +1,51 @@
+import { CheckCircle, Clock, XCircle, Hourglass } from 'lucide-react'
+
+const getStatus = (record) => {
+    if (record.excuse_status === 'approved' || record.excuse_status === 'approved_not_needed') return 'excused'
+
+    if (record.signed_out_at || record.marked_present_by) return 'present'
+
+    if (record.signed_in_at && !record.signed_out_at) return 'pending'
+
+    const meetingDate = new Date(record.meeting_date + 'T12:00:00Z')
+    if (meetingDate > new Date()) return 'upcoming'
+
+    return 'absent'
+}
+
+const statusConfig = {
+    present: {
+        label: 'Present',
+        color: '#008751',
+        bg: '#e6f4ee',
+        icon: <CheckCircle size={14} color="#008751" />
+    },
+    excused: {
+        label: 'Excused',
+        color: '#d4900a',
+        bg: '#fff8e6',
+        icon: <Clock size={14} color="#d4900a" />
+    },
+    pending: {
+        label: 'Awaiting sign-out',
+        color: '#4f46e5',
+        bg: '#eef2ff',
+        icon: <Clock size={14} color="#4f46e5" />
+    },
+    absent: {
+        label: 'Absent',
+        color: '#e53e3e',
+        bg: '#fff0f0',
+        icon: <XCircle size={14} color="#e53e3e" />
+    },
+    upcoming: {
+        label: 'Upcoming',
+        color: '#8fa396',
+        bg: '#f2f4f7',
+        icon: <Hourglass size={14} color="#8fa396" />
+    }
+}
+
 export function RecentAttendanceList({ attendance, onNavigate }) {
     return (
         <>
@@ -27,8 +75,10 @@ export function RecentAttendanceList({ attendance, onNavigate }) {
             ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     {attendance.map(record => {
-                        const isPresent = record.signed_out_at || record.excuse_id || record.marked_present_by
-                        const meetingDate = new Date(record.meeting_date)
+                        const statusKey = getStatus(record)
+                        const config = statusConfig[statusKey]
+                        const meetingDate = new Date(record.meeting_date + 'T12:00:00Z')
+
                         return (
                             <div key={record.meeting_id} style={{
                                 background: '#ffffff',
@@ -43,22 +93,20 @@ export function RecentAttendanceList({ attendance, onNavigate }) {
                                     width: '36px',
                                     height: '36px',
                                     borderRadius: '10px',
-                                    background: isPresent ? '#e6f4ee' : '#fff0f0',
+                                    background: config.bg,
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
                                     flexShrink: 0
                                 }}>
-                                    <span style={{ fontSize: '0.9rem' }}>
-                                        {isPresent ? '✓' : '✗'}
-                                    </span>
+                                    {config.icon}
                                 </div>
                                 <div style={{ flex: 1 }}>
                                     <div style={{ fontSize: '0.82rem', fontWeight: 600, color: '#0d1b12', marginBottom: '2px' }}>
                                         {record.title}
                                     </div>
                                     <div style={{ fontSize: '0.68rem', color: '#8fa396' }}>
-                                        {meetingDate.toLocaleString('default', { month: 'long', year: 'numeric', timeZone: 'UTC' })}
+                                        {meetingDate.toLocaleString('default', { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' })}
                                     </div>
                                 </div>
                                 <div style={{
@@ -66,10 +114,10 @@ export function RecentAttendanceList({ attendance, onNavigate }) {
                                     fontWeight: 700,
                                     padding: '3px 9px',
                                     borderRadius: '20px',
-                                    background: isPresent ? '#e6f4ee' : '#fff0f0',
-                                    color: isPresent ? '#008751' : '#e53e3e'
+                                    background: config.bg,
+                                    color: config.color
                                 }}>
-                                    {isPresent ? 'Present' : 'Absent'}
+                                    {config.label}
                                 </div>
                             </div>
                         )

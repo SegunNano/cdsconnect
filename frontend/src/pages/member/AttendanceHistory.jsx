@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, CheckCircle, XCircle, Clock, FileText, Calendar } from 'lucide-react'
+import { ArrowLeft, CheckCircle, XCircle, Clock, FileText, Hourglass } from 'lucide-react'
 import { getMyAttendance } from '../../services/attendance.service'
 
 export default function AttendanceHistory() {
@@ -64,7 +64,7 @@ const statusConfig = {
         label: 'Upcoming',
         color: '#8fa396',
         bg: '#f2f4f7',
-        icon: <Calendar size={14} color="#8fa396" />
+        icon: <Hourglass size={14} color="#8fa396" />
     }
 }
     return (
@@ -143,10 +143,10 @@ const statusConfig = {
                             const status = getStatus(record)
                             const config = statusConfig[status]
                             const meetingDate = new Date(record.meeting_date)
-
+                         
                             return (
                                 <div
-                                    key={record.id}
+                                    key={record.meeting_id}
                                     style={{
                                         background: '#ffffff',
                                         borderRadius: '14px',

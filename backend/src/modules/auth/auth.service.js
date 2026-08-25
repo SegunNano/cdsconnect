@@ -46,8 +46,9 @@ export const registerMember = async (data) => {
     const settings = await pool.query(
         'SELECT registration_open FROM settings LIMIT 1'
     )
+    console.log(settings.rows[0])
     if (settings.rows.length > 0 && !settings.rows[0].registration_open) {
-        throw { status: 403, message: 'Registration is currently closed. Contact your coordinator.' }
+        throw { status: 403, message: 'Registration is currently closed. Contact the coordinator.' }
     }
 
     // Check stream exists and is active
