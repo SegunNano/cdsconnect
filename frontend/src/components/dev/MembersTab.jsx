@@ -1,5 +1,6 @@
 import { Search, Shield, Smartphone, UserX, ChevronDown, ChevronUp } from 'lucide-react'
 import ManualMarkPresent from './ManualMarkPresent'
+import { ROLES } from '../../constants'
 
 export default function MembersTab({
     members,
@@ -123,7 +124,14 @@ export default function MembersTab({
                                     <div style={{ marginTop: '14px', paddingTop: '14px', borderTop: '1px solid #e8ece9' }}>
                                         {/* ROLE SELECTION */}
                                         <div style={{ marginBottom: '12px' }}>
-                                            <label style={{ display: 'block', fontSize: '0.68rem', fontWeight: 600, color: '#4a5e52', uppercase: 'true', marginBottom: '6px' }}>
+                                            <label style={{ 
+                                                display: 'block', 
+                                                fontSize: '0.68rem', 
+                                                fontWeight: 600, 
+                                                color: '#4a5e52', 
+                                                textTransform: 'uppercase', 
+                                                marginBottom: '6px' 
+                                            }}>
                                                 CHANGE ROLE
                                             </label>
                                             <select
@@ -139,12 +147,15 @@ export default function MembersTab({
                                                     fontSize: '0.8rem',
                                                     fontWeight: 600,
                                                     color: '#0d1b12',
-                                                    outline: 'none'
+                                                    outline: 'none',
+                                                    textTransform: 'capitalize'
                                                 }}
                                             >
-                                                <option value="member">Member</option>
-                                                <option value="exco">EXCO</option>
-                                                <option value="admin">Admin</option>
+                                                {ROLES.map(role => (
+                                                    <option key={role} value={role}>
+                                                        {role.replace('_', ' ')}
+                                                    </option>
+                                                ))}
                                             </select>
                                         </div>
 
