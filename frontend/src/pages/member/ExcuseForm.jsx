@@ -19,7 +19,7 @@ export default function ExcuseForm() {
                 const result = await api.get('/meetings')
                 // Only show future meetings
                 const upcoming = result.data.data.filter(m => {
-                    const signInOpen = new Date(m.sign_in_open)
+                    const signInOpen = new Date(m.meeting_date)
                     return signInOpen > new Date()
                 })
                 setMeetings(upcoming)
