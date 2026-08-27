@@ -16,6 +16,8 @@ import DevDashboard from './pages/dev/DevDashboard'
 import VerifySlip from './pages/public/VerifySlip'
 import Onboarding from './pages/auth/Onboarding'
 import TokenHistory from './pages/member/TokenHistory'
+import Treasury from './pages/member/Treasury'
+
 
 function HomeRedirect() {
     const { member, loading } = useAuth()
@@ -50,6 +52,7 @@ export default function App() {
                     <Route path="/topup" element={<ProtectedRoute><TopUp /></ProtectedRoute>} />
                     <Route path="/dev" element={<ProtectedRoute><DevDashboard /></ProtectedRoute>} />
                     <Route path="/tokens" element={<ProtectedRoute><TokenHistory /></ProtectedRoute>} />
+                    <Route path="/treasury" element={<ProtectedRoute><Treasury /></ProtectedRoute>} />
                     <Route path="/verify/:qrToken" element={<VerifySlip />} />
 
                     {/* Coordinator */}

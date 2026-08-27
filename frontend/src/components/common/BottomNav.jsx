@@ -1,8 +1,12 @@
 import { useNavigate, useLocation } from 'react-router-dom'
 import {
     Home, Calendar, FileText, User,
-    Coins, LogOut, Settings2
-} from 'lucide-react'
+    Coins, LogOut, Settings2, DollarSign
+    } from 'lucide-react'
+const TREASURY_ROLES = [
+    'treasurer', 'financial_secretary',
+    'president', 'vice_president', 'secretary'
+]
 
 export default function BottomNav({ member }) {
     const navigate = useNavigate()
@@ -21,6 +25,9 @@ export default function BottomNav({ member }) {
             : []),
         ...(member?.is_dev
             ? [{ path: '/dev', label: 'Dev', icon: Settings2 }]
+            : []),
+        ...(TREASURY_ROLES.includes(member?.role)
+            ? [{ path: '/treasury', label: 'Treasury', icon: DollarSign }]
             : [])
     ]
 
