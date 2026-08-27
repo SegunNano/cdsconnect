@@ -2,8 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import {
-    ArrowLeft, TrendingUp, TrendingDown,
-    DollarSign, Plus, AlertCircle
+    ArrowLeft, TrendingUp, TrendingDown, Plus, AlertCircle
 } from 'lucide-react'
 import api from '../../services/api'
 
