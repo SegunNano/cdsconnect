@@ -33,7 +33,8 @@ export const NOTIFICATION_TYPES = {
     TOPUP: 'topup',
     MEETING_CREATED: 'meeting_created',
     LOW_TOKEN: 'low_token',
-    CLEARANCE_READY: 'clearance_ready'
+    CLEARANCE_READY: 'clearance_ready',
+    EXPENSE_LOGGED: 'expense_logged'
 }
 
 export const EXCUSE_STATUS = {

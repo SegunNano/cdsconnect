@@ -1,4 +1,5 @@
 import pool from '../../config/db.js'
+import { ROLES } from '../../constants.js'
 
 export const getMemberForLogin = async (email) => {
     const result = await pool.query(
@@ -72,8 +73,28 @@ export const getAllMembers = async () => {
     return result.rows
 }
 
-
 export const updateMemberRole = async (memberId, role) => {
+    // Validate that the requested role actually exists
+    if (!ROLES.includes(role)) {
+        throw { status: 400, message: `Invalid role: ${role}` }
+    }
+
+    // Any role other than 'member' is treated as a single-holder role
+    if (role !== 'member') {
+        const existing = await pool.query(
+            'SELECT id, first_name, last_name FROM members WHERE role = $1 AND id != $2',
+            [role, memberId]
+        )
+        if (existing.rows.length > 0) {
+            const holder = existing.rows[0]
+            const formattedRole = role.replace(/_/g, ' ')
+            throw {
+                status: 409,
+                message: `${formattedRole} is already assigned to ${holder.first_name} ${holder.last_name}. Remove it from them first.`
+            }
+        }
+    }
+
     const result = await pool.query(
         `UPDATE members 
         SET role = $1 
@@ -81,29 +102,48 @@ export const updateMemberRole = async (memberId, role) => {
         RETURNING id, first_name, last_name, role`,
         [role, memberId]
     )
+
     if (result.rows.length === 0) {
         throw { status: 404, message: 'Member not found' }
     }
+
     return result.rows[0]
 }
 
 export const toggleDevAccess = async (adminId, targetMemberId) => {
-    // Can't remove your own dev access
     if (adminId === targetMemberId) {
         throw { status: 400, message: 'You cannot change your own dev access' }
     }
 
-    // At least one dev must always exist
-    const devCount = await pool.query(
-        'SELECT COUNT(*) FROM members WHERE is_dev = true'
-    )
     const member = await pool.query(
         'SELECT is_dev FROM members WHERE id = $1',
         [targetMemberId]
     )
 
-    if (member.rows[0].is_dev && parseInt(devCount.rows[0].count) === 1) {
-        throw { status: 400, message: 'At least one dev must exist on the platform' }
+    const isCurrentlyDev = member.rows[0].is_dev
+
+    if (!isCurrentlyDev) {
+        // Trying to grant dev — check limit
+        const devCount = await pool.query(
+            'SELECT COUNT(*) FROM members WHERE is_dev = true'
+        )
+        if (parseInt(devCount.rows[0].count) >= 2) {
+            throw { 
+                status: 400, 
+                message: 'Maximum of 2 devs allowed. Remove a dev first.' 
+            }
+        }
+    } else {
+        // Trying to remove dev — ensure at least 1 remains
+        const devCount = await pool.query(
+            'SELECT COUNT(*) FROM members WHERE is_dev = true'
+        )
+        if (parseInt(devCount.rows[0].count) === 1) {
+            throw { 
+                status: 400, 
+                message: 'At least one dev must exist on the platform.' 
+            }
+        }
     }
 
     const result = await pool.query(

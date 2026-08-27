@@ -1,215 +1,377 @@
-import { Search, Shield, Smartphone, UserX, ChevronDown, ChevronUp } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Users, ChevronRight, Shield, Smartphone, UserX, AlertCircle } from 'lucide-react'
 import ManualMarkPresent from './ManualMarkPresent'
 import { ROLES } from '../../constants'
 
 export default function MembersTab({
-    members,
-    search,
-    setSearch,
-    loading,
-    selectedMember,
-    setSelectedMember,
-    onRoleUpdate,
-    onToggleDev,
-    onResetDevice,
-    onDeactivate,
-    currentMemberId
+    members, search, setSearch, loading,
+    selectedMember, setSelectedMember,
+    onRoleUpdate, onToggleDev, onResetDevice,
+    onDeactivate, currentMemberId
 }) {
-    const card = {
-        background: '#ffffff',
-        borderRadius: '14px',
-        padding: '16px',
-        boxShadow: '0 2px 12px rgba(0,0,0,0.07)',
-        marginBottom: '10px'
-    }
+    const devCount = members.filter(m => m.is_dev).length
+    const maxDevsReached = devCount >= 2
 
-    const badgeStyle = (bgColor, textColor) => ({
-        padding: '2px 8px',
-        borderRadius: '12px',
-        fontSize: '0.65rem',
-        fontWeight: 700,
-        textTransform: 'uppercase',
-        background: bgColor,
-        color: textColor
+    // Build a map of which roles are already taken
+    const takenRoles = {}
+    members.forEach(m => {
+        if (m.role && m.role !== 'member') {
+            takenRoles[m.role] = `${m.first_name} ${m.last_name}`
+        }
     })
 
-    const actionBtnStyle = {
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '6px',
-        width: '100%',
-        padding: '10px',
-        borderRadius: '10px',
-        border: 'none',
-        fontSize: '0.75rem',
-        fontWeight: 600,
-        cursor: 'pointer',
-        fontFamily: "'Plus Jakarta Sans', sans-serif",
-        marginBottom: '8px'
+    const [roleErrors, setRoleErrors] = useState({})
+    const [devErrors, setDevErrors] = useState({})
+    const [actionLoading, setActionLoading] = useState({})
+
+    const handleRoleUpdate = async (memberId, role) => {
+        setActionLoading(prev => ({ ...prev, [`role_${memberId}`]: true }))
+        setRoleErrors(prev => ({ ...prev, [memberId]: '' }))
+        try {
+            await onRoleUpdate(memberId, role)
+        } catch (err) {
+            setRoleErrors(prev => ({
+                ...prev,
+                [memberId]: err.response?.data?.message || 'Failed to update role'
+            }))
+        } finally {
+            setActionLoading(prev => ({ ...prev, [`role_${memberId}`]: false }))
+        }
+    }
+
+    const handleToggleDev = async (memberId) => {
+        setActionLoading(prev => ({ ...prev, [`dev_${memberId}`]: true }))
+        setDevErrors(prev => ({ ...prev, [memberId]: '' }))
+        try {
+            await onToggleDev(memberId)
+        } catch (err) {
+            setDevErrors(prev => ({
+                ...prev,
+                [memberId]: err.response?.data?.message || 'Failed to update dev access'
+            }))
+        } finally {
+            setActionLoading(prev => ({ ...prev, [`dev_${memberId}`]: false }))
+        }
     }
 
     return (
         <>
-            {/* SEARCH INPUT */}
-            <div style={{ position: 'relative', marginBottom: '14px' }}>
-                <Search
-                    size={16}
-                    color="#8fa396"
-                    style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)' }}
-                />
+            {/* DEV LIMIT WARNING */}
+            {maxDevsReached && (
+                <div style={{
+                    background: '#fff8e6',
+                    borderRadius: '12px',
+                    padding: '10px 14px',
+                    fontSize: '0.75rem',
+                    color: '#d4900a',
+                    fontWeight: 500,
+                    marginBottom: '12px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                }}>
+                    <AlertCircle size={14} color="#d4900a" />
+                    Maximum 2 devs reached. Remove a dev to assign another.
+                </div>
+            )}
+
+            {/* SEARCH */}
+            <div style={{
+                background: '#ffffff',
+                borderRadius: '14px',
+                padding: '12px 16px',
+                boxShadow: '0 2px 12px rgba(0,0,0,0.07)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                marginBottom: '12px'
+            }}>
+                <Users size={16} color="#8fa396" />
                 <input
                     type="text"
-                    placeholder="Search by name or state code..."
                     value={search}
                     onChange={e => setSearch(e.target.value)}
+                    placeholder="Search by name or state code"
                     style={{
-                        width: '100%',
-                        background: '#ffffff',
-                        border: '1px solid #e8ece9',
-                        borderRadius: '12px',
-                        padding: '12px 14px 12px 40px',
-                        fontSize: '0.85rem',
-                        color: '#0d1b12',
-                        outline: 'none',
-                        fontFamily: "'Plus Jakarta Sans', sans-serif"
+                        flex: 1, border: 'none', outline: 'none',
+                        fontSize: '0.85rem', color: '#0d1b12',
+                        fontFamily: "'Plus Jakarta Sans', sans-serif",
+                        background: 'transparent'
                     }}
                 />
             </div>
 
-            {loading ? (
-                <div style={{ ...card, textAlign: 'center', color: '#8fa396', fontSize: '0.82rem' }}>
-                    Loading members...
+            {loading && (
+                <div style={{ textAlign: 'center', color: '#8fa396', fontSize: '0.82rem', padding: '40px 0' }}>
+                    Loading...
                 </div>
-            ) : members.length === 0 ? (
-                <div style={{ ...card, textAlign: 'center', color: '#8fa396', fontSize: '0.82rem' }}>
+            )}
+
+            {!loading && members.length === 0 && (
+                <div style={{
+                    background: '#ffffff', borderRadius: '14px',
+                    padding: '30px', textAlign: 'center',
+                    color: '#8fa396', fontSize: '0.82rem',
+                    boxShadow: '0 2px 12px rgba(0,0,0,0.07)'
+                }}>
                     No members found
                 </div>
-            ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {members.map(m => {
-                        const isExpanded = selectedMember === m.id
-                        const isSelf = m.id === currentMemberId
+            )}
 
-                        return (
-                            <div key={m.id} style={card}>
-                                {/* MEMBER ROW SUMMARY */}
-                                <div
-                                    onClick={() => setSelectedMember(isExpanded ? null : m.id)}
-                                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}
-                                >
-                                    <div>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
-                                            <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#0d1b12' }}>
-                                                {m.first_name} {m.last_name}
-                                            </span>
-                                            {m.is_dev && (
-                                                <span style={badgeStyle('#e6f4ee', '#008751')}>DEV</span>
-                                            )}
-                                            {!m.is_active && (
-                                                <span style={badgeStyle('#fff0f0', '#e53e3e')}>INACTIVE</span>
-                                            )}
-                                        </div>
-                                        <div style={{ fontSize: '0.72rem', color: '#8fa396' }}>
-                                            {m.state_code} · <span style={{ textTransform: 'capitalize' }}>{m.role}</span>
-                                        </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {members.map(m => (
+                    <div key={m.id}>
+                        {/* MEMBER ROW */}
+                        <div
+                            onClick={() => setSelectedMember(selectedMember?.id === m.id ? null : m)}
+                            style={{
+                                background: '#ffffff',
+                                borderRadius: selectedMember?.id === m.id ? '14px 14px 0 0' : '14px',
+                                padding: '14px 16px',
+                                boxShadow: '0 2px 12px rgba(0,0,0,0.07)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '12px',
+                                cursor: 'pointer',
+                                border: selectedMember?.id === m.id
+                                    ? '2px solid #008751'
+                                    : '2px solid transparent',
+                                borderBottom: selectedMember?.id === m.id ? 'none' : '2px solid transparent'
+                            }}
+                        >
+                            {/* AVATAR */}
+                            <div style={{
+                                width: '40px', height: '40px',
+                                borderRadius: '50%',
+                                background: m.is_active ? '#e6f4ee' : '#f2f4f7',
+                                display: 'flex', alignItems: 'center',
+                                justifyContent: 'center',
+                                fontWeight: 700, fontSize: '0.78rem',
+                                color: m.is_active ? '#008751' : '#8fa396',
+                                flexShrink: 0
+                            }}>
+                                {m.first_name[0]}{m.last_name[0]}
+                            </div>
+
+                            <div style={{ flex: 1 }}>
+                                <div style={{
+                                    fontSize: '0.85rem', fontWeight: 600,
+                                    color: m.is_active ? '#0d1b12' : '#8fa396',
+                                    marginBottom: '2px',
+                                    display: 'flex', alignItems: 'center', gap: '6px'
+                                }}>
+                                    {m.first_name} {m.last_name}
+                                    {m.is_dev && (
+                                        <span style={{
+                                            background: '#eef2ff', color: '#4f46e5',
+                                            fontSize: '0.6rem', fontWeight: 700,
+                                            padding: '2px 6px', borderRadius: '6px'
+                                        }}>
+                                            DEV
+                                        </span>
+                                    )}
+                                    {!m.is_active && (
+                                        <span style={{
+                                            background: '#fff0f0', color: '#e53e3e',
+                                            fontSize: '0.6rem', fontWeight: 700,
+                                            padding: '2px 6px', borderRadius: '6px'
+                                        }}>
+                                            INACTIVE
+                                        </span>
+                                    )}
+                                </div>
+                                <div style={{ fontSize: '0.7rem', color: '#8fa396' }}>
+                                    {m.state_code} · {m.role?.replace('_', ' ')}
+                                    {m.stream_year ? ` · ${m.stream_year} Batch ${m.stream_batch}` : ''}
+                                </div>
+                            </div>
+
+                            <ChevronRight
+                                size={16}
+                                color="#8fa396"
+                                style={{
+                                    transform: selectedMember?.id === m.id ? 'rotate(90deg)' : 'rotate(0)',
+                                    transition: 'transform 0.2s'
+                                }}
+                            />
+                        </div>
+
+                        {/* EXPANDED ACTIONS */}
+                        {selectedMember?.id === m.id && (
+                            <div style={{
+                                background: '#f8fdf9',
+                                border: '2px solid #008751',
+                                borderTop: 'none',
+                                borderRadius: '0 0 14px 14px',
+                                padding: '16px',
+                                marginBottom: '8px'
+                            }}>
+
+                                {/* ROLE SELECTOR */}
+                                <div style={{ marginBottom: '12px' }}>
+                                    <div style={{
+                                        fontSize: '0.68rem', fontWeight: 600,
+                                        color: '#4a5e52', textTransform: 'uppercase',
+                                        letterSpacing: '0.5px', marginBottom: '6px'
+                                    }}>
+                                        Role
                                     </div>
-                                    <div>
-                                        {isExpanded ? <ChevronUp size={18} color="#8fa396" /> : <ChevronDown size={18} color="#8fa396" />}
-                                    </div>
+
+                                    {roleErrors[m.id] && (
+                                        <div style={{
+                                            background: '#fff0f0', color: '#e53e3e',
+                                            fontSize: '0.72rem', padding: '8px 10px',
+                                            borderRadius: '8px', marginBottom: '8px',
+                                            display: 'flex', alignItems: 'center', gap: '6px'
+                                        }}>
+                                            <AlertCircle size={12} color="#e53e3e" />
+                                            {roleErrors[m.id]}
+                                        </div>
+                                    )}
+
+                                    <select
+                                        value={m.role}
+                                        onChange={async (e) => {
+                                            await handleRoleUpdate(m.id, e.target.value)
+                                        }}
+                                        disabled={actionLoading[`role_${m.id}`]}
+                                        style={{
+                                            width: '100%',
+                                            background: '#ffffff',
+                                            border: '1px solid #e8ece9',
+                                            borderRadius: '10px',
+                                            padding: '10px 12px',
+                                            fontSize: '0.82rem',
+                                            color: '#0d1b12',
+                                            outline: 'none',
+                                            fontFamily: "'Plus Jakarta Sans', sans-serif",
+                                            appearance: 'none',
+                                            opacity: actionLoading[`role_${m.id}`] ? 0.6 : 1
+                                        }}
+                                    >
+                                        {ROLES.map(role => {
+                                            const isTaken = takenRoles[role] && takenRoles[role] !== `${m.first_name} ${m.last_name}`
+                                            return (
+                                                <option
+                                                    key={role}
+                                                    value={role}
+                                                    disabled={isTaken}
+                                                >
+                                                    {role.replace('_', ' ')}
+                                                    {isTaken ? ` — taken by ${takenRoles[role]}` : ''}
+                                                </option>
+                                            )
+                                        })}
+                                    </select>
                                 </div>
 
-                                {/* EXPANDED DETAILS & ACTIONS */}
-                                {isExpanded && (
-                                    <div style={{ marginTop: '14px', paddingTop: '14px', borderTop: '1px solid #e8ece9' }}>
-                                        {/* ROLE SELECTION */}
-                                        <div style={{ marginBottom: '12px' }}>
-                                            <label style={{ 
-                                                display: 'block', 
-                                                fontSize: '0.68rem', 
-                                                fontWeight: 600, 
-                                                color: '#4a5e52', 
-                                                textTransform: 'uppercase', 
-                                                marginBottom: '6px' 
-                                            }}>
-                                                CHANGE ROLE
-                                            </label>
-                                            <select
-                                                value={m.role}
-                                                disabled={isSelf}
-                                                onChange={e => onRoleUpdate(m.id, e.target.value)}
-                                                style={{
-                                                    width: '100%',
-                                                    padding: '10px',
-                                                    borderRadius: '10px',
-                                                    border: '1px solid #e8ece9',
-                                                    background: '#f2f4f7',
-                                                    fontSize: '0.8rem',
-                                                    fontWeight: 600,
-                                                    color: '#0d1b12',
-                                                    outline: 'none',
-                                                    textTransform: 'capitalize'
-                                                }}
-                                            >
-                                                {ROLES.map(role => (
-                                                    <option key={role} value={role}>
-                                                        {role.replace('_', ' ')}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                        </div>
+                                {/* ACTION BUTTONS */}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
 
-                                        {/* ACTION BUTTONS */}
-                                        <button
-                                            onClick={() => onToggleDev(m.id)}
-                                            disabled={isSelf}
-                                            style={{
-                                                ...actionBtnStyle,
-                                                background: m.is_dev ? '#fef3c7' : '#e6f4ee',
-                                                color: m.is_dev ? '#b45309' : '#008751',
-                                                opacity: isSelf ? 0.5 : 1
-                                            }}
-                                        >
-                                            <Shield size={14} />
-                                            {m.is_dev ? 'Revoke Dev Access' : 'Grant Dev Access'}
-                                        </button>
-
-                                        <button
-                                            onClick={() => onResetDevice(m.id)}
-                                            style={{
-                                                ...actionBtnStyle,
-                                                background: '#f3f4f6',
-                                                color: '#374151'
-                                            }}
-                                        >
-                                            <Smartphone size={14} />
-                                            Reset Bound Device
-                                        </button>
-
-                                        {m.is_active && (
+                                    {/* TOGGLE DEV */}
+                                    {m.id !== currentMemberId && (
+                                        <>
+                                            {devErrors[m.id] && (
+                                                <div style={{
+                                                    background: '#fff0f0', color: '#e53e3e',
+                                                    fontSize: '0.72rem', padding: '8px 10px',
+                                                    borderRadius: '8px',
+                                                    display: 'flex', alignItems: 'center', gap: '6px'
+                                                }}>
+                                                    <AlertCircle size={12} color="#e53e3e" />
+                                                    {devErrors[m.id]}
+                                                </div>
+                                            )}
                                             <button
-                                                onClick={() => onDeactivate(m.id)}
-                                                disabled={isSelf}
+                                                onClick={() => handleToggleDev(m.id)}
+                                                disabled={
+                                                    actionLoading[`dev_${m.id}`] ||
+                                                    (!m.is_dev && maxDevsReached)
+                                                }
                                                 style={{
-                                                    ...actionBtnStyle,
-                                                    background: '#fff0f0',
-                                                    color: '#e53e3e',
-                                                    marginBottom: 0,
-                                                    opacity: isSelf ? 0.5 : 1
+                                                    background: m.is_dev ? '#fff8e6' : '#eef2ff',
+                                                    border: 'none', borderRadius: '10px',
+                                                    padding: '10px 14px', cursor: 'pointer',
+                                                    display: 'flex', alignItems: 'center',
+                                                    gap: '8px', fontSize: '0.78rem',
+                                                    fontWeight: 600,
+                                                    color: m.is_dev ? '#d4900a' : '#4f46e5',
+                                                    fontFamily: "'Plus Jakarta Sans', sans-serif",
+                                                    width: '100%',
+                                                    opacity: (!m.is_dev && maxDevsReached) ? 0.5 : 1
                                                 }}
                                             >
-                                                <UserX size={14} />
-                                                Deactivate Member
+                                                <Shield size={14} color={m.is_dev ? '#d4900a' : '#4f46e5'} />
+                                                {actionLoading[`dev_${m.id}`]
+                                                    ? 'Updating...'
+                                                    : m.is_dev
+                                                        ? 'Remove Dev Access'
+                                                        : maxDevsReached
+                                                            ? 'Dev limit reached (2/2)'
+                                                            : 'Grant Dev Access'
+                                                }
                                             </button>
-                                        )}
-                                        <div style={{ marginTop: '8px' }}>
+                                        </>
+                                    )}
+
+                                    {/* RESET DEVICE */}
+                                    <button
+                                        onClick={async () => {
+                                            setActionLoading(prev => ({ ...prev, [`device_${m.id}`]: true }))
+                                            try {
+                                                await onResetDevice(m.id)
+                                            } finally {
+                                                setActionLoading(prev => ({ ...prev, [`device_${m.id}`]: false }))
+                                            }
+                                        }}
+                                        disabled={actionLoading[`device_${m.id}`]}
+                                        style={{
+                                            background: '#f2f4f7', border: 'none',
+                                            borderRadius: '10px', padding: '10px 14px',
+                                            cursor: 'pointer', display: 'flex',
+                                            alignItems: 'center', gap: '8px',
+                                            fontSize: '0.78rem', fontWeight: 600,
+                                            color: '#4a5e52',
+                                            fontFamily: "'Plus Jakarta Sans', sans-serif",
+                                            width: '100%',
+                                            opacity: actionLoading[`device_${m.id}`] ? 0.6 : 1
+                                        }}
+                                    >
+                                        <Smartphone size={14} color="#4a5e52" />
+                                        {actionLoading[`device_${m.id}`] ? 'Resetting...' : 'Reset Device'}
+                                    </button>
+
+                                    {/* DEACTIVATE */}
+                                    {m.is_active && m.id !== currentMemberId && (
+                                        <button
+                                            onClick={() => {
+                                                if (window.confirm(`Deactivate ${m.first_name} ${m.last_name}?`)) {
+                                                    onDeactivate(m.id)
+                                                }
+                                            }}
+                                            style={{
+                                                background: '#fff0f0', border: 'none',
+                                                borderRadius: '10px', padding: '10px 14px',
+                                                cursor: 'pointer', display: 'flex',
+                                                alignItems: 'center', gap: '8px',
+                                                fontSize: '0.78rem', fontWeight: 600,
+                                                color: '#e53e3e',
+                                                fontFamily: "'Plus Jakarta Sans', sans-serif",
+                                                width: '100%'
+                                            }}
+                                        >
+                                            <UserX size={14} color="#e53e3e" />
+                                            Deactivate Member
+                                        </button>
+                                    )}
+
+                                    {/* MARK PRESENT */}
+                                    {m.id !== currentMemberId && m.is_active && (
+                                        <div style={{ marginTop: '4px' }}>
                                             <div style={{
-                                                fontSize: '0.68rem',
-                                                fontWeight: 600,
-                                                color: '#4a5e52',
-                                                textTransform: 'uppercase',
-                                                letterSpacing: '0.5px',
-                                                marginBottom: '6px'
+                                                fontSize: '0.68rem', fontWeight: 600,
+                                                color: '#4a5e52', textTransform: 'uppercase',
+                                                letterSpacing: '0.5px', marginBottom: '6px'
                                             }}>
                                                 Mark Present
                                             </div>
@@ -218,13 +380,13 @@ export default function MembersTab({
                                                 onSuccess={() => setSelectedMember(null)}
                                             />
                                         </div>
-                                    </div>
-                                )}
+                                    )}
+                                </div>
                             </div>
-                        )
-                    })}
-                </div>
-            )}
+                        )}
+                    </div>
+                ))}
+            </div>
         </>
     )
 }
