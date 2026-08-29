@@ -5,7 +5,8 @@ import {
     getTodayAttendanceStatus,
     markMemberPresent,
     checkIfSuspended,
-    reinstateMember
+    reinstateMember,
+    getMissedMeeting
 } from './attendance.service.js'
 
 export const memberSignIn = async (req, res, next) => {
