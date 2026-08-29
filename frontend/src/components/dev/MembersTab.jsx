@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Users, ChevronRight, Shield, Smartphone, UserX, AlertCircle, UserCheck } from 'lucide-react'
+import { Users, ChevronRight, Shield, Smartphone, UserX, AlertCircle, UserCheck, X } from 'lucide-react'
 import ManualMarkPresent from './ManualMarkPresent'
 import api from '../../services/api'
 import { ROLES } from '../../constants'
@@ -26,6 +26,9 @@ export default function MembersTab({
     const [actionLoading, setActionLoading] = useState({})
 
     const [suspensions, setSuspensions] = useState({})
+    
+    // State to handle the Mark Present Modal
+    const [markPresentMember, setMarkPresentMember] = useState(null)
 
     useEffect(() => {
         const checkSuspensions = async () => {
@@ -393,23 +396,6 @@ export default function MembersTab({
                                         </button>
                                     )}
 
-                                    {/* MARK PRESENT */}
-                                    {m.id !== currentMemberId && m.is_active && (
-                                        <div style={{ marginTop: '4px' }}>
-                                            <div style={{
-                                                fontSize: '0.68rem', fontWeight: 600,
-                                                color: '#4a5e52', textTransform: 'uppercase',
-                                                letterSpacing: '0.5px', marginBottom: '6px'
-                                            }}>
-                                                Mark Present
-                                            </div>
-                                            <ManualMarkPresent
-                                                member={m}
-                                                onSuccess={() => setSelectedMember(null)}
-                                            />
-                                        </div>
-                                    )}
-
                                     {/* REINSTATE SUSPENDED MEMBER */}
                                     {suspensions[m.id]?.is_suspended && m.id !== currentMemberId && (
                                         <button
@@ -445,12 +431,90 @@ export default function MembersTab({
                                         </button>
                                     )}
 
+                                    {/* MARK PRESENT BUTTON */}
+                                    {m.id !== currentMemberId && m.is_active && (
+                                        <button
+                                            onClick={() => setMarkPresentMember(m)}
+                                            style={{
+                                                background: '#e6f4ee', border: 'none',
+                                                borderRadius: '10px', padding: '10px 14px',
+                                                cursor: 'pointer', display: 'flex',
+                                                alignItems: 'center', gap: '8px',
+                                                fontSize: '0.78rem', fontWeight: 600,
+                                                color: '#008751',
+                                                fontFamily: "'Plus Jakarta Sans', sans-serif",
+                                                width: '100%'
+                                            }}
+                                        >
+                                            <UserCheck size={14} color="#008751" />
+                                            Mark Member Present
+                                        </button>
+                                    )}
+
                                 </div>
                             </div>
                         )}
                     </div>
                 ))}
             </div>
+
+            {/* MARK PRESENT MODAL */}
+            {markPresentMember && (
+                <div style={{
+                    position: 'fixed',
+                    top: 0, left: 0, right: 0, bottom: 0,
+                    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    zIndex: 1000, padding: '16px'
+                }}>
+                    <div style={{
+                        background: '#ffffff',
+                        borderRadius: '16px',
+                        padding: '20px',
+                        width: '100%',
+                        maxWidth: '440px',
+                        boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+                        position: 'relative'
+                    }}>
+                        <div style={{
+                            display: 'flex',
+                            justify: 'space-between',
+                            alignItems: 'center',
+                            marginBottom: '16px'
+                        }}>
+                            <h3 style={{
+                                fontSize: '1rem',
+                                fontWeight: 700,
+                                color: '#0d1b12',
+                                margin: 0
+                            }}>
+                                Mark Present: {markPresentMember.first_name} {markPresentMember.last_name}
+                            </h3>
+                            <button
+                                onClick={() => setMarkPresentMember(null)}
+                                style={{
+                                    background: 'transparent',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    padding: '4px',
+                                    display: 'flex',
+                                    alignItems: 'center'
+                                }}
+                            >
+                                <X size={18} color="#8fa396" />
+                            </button>
+                        </div>
+
+                        <ManualMarkPresent
+                            member={markPresentMember}
+                            onSuccess={() => {
+                                setMarkPresentMember(null)
+                                setSelectedMember(null)
+                            }}
+                        />
+                    </div>
+                </div>
+            )}
         </>
     )
 }
