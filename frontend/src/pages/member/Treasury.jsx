@@ -18,7 +18,7 @@ export default function Treasury() {
     const [submitting, setSubmitting] = useState(false)
     const [error, setError] = useState('')
 
-    const canLog = CAN_LOG.includes(member?.role) || member?.is_dev
+    const canLog = CAN_LOG.includes(member?.role)
 
     useEffect(() => {
         const fetch = async () => {

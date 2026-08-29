@@ -5,7 +5,9 @@ import {
     getMeetingAttendanceList,
     getTodayStatus,
     manualMarkPresent,
-    getTodayAttendance
+    getTodayAttendance,
+    reinstate,
+    getSuspensionStatus 
 } from './attendance.controller.js'
 import authMiddleware from '../../middlewares/auth.middleware.js'
 import devMiddleware from '../../middlewares/dev.middleware.js'
@@ -20,8 +22,11 @@ router.get('/me', getMyAttendance)
 router.get('/today', getTodayStatus)
 router.get('/meeting/:meetingId', getMeetingAttendanceList)
 router.get('/today/status', getTodayAttendance)
+router.get('/suspension', getSuspensionStatus)
 
 // Dev only
 router.post('/mark-present', devMiddleware, manualMarkPresent)
+router.post('/reinstate', devMiddleware, reinstate)
+router.get('/suspension/:memberId', devMiddleware, getSuspensionStatus)
 
 export default router

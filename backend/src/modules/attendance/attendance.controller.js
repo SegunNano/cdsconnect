@@ -93,3 +93,31 @@ export const manualMarkPresent = async (req, res, next) => {
         next(err)
     }
 }
+
+export const reinstate = async (req, res, next) => {
+    try {
+        const { memberId } = req.body
+        const result = await reinstateMember(req.member.id, memberId)
+        res.status(200).json({
+            success: true,
+            message: `${result.member} reinstated. ${result.penalty_tokens} tokens deducted.`,
+            data: result
+        })
+    } catch (err) {
+        next(err)
+    }
+}
+
+export const getSuspensionStatus = async (req, res, next) => {
+    try {
+        const memberId = req.params.memberId || req.member.id
+        const isSuspended = await checkIfSuspended(memberId)
+        const missedMeeting = isSuspended ? await getMissedMeeting(memberId) : null
+        res.status(200).json({
+            success: true,
+            data: { is_suspended: isSuspended, missed_meeting: missedMeeting }
+        })
+    } catch (err) {
+        next(err)
+    }
+}

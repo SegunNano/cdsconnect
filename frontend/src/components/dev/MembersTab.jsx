@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
-import { Users, ChevronRight, Shield, Smartphone, UserX, AlertCircle } from 'lucide-react'
+import { Users, ChevronRight, Shield, Smartphone, UserX, AlertCircle, UserCheck } from 'lucide-react'
 import ManualMarkPresent from './ManualMarkPresent'
+import api from '../../services/api'
 import { ROLES } from '../../constants'
 
 export default function MembersTab({
@@ -23,6 +24,24 @@ export default function MembersTab({
     const [roleErrors, setRoleErrors] = useState({})
     const [devErrors, setDevErrors] = useState({})
     const [actionLoading, setActionLoading] = useState({})
+
+    const [suspensions, setSuspensions] = useState({})
+
+    useEffect(() => {
+        const checkSuspensions = async () => {
+            const results = {}
+            await Promise.all(
+                members.map(async (m) => {
+                    try {
+                        const res = await api.get(`/attendance/suspension/${m.id}`)
+                        results[m.id] = res.data.data
+                    } catch (err) {}
+                })
+            )
+            setSuspensions(results)
+        }
+        if (members.length > 0) checkSuspensions()
+    }, [members])
 
     const handleRoleUpdate = async (memberId, role) => {
         setActionLoading(prev => ({ ...prev, [`role_${memberId}`]: true }))
@@ -177,6 +196,15 @@ export default function MembersTab({
                                             padding: '2px 6px', borderRadius: '6px'
                                         }}>
                                             INACTIVE
+                                        </span>
+                                    )}
+                                    {suspensions[m.id]?.is_suspended && (
+                                        <span style={{
+                                            background: '#fff0f0', color: '#e53e3e',
+                                            fontSize: '0.6rem', fontWeight: 700,
+                                            padding: '2px 6px', borderRadius: '6px'
+                                        }}>
+                                            SUSPENDED {m.reinstatement_count > 0 ? `(×${m.reinstatement_count + 1})` : ''}
                                         </span>
                                     )}
                                 </div>
@@ -380,6 +408,49 @@ export default function MembersTab({
                                                 onSuccess={() => setSelectedMember(null)}
                                             />
                                         </div>
+                                    )}
+                                    {suspensions[m.id]?.is_suspended && m.id !== currentMemberId && (
+                                        <button
+                                            onClick={async () => {
+                                                setActionLoading(prev => ({ ...prev, [`reinstate_${m.id}`]: true }))
+                                                try {
+                                                    await api.post('/attendance/reinstate', { memberId: m.id })
+                                                    setSuspensions(prev => ({
+                                                        ...prev,
+                                                        [m.id]: { is_suspended: false, missed_meeting: null }
+                                                    }))
+                                                } catch (err) {
+                                                    setRoleErrors(prev => ({
+                                                        ...prev,
+                                                        [m.id]: err.response?.data?.message || 'Reinstatement failed'
+                                                    }))
+                                                } finally {
+                                                    setActionLoading(prev => ({ ...prev, [`reinstate_${m.id}`]: false }))
+                                                }
+                                            }}
+                                            disabled={actionLoading[`reinstate_${m.id}`]}
+                                            style={{
+                                                background: '#fff8e6',
+                                                border: '1px solid #d4900a',
+                                                borderRadius: '10px',
+                                                padding: '10px 14px',
+                                                cursor: 'pointer',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '8px',
+                                                fontSize: '0.78rem',
+                                                fontWeight: 600,
+                                                color: '#d4900a',
+                                                fontFamily: "'Plus Jakarta Sans', sans-serif",
+                                                width: '100%'
+                                            }}
+                                        >
+                                            <UserCheck size={14} color="#d4900a" />
+                                            {actionLoading[`reinstate_${m.id}`]
+                                                ? 'Reinstating...'
+                                                : `Reinstate — ${suspensions[m.id]?.missed_meeting?.title || 'missed meeting'}`
+                                            }
+                                        </button>
                                     )}
                                 </div>
                             </div>

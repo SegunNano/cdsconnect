@@ -34,7 +34,8 @@ export const NOTIFICATION_TYPES = {
     MEETING_CREATED: 'meeting_created',
     LOW_TOKEN: 'low_token',
     CLEARANCE_READY: 'clearance_ready',
-    EXPENSE_LOGGED: 'expense_logged'
+    EXPENSE_LOGGED: 'expense_logged',
+    REINSTATEMENT: 'reinstatement'
 }
 
 export const EXCUSE_STATUS = {

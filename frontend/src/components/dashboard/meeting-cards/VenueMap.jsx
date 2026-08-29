@@ -26,30 +26,26 @@ function RecenterAutomatically({ venueLat, venueLng, userLocation }) {
 
 const VenueMap = ({meeting, userLocation, cardStyle, signInError, signingIn, formatTime, member, handleSignIn, signInClose}) => {
 
-            const isLate = meeting.state === 'open_late'
-            const totalCost = isLate
-                ? meeting.meeting_cost + meeting.lateness_cost
-                : meeting.meeting_cost
-    
-            const venueLat = parseFloat(meeting.venue_lat)
-            const venueLng = parseFloat(meeting.venue_lng)
-    
-            // Calculate distance if user location is available
-            const distanceMeters = (userLocation && userLocation.lat && userLocation.lng)
-                ? getDistanceInMeters(userLocation.lat, userLocation.lng, venueLat, venueLng)
-                : null
-    
-            // Format distance string
-            const formattedDistance = distanceMeters !== null
-                ? distanceMeters >= 1000
-                    ? `${(distanceMeters / 1000).toFixed(1)}km away`
-                    : `${distanceMeters}m away`
-                : null
-    
-            // Check if user is within the geofence radius
-            const isWithinGeofence = distanceMeters !== null && distanceMeters <= meeting.radius_meters
+        const isLate = meeting.state === 'open_late'
+        const totalCost = isLate
+            ? meeting.meeting_cost + meeting.lateness_cost
+            : meeting.meeting_cost    
+        const venueLat = parseFloat(meeting.venue_lat)
+        const venueLng = parseFloat(meeting.venue_lng)    
+        // Calculate distance if user location is available
+        const distanceMeters = (userLocation && userLocation.lat && userLocation.lng)
+            ? getDistanceInMeters(userLocation.lat, userLocation.lng, venueLat, venueLng)
+            : null    
+        // Format distance string
+        const formattedDistance = distanceMeters !== null
+            ? distanceMeters >= 1000
+                ? `${(distanceMeters / 1000).toFixed(1)}km away`
+                : `${distanceMeters}m away`
+            : null    
+        // Check if user is within the geofence radius
+        const isWithinGeofence = distanceMeters !== null && distanceMeters <= meeting.radius_meters
   return (
- <div style={{ ...cardStyle, padding: '16px' }}>
+             <div style={{ ...cardStyle, padding: '16px' }}>
                 <div style={{
                     display: 'flex',
                     alignItems: 'flex-start',
@@ -78,17 +74,35 @@ const VenueMap = ({meeting, userLocation, cardStyle, signInError, signingIn, for
                 </div>
 
                 {signInError && (
-                    <div style={{
-                        background: '#fff0f0',
-                        color: '#e53e3e',
-                        fontSize: '0.78rem',
-                        padding: '8px 12px',
-                        borderRadius: '10px',
-                        marginBottom: '10px',
-                        textAlign: 'center'
-                    }}>
-                        {signInError}
-                    </div>
+                    signInError.includes('suspended') ? (
+                        <div style={{
+                            background: '#fff0f0',
+                            borderRadius: '14px',
+                            padding: '20px',
+                            textAlign: 'center',
+                            border: '1px solid #e53e3e'
+                        }}>
+                            <div style={{ fontSize: '1.5rem', marginBottom: '8px' }}>🔒</div>
+                            <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#e53e3e', marginBottom: '6px' }}>
+                                Account Suspended
+                            </div>
+                            <div style={{ fontSize: '0.78rem', color: '#4a5e52', lineHeight: 1.6 }}>
+                                {signInError}
+                            </div>
+                        </div>
+                    ) : (
+                        <div style={{
+                            background: '#fff0f0',
+                            color: '#e53e3e',
+                            fontSize: '0.78rem',
+                            padding: '8px 12px',
+                            borderRadius: '10px',
+                            marginBottom: '10px',
+                            textAlign: 'center'
+                        }}>
+                            {signInError}
+                        </div>
+                    )
                 )}
 
                 <div style={{

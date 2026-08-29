@@ -18,10 +18,180 @@ import { issueClearance } from '../../utils/clearance.js'
     return Math.round(R * c);
 }
 
+
+export const checkIfSuspended = async (memberId) => {
+    const result = await pool.query(
+        `SELECT EXISTS (
+            SELECT 1
+            FROM meetings m
+            LEFT JOIN attendance a 
+                ON a.meeting_id = m.id AND a.member_id = $1
+            LEFT JOIN excuse_requests er
+                ON er.meeting_id = m.id AND er.member_id = $1
+                AND er.status IN ('approved', 'approved_not_needed')
+            WHERE m.sign_in_close < NOW()
+            AND m.meeting_date = (
+                SELECT MAX(meeting_date) 
+                FROM meetings 
+                WHERE sign_in_close < NOW()
+            )
+            AND (
+                a.id IS NULL
+                OR (
+                    a.signed_out_at IS NULL 
+                    AND a.marked_present_by IS NULL 
+                    AND a.excuse_id IS NULL
+                )
+            )
+            AND er.id IS NULL
+        ) AS is_suspended`,
+        [memberId]
+    )
+    return result.rows[0].is_suspended
+}
+
+export const getMissedMeeting = async (memberId) => {
+    const result = await pool.query(
+        `SELECT m.*
+        FROM meetings m
+        LEFT JOIN attendance a 
+            ON a.meeting_id = m.id AND a.member_id = $1
+        LEFT JOIN excuse_requests er
+            ON er.meeting_id = m.id AND er.member_id = $1
+            AND er.status IN ('approved', 'approved_not_needed')
+        WHERE m.sign_in_close < NOW()
+        AND m.meeting_date = (
+            SELECT MAX(meeting_date) 
+            FROM meetings 
+            WHERE sign_in_close < NOW()
+        )
+        AND (
+            a.id IS NULL
+            OR (
+                a.signed_out_at IS NULL 
+                AND a.marked_present_by IS NULL 
+                AND a.excuse_id IS NULL
+            )
+        )
+        AND er.id IS NULL`,
+        [memberId]
+    )
+    return result.rows[0] || null
+}
+
+const getPenaltyTokens = (reinstatementCount, meetingCost) => {
+    return meetingCost * 2
+}
+
+export const reinstateMember = async (devId, memberId) => {
+    // Can't reinstate yourself
+    if (parseInt(devId) === parseInt(memberId)) {
+        throw { status: 400, message: 'You cannot reinstate yourself.' }
+    }
+
+    // Check member is actually suspended
+    const isSuspended = await checkIfSuspended(memberId)
+    if (!isSuspended) {
+        throw { status: 400, message: 'Member is not suspended.' }
+    }
+
+    // Get the missed meeting
+    const missedMeeting = await getMissedMeeting(memberId)
+    if (!missedMeeting) {
+        throw { status: 404, message: 'Could not find missed meeting.' }
+    }
+
+    // Calculate penalty
+    const penaltyTokens = await getPenaltyTokens(memberId, missedMeeting.meeting_cost)
+
+    // Check member has enough tokens
+    const memberResult = await pool.query(
+        'SELECT token_balance, first_name, last_name FROM members WHERE id = $1',
+        [memberId]
+    )
+    const member = memberResult.rows[0]
+
+    if (member.token_balance < penaltyTokens) {
+        throw {
+            status: 400,
+            message: `Insufficient tokens. Member needs ${penaltyTokens} tokens (penalty) but has ${member.token_balance}. Ask treasurer to top up first.`
+        }
+    }
+
+    // Deduct penalty tokens
+    await pool.query(
+        'UPDATE members SET token_balance = token_balance - $1 WHERE id = $2',
+        [penaltyTokens, memberId]
+    )
+
+    // Get next sequence number
+    const seqResult = await pool.query(
+        `SELECT COALESCE(MAX(sequence_number), 0) + 1 AS next_seq
+        FROM attendance WHERE meeting_id = $1`,
+        [missedMeeting.id]
+    )
+
+    // Mark present for missed meeting
+    await pool.query(
+        `INSERT INTO attendance (
+            member_id, meeting_id, sequence_number,
+            signed_in_at, signed_out_at,
+            tokens_deducted, is_late,
+            marked_present_by, mark_reason
+        ) VALUES ($1, $2, $3, $4, $4, $5, false, $6, $7)`,
+        [
+            memberId,
+            missedMeeting.id,
+            seqResult.rows[0].next_seq,
+            new Date(),
+            penaltyTokens,
+            devId,
+            `Reinstated after absence — ${penaltyTokens} token penalty paid`
+        ]
+    )
+
+    // Record reinstatement
+    // After successful reinstatement
+    await pool.query(
+        'UPDATE members SET reinstatement_count = reinstatement_count + 1 WHERE id = $1',
+        [memberId]
+    )
+
+    // Issue clearance
+    const { issueClearance } = await import('../../utils/clearance.js')
+    await issueClearance(memberId, missedMeeting.id)
+
+    // Notify member
+    const { createNotification } = await import('../notifications/notifications.service.js')
+    await createNotification(
+        memberId,
+        'Account Reinstated',
+        `Your account has been reinstated. ${penaltyTokens} token${penaltyTokens !== 1 ? 's' : ''} were deducted as penalty for missing ${missedMeeting.title}.`,
+        'reinstatement'
+    )
+
+    return {
+        member: member.first_name + ' ' + member.last_name,
+        missed_meeting: missedMeeting.title,
+        penalty_tokens: penaltyTokens,
+        new_balance: member.token_balance - penaltyTokens
+    }
+}
+
 export const signIn = async (memberId, latitude, longitude) => {
   const client = await pool.connect()
 
   try {
+
+     const isSuspended = await checkIfSuspended(memberId)
+    if (isSuspended) {
+        const missedMeeting = await getMissedMeeting(memberId)
+        throw {
+            status: 403,
+            message: `Your account is suspended for missing ${missedMeeting?.title}. Report to the President to reinstate your account.`
+        }
+    }
+
    await client.query('BEGIN')
 
     // 1. Get member & stream details
