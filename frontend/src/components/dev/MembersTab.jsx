@@ -409,6 +409,8 @@ export default function MembersTab({
                                             />
                                         </div>
                                     )}
+
+                                    {/* REINSTATE SUSPENDED MEMBER */}
                                     {suspensions[m.id]?.is_suspended && m.id !== currentMemberId && (
                                         <button
                                             onClick={async () => {
@@ -420,38 +422,29 @@ export default function MembersTab({
                                                         [m.id]: { is_suspended: false, missed_meeting: null }
                                                     }))
                                                 } catch (err) {
-                                                    setRoleErrors(prev => ({
-                                                        ...prev,
-                                                        [m.id]: err.response?.data?.message || 'Reinstatement failed'
-                                                    }))
+                                                    console.error(err)
                                                 } finally {
                                                     setActionLoading(prev => ({ ...prev, [`reinstate_${m.id}`]: false }))
                                                 }
                                             }}
                                             disabled={actionLoading[`reinstate_${m.id}`]}
                                             style={{
-                                                background: '#fff8e6',
-                                                border: '1px solid #d4900a',
-                                                borderRadius: '10px',
-                                                padding: '10px 14px',
-                                                cursor: 'pointer',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: '8px',
-                                                fontSize: '0.78rem',
-                                                fontWeight: 600,
-                                                color: '#d4900a',
+                                                background: '#e6f4ee', border: 'none',
+                                                borderRadius: '10px', padding: '10px 14px',
+                                                cursor: 'pointer', display: 'flex',
+                                                alignItems: 'center', gap: '8px',
+                                                fontSize: '0.78rem', fontWeight: 600,
+                                                color: '#008751',
                                                 fontFamily: "'Plus Jakarta Sans', sans-serif",
-                                                width: '100%'
+                                                width: '100%',
+                                                opacity: actionLoading[`reinstate_${m.id}`] ? 0.6 : 1
                                             }}
                                         >
-                                            <UserCheck size={14} color="#d4900a" />
-                                            {actionLoading[`reinstate_${m.id}`]
-                                                ? 'Reinstating...'
-                                                : `Reinstate — ${suspensions[m.id]?.missed_meeting?.title || 'missed meeting'}`
-                                            }
+                                            <UserCheck size={14} color="#008751" />
+                                            {actionLoading[`reinstate_${m.id}`] ? 'Reinstating...' : 'Reinstate Member'}
                                         </button>
                                     )}
+
                                 </div>
                             </div>
                         )}
