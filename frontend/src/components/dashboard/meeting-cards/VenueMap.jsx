@@ -1,14 +1,16 @@
-import { useEffect } from "react"
-import { getDistanceInMeters } from "../leafletIcons"
+import { useEffect, useState } from "react"
 import { MapContainer, TileLayer, Marker, Circle, useMap } from 'react-leaflet'
-import { venuePin, userPin } from "../leafletIcons"
 import { MapPin, Lock } from 'lucide-react'
+import axios from 'axios'
+import { venuePin, userPin, getDistanceInMeters } from "../leafletIcons"
+import api from "../../../services/api"
 
+// Helper component to dynamically adjust map bounds
 function RecenterAutomatically({ venueLat, venueLng, userLocation }) {
     const map = useMap()
 
     useEffect(() => {
-        if (userLocation && userLocation.lat && userLocation.lng) {
+        if (userLocation?.lat && userLocation?.lng) {
             const bounds = [
                 [venueLat, venueLng],
                 [userLocation.lat, userLocation.lng]
@@ -23,14 +25,35 @@ function RecenterAutomatically({ venueLat, venueLng, userLocation }) {
 }
 
 const VenueMap = ({ meeting, userLocation, cardStyle, signInError, signingIn, formatTime, member, handleSignIn, signInClose }) => {
+    const [suspensionData, setSuspensionData] = useState({ is_suspended: false, missed_meeting: null })
+    const [loadingSuspension, setLoadingSuspension] = useState(true)
+
+    // Automatically check backend suspension route on mount
+    useEffect(() => {
+        const fetchSuspensionStatus = async () => {
+            if (!member?.id) return
+            try {
+                const response = await api.get(`/attendance/suspension/${member.id}`)
+                const {data} = response
+                if (data?.success) {
+                    setSuspensionData(data.data)
+                }
+            } catch (err) {
+                console.error("Failed to load suspension check:", err)
+            } finally {
+                setLoadingSuspension(false)
+            }
+        }
+
+        fetchSuspensionStatus()
+    }, [member?.id])
+
     const isLate = meeting.state === 'open_late'
-    const totalCost = isLate
-        ? meeting.meeting_cost + meeting.lateness_cost
-        : meeting.meeting_cost    
+    const totalCost = isLate ? meeting.meeting_cost + meeting.lateness_cost : meeting.meeting_cost    
     const venueLat = parseFloat(meeting.venue_lat)
     const venueLng = parseFloat(meeting.venue_lng)    
 
-    const distanceMeters = (userLocation && userLocation.lat && userLocation.lng)
+    const distanceMeters = (userLocation?.lat && userLocation?.lng)
         ? getDistanceInMeters(userLocation.lat, userLocation.lng, venueLat, venueLng)
         : null    
 
@@ -42,22 +65,18 @@ const VenueMap = ({ meeting, userLocation, cardStyle, signInError, signingIn, fo
 
     const isWithinGeofence = distanceMeters !== null && distanceMeters <= meeting.radius_meters
 
-    // PRE-CHECK: Check member object directly BEFORE sign-in attempt, fallback to signInError
-    const isSuspended = member?.status === 'suspended' || 
-                        member?.is_suspended === true || 
-                        (signInError && signInError.toLowerCase().includes('suspended'))
+    // Combine mount check with runtime sign-in error check
+    const isSuspended = suspensionData.is_suspended || (signInError && signInError.toLowerCase().includes('suspended'))
 
-    const suspensionReason = member?.suspension_reason || signInError || 'Your account has been suspended from CDS sign-ins.'
+    const missedTitle = suspensionData.missed_meeting?.title
+    const suspensionReason = missedTitle
+        ? `Account suspended for unverified attendance in "${missedTitle}".`
+        : signInError || 'Your account is suspended due to unclosed attendance in the previous meeting.'
 
     return (
         <div style={{ ...cardStyle, padding: '16px' }}>
-            {/* Header */}
-            <div style={{
-                display: 'flex',
-                alignItems: 'flex-start',
-                justifyContent: 'space-between',
-                marginBottom: '12px'
-            }}>
+            {/* Header section */}
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '12px' }}>
                 <div>
                     <div style={{ fontSize: '0.7rem', fontWeight: 600, color: '#8fa396', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '2px' }}>
                         Today's Meeting
@@ -79,7 +98,7 @@ const VenueMap = ({ meeting, userLocation, cardStyle, signInError, signingIn, fo
                 </div>
             </div>
 
-            {/* Regular Error Banner (For non-suspension errors like Network/GPS issues) */}
+            {/* General runtime errors (Non-Suspension) */}
             {signInError && !isSuspended && (
                 <div style={{
                     background: '#fff0f0',
@@ -94,13 +113,8 @@ const VenueMap = ({ meeting, userLocation, cardStyle, signInError, signingIn, fo
                 </div>
             )}
 
-            {/* Map Canvas Box */}
-            <div style={{
-                position: 'relative',
-                borderRadius: '14px',
-                overflow: 'hidden',
-                height: '260px'
-            }}>
+            {/* Map Canvas Wrapper */}
+            <div style={{ position: 'relative', borderRadius: '14px', overflow: 'hidden', height: '260px' }}>
                 <MapContainer
                     center={[venueLat, venueLng]}
                     zoom={16}
@@ -109,10 +123,7 @@ const VenueMap = ({ meeting, userLocation, cardStyle, signInError, signingIn, fo
                     scrollWheelZoom={true}
                     dragging={true}
                 >
-                    <TileLayer
-                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                        attribution=""
-                    />
+                    <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution="" />
 
                     <Marker position={[venueLat, venueLng]} icon={venuePin} />
 
@@ -122,7 +133,7 @@ const VenueMap = ({ meeting, userLocation, cardStyle, signInError, signingIn, fo
                         pathOptions={{ color: '#008751', fillColor: '#008751', fillOpacity: 0.15 }}
                     />
 
-                    {userLocation && userLocation.lat && userLocation.lng && (
+                    {userLocation?.lat && userLocation?.lng && (
                         <>
                             <Marker position={[userLocation.lat, userLocation.lng]} icon={userPin} />
                             <RecenterAutomatically
@@ -135,7 +146,7 @@ const VenueMap = ({ meeting, userLocation, cardStyle, signInError, signingIn, fo
                 </MapContainer>
 
                 {/* TRANSPARENT GLASS SUSPENSION OVERLAY */}
-                {isSuspended && (
+                {!loadingSuspension && isSuspended && (
                     <div style={{
                         position: 'absolute',
                         top: 0,
@@ -143,8 +154,8 @@ const VenueMap = ({ meeting, userLocation, cardStyle, signInError, signingIn, fo
                         right: 0,
                         bottom: 0,
                         zIndex: 2000,
-                        background: 'rgba(255, 255, 255, 0.45)', // 45% transparency to clearly show the map
-                        backdropFilter: 'blur(3px)',             // Light blur for readability
+                        background: 'rgba(255, 255, 255, 0.40)', // Low opacity to keep map clearly visible underneath
+                        backdropFilter: 'blur(3px)',
                         WebkitBackdropFilter: 'blur(3px)',
                         display: 'flex',
                         flexDirection: 'column',
@@ -154,7 +165,7 @@ const VenueMap = ({ meeting, userLocation, cardStyle, signInError, signingIn, fo
                         textAlign: 'center'
                     }}>
                         <div style={{
-                            background: 'rgba(255, 229, 229, 0.90)',
+                            background: 'rgba(255, 229, 229, 0.95)',
                             padding: '10px',
                             borderRadius: '50%',
                             marginBottom: '8px',
@@ -165,31 +176,34 @@ const VenueMap = ({ meeting, userLocation, cardStyle, signInError, signingIn, fo
                         }}>
                             <Lock size={20} color="#e53e3e" />
                         </div>
+
                         <div style={{
                             fontSize: '0.9rem',
                             fontWeight: 700,
                             color: '#e53e3e',
-                            marginBottom: '4px',
-                            textShadow: '0 1px 2px rgba(255,255,255,0.8)'
+                            marginBottom: '6px',
+                            textShadow: '0 1px 2px rgba(255, 255, 255, 0.8)'
                         }}>
                             Account Suspended
                         </div>
+
                         <div style={{
                             fontSize: '0.78rem',
                             fontWeight: 600,
-                            color: '#2d3748',
+                            color: '#1a202c',
                             lineHeight: 1.4,
                             maxWidth: '85%',
-                            background: 'rgba(255, 255, 255, 0.75)',
-                            padding: '6px 12px',
-                            borderRadius: '8px'
+                            background: 'rgba(255, 255, 255, 0.85)',
+                            padding: '8px 12px',
+                            borderRadius: '8px',
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
                         }}>
                             {suspensionReason}
                         </div>
                     </div>
                 )}
 
-                {/* BOTTOM CONTROL BAR */}
+                {/* BOTTOM ACTION BAR */}
                 {!isSuspended && (
                     <div style={{
                         position: 'absolute',
@@ -210,11 +224,7 @@ const VenueMap = ({ meeting, userLocation, cardStyle, signInError, signingIn, fo
                         <div style={{ flex: 1 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
                                 {formattedDistance && (
-                                    <span style={{
-                                        fontSize: '0.75rem',
-                                        fontWeight: 700,
-                                        color: isWithinGeofence ? '#008751' : '#e53e3e',
-                                    }}>
+                                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: isWithinGeofence ? '#008751' : '#e53e3e' }}>
                                         📍 {formattedDistance}
                                     </span>
                                 )}
@@ -251,8 +261,7 @@ const VenueMap = ({ meeting, userLocation, cardStyle, signInError, signingIn, fo
                                 border: 'none',
                                 fontWeight: 700,
                                 fontSize: '0.75rem',
-                                cursor: member.token_balance < totalCost || signingIn || !userLocation
-                                    ? 'not-allowed' : 'pointer',
+                                cursor: member.token_balance < totalCost || signingIn || !userLocation ? 'not-allowed' : 'pointer',
                                 boxShadow: '0 2px 8px rgba(0,135,81,0.25)'
                             }}
                         >
