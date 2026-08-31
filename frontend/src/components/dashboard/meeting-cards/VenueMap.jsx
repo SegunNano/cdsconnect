@@ -2,10 +2,9 @@ import { useEffect } from "react"
 import { getDistanceInMeters } from "../leafletIcons"
 import { MapContainer, TileLayer, Marker, Circle, useMap } from 'react-leaflet'
 import { venuePin, userPin } from "../leafletIcons"
-import { MapPin } from 'lucide-react'
+import { MapPin, Lock } from 'lucide-react'
 
-
-// Helper component to dynamically adjust map bounds to include both venue and user location
+// Helper component to dynamically adjust map bounds
 function RecenterAutomatically({ venueLat, venueLng, userLocation }) {
     const map = useMap()
 
@@ -24,140 +23,159 @@ function RecenterAutomatically({ venueLat, venueLng, userLocation }) {
     return null
 }
 
-const VenueMap = ({meeting, userLocation, cardStyle, signInError, signingIn, formatTime, member, handleSignIn, signInClose}) => {
+const VenueMap = ({ meeting, userLocation, cardStyle, signInError, signingIn, formatTime, member, handleSignIn, signInClose }) => {
+    const isLate = meeting.state === 'open_late'
+    const totalCost = isLate
+        ? meeting.meeting_cost + meeting.lateness_cost
+        : meeting.meeting_cost    
+    const venueLat = parseFloat(meeting.venue_lat)
+    const venueLng = parseFloat(meeting.venue_lng)    
 
-        const isLate = meeting.state === 'open_late'
-        const totalCost = isLate
-            ? meeting.meeting_cost + meeting.lateness_cost
-            : meeting.meeting_cost    
-        const venueLat = parseFloat(meeting.venue_lat)
-        const venueLng = parseFloat(meeting.venue_lng)    
-        // Calculate distance if user location is available
-        const distanceMeters = (userLocation && userLocation.lat && userLocation.lng)
-            ? getDistanceInMeters(userLocation.lat, userLocation.lng, venueLat, venueLng)
-            : null    
-        // Format distance string
-        const formattedDistance = distanceMeters !== null
-            ? distanceMeters >= 1000
-                ? `${(distanceMeters / 1000).toFixed(1)}km away`
-                : `${distanceMeters}m away`
-            : null    
-        // Check if user is within the geofence radius
-        const isWithinGeofence = distanceMeters !== null && distanceMeters <= meeting.radius_meters
-  return (
-             <div style={{ ...cardStyle, padding: '16px' }}>
-                <div style={{
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    justifyContent: 'space-between',
-                    marginBottom: '12px'
-                }}>
-                    <div>
-                        <div style={{ fontSize: '0.7rem', fontWeight: 600, color: '#8fa396', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '2px' }}>
-                            Today's Meeting
-                        </div>
-                        <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0d1b12' }}>
-                            {meeting.title}
-                        </div>
+    const distanceMeters = (userLocation && userLocation.lat && userLocation.lng)
+        ? getDistanceInMeters(userLocation.lat, userLocation.lng, venueLat, venueLng)
+        : null    
+
+    const formattedDistance = distanceMeters !== null
+        ? distanceMeters >= 1000
+            ? `${(distanceMeters / 1000).toFixed(1)}km away`
+            : `${distanceMeters}m away`
+        : null    
+
+    const isWithinGeofence = distanceMeters !== null && distanceMeters <= meeting.radius_meters
+    const isSuspended = signInError && signInError.includes('suspended')
+
+    return (
+        <div style={{ ...cardStyle, padding: '16px' }}>
+            {/* Header section */}
+            <div style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                justifyIn: 'space-between',
+                marginBottom: '12px'
+            }}>
+                <div>
+                    <div style={{ fontSize: '0.7rem', fontWeight: 600, color: '#8fa396', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '2px' }}>
+                        Today's Meeting
                     </div>
-                    <div style={{
-                        background: isLate ? '#fff8e6' : '#e6f4ee',
-                        color: isLate ? '#d4900a' : '#008751',
-                        fontSize: '0.7rem',
-                        fontWeight: 600,
-                        padding: '4px 10px',
-                        borderRadius: '20px',
-                        whiteSpace: 'nowrap'
-                    }}>
-                        {isLate ? 'Late' : 'On time'}
+                    <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0d1b12' }}>
+                        {meeting.title}
                     </div>
                 </div>
+                <div style={{
+                    background: isLate ? '#fff8e6' : '#e6f4ee',
+                    color: isLate ? '#d4900a' : '#008751',
+                    fontSize: '0.7rem',
+                    fontWeight: 600,
+                    padding: '4px 10px',
+                    borderRadius: '20px',
+                    whiteSpace: 'nowrap'
+                }}>
+                    {isLate ? 'Late' : 'On time'}
+                </div>
+            </div>
 
-                {signInError && (
-                    signInError.includes('suspended') ? (
+            {/* General Error Banner (Non-Suspended) */}
+            {signInError && !isSuspended && (
+                <div style={{
+                    background: '#fff0f0',
+                    color: '#e53e3e',
+                    fontSize: '0.78rem',
+                    padding: '8px 12px',
+                    borderRadius: '10px',
+                    marginBottom: '10px',
+                    textAlign: 'center'
+                }}>
+                    {signInError}
+                </div>
+            )}
+
+            {/* Map Container with Overlay Context */}
+            <div style={{
+                position: 'relative',
+                borderRadius: '14px',
+                overflow: 'hidden',
+                height: '260px'
+            }}>
+                <MapContainer
+                    center={[venueLat, venueLng]}
+                    zoom={16}
+                    style={{ height: '100%', width: '100%' }}
+                    zoomControl={false}
+                    scrollWheelZoom={!isSuspended}
+                    dragging={!isSuspended}
+                >
+                    <TileLayer
+                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                        attribution=""
+                    />
+
+                    <Marker position={[venueLat, venueLng]} icon={venuePin} />
+
+                    <Circle
+                        center={[venueLat, venueLng]}
+                        radius={meeting.radius_meters}
+                        pathOptions={{ color: '#008751', fillColor: '#008751', fillOpacity: 0.15 }}
+                    />
+
+                    {userLocation && userLocation.lat && userLocation.lng && (
+                        <>
+                            <Marker position={[userLocation.lat, userLocation.lng]} icon={userPin} />
+                            <RecenterAutomatically
+                                venueLat={venueLat}
+                                venueLng={venueLng}
+                                userLocation={userLocation}
+                            />
+                        </>
+                    )}
+                </MapContainer>
+
+                {/* SUSPENDED ACCOUNT OVERLAY */}
+                {isSuspended && (
+                    <div style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        zIndex: 2000,
+                        background: 'rgba(255, 240, 240, 0.85)',
+                        backdropFilter: 'blur(6px)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '20px',
+                        textAlign: 'center'
+                    }}>
                         <div style={{
-                            background: '#fff0f0',
-                            borderRadius: '14px',
-                            padding: '20px',
-                            textAlign: 'center',
-                            border: '1px solid #e53e3e'
+                            background: '#ffe5e5',
+                            padding: '10px',
+                            borderRadius: '50%',
+                            marginBottom: '8px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
                         }}>
-                            <div style={{ fontSize: '1.5rem', marginBottom: '8px' }}>🔒</div>
-                            <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#e53e3e', marginBottom: '6px' }}>
-                                Account Suspended
-                            </div>
-                            <div style={{ fontSize: '0.78rem', color: '#4a5e52', lineHeight: 1.6 }}>
-                                {signInError}
-                            </div>
+                            <Lock size={22} color="#e53e3e" />
                         </div>
-                    ) : (
-                        <div style={{
-                            background: '#fff0f0',
-                            color: '#e53e3e',
-                            fontSize: '0.78rem',
-                            padding: '8px 12px',
-                            borderRadius: '10px',
-                            marginBottom: '10px',
-                            textAlign: 'center'
-                        }}>
+                        <div style={{ fontSize: '0.92rem', fontWeight: 700, color: '#e53e3e', marginBottom: '4px' }}>
+                            Account Suspended
+                        </div>
+                        <div style={{ fontSize: '0.78rem', color: '#4a5e52', lineHeight: 1.5, maxWidth: '85%' }}>
                             {signInError}
                         </div>
-                    )
+                    </div>
                 )}
 
-                <div style={{
-                    position: 'relative',
-                    borderRadius: '14px',
-                    overflow: 'hidden',
-                    height: '260px'
-                }}>
-
-                    <MapContainer
-                        center={[venueLat, venueLng]}
-                        zoom={16}
-                        style={{ height: '100%', width: '100%' }}
-                        zoomControl={false}
-                        scrollWheelZoom={true}
-                        dragging={true}
-                    >
-                        <TileLayer
-                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                            attribution=""
-                        />
-
-                        {/* Venue location marker */}
-                        <Marker position={[venueLat, venueLng]} icon={venuePin} />
-
-                        {/* Geofence area */}
-                        <Circle
-                            center={[venueLat, venueLng]}
-                            radius={meeting.radius_meters}
-                            pathOptions={{ color: '#008751', fillColor: '#008751', fillOpacity: 0.15 }}
-                        />
-
-                        {userLocation && userLocation.lat && userLocation.lng && (
-                            <>
-                                {/* Explicit user position marker */}
-                                <Marker position={[userLocation.lat, userLocation.lng]} icon={userPin} />
-
-                                {/* Dynamic bounds handler */}
-                                <RecenterAutomatically
-                                    venueLat={venueLat}
-                                    venueLng={venueLng}
-                                    userLocation={userLocation}
-                                />
-                            </>
-                        )}
-                    </MapContainer>
-                        
-                    {/* RECTANGULAR BUTTON & INFO OVERLAY */}
+                {/* BOTTOM ACTION & DISTANCE BAR (Only shown when active) */}
+                {!isSuspended && (
                     <div style={{
                         position: 'absolute',
                         bottom: '10px',
                         left: '10px',
                         right: '10px',
                         zIndex: 1000,
-                        background: 'rgba(255, 255, 255, 0.40)',
+                        background: 'rgba(255, 255, 255, 0.85)',
                         backdropFilter: 'blur(4px)',
                         padding: '10px 12px',
                         borderRadius: '12px',
@@ -169,19 +187,15 @@ const VenueMap = ({meeting, userLocation, cardStyle, signInError, signingIn, for
                     }}>
                         <div style={{ flex: 1 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
-                             {formattedDistance && (
-                                <>
-                                    <span
-                                    style={{
+                                {formattedDistance && (
+                                    <span style={{
                                         fontSize: '0.75rem',
                                         fontWeight: 700,
                                         color: isWithinGeofence ? '#008751' : '#e53e3e',
-                                    }}
-                                    >
-                                    📍 {formattedDistance}
+                                    }}>
+                                        📍 {formattedDistance}
                                     </span>
-                                </>
-                            )}
+                                )}
 
                                 <span style={{
                                     fontSize: '0.62rem',
@@ -227,9 +241,10 @@ const VenueMap = ({meeting, userLocation, cardStyle, signInError, signingIn, for
                                 : 'Sign In'}
                         </button>
                     </div>
-                </div>
+                )}
             </div>
-  )
+        </div>
+    )
 }
 
 export default VenueMap
