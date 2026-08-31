@@ -4,7 +4,6 @@ import { MapContainer, TileLayer, Marker, Circle, useMap } from 'react-leaflet'
 import { venuePin, userPin } from "../leafletIcons"
 import { MapPin, Lock } from 'lucide-react'
 
-// Helper component to dynamically adjust map bounds
 function RecenterAutomatically({ venueLat, venueLng, userLocation }) {
     const map = useMap()
 
@@ -42,15 +41,21 @@ const VenueMap = ({ meeting, userLocation, cardStyle, signInError, signingIn, fo
         : null    
 
     const isWithinGeofence = distanceMeters !== null && distanceMeters <= meeting.radius_meters
-    const isSuspended = signInError && signInError.includes('suspended')
+
+    // PRE-CHECK: Check member object directly BEFORE sign-in attempt, fallback to signInError
+    const isSuspended = member?.status === 'suspended' || 
+                        member?.is_suspended === true || 
+                        (signInError && signInError.toLowerCase().includes('suspended'))
+
+    const suspensionReason = member?.suspension_reason || signInError || 'Your account has been suspended from CDS sign-ins.'
 
     return (
         <div style={{ ...cardStyle, padding: '16px' }}>
-            {/* Header section */}
+            {/* Header */}
             <div style={{
                 display: 'flex',
                 alignItems: 'flex-start',
-                justifyIn: 'space-between',
+                justifyContent: 'space-between',
                 marginBottom: '12px'
             }}>
                 <div>
@@ -74,7 +79,7 @@ const VenueMap = ({ meeting, userLocation, cardStyle, signInError, signingIn, fo
                 </div>
             </div>
 
-            {/* General Error Banner (Non-Suspended) */}
+            {/* Regular Error Banner (For non-suspension errors like Network/GPS issues) */}
             {signInError && !isSuspended && (
                 <div style={{
                     background: '#fff0f0',
@@ -89,7 +94,7 @@ const VenueMap = ({ meeting, userLocation, cardStyle, signInError, signingIn, fo
                 </div>
             )}
 
-            {/* Map Container with Overlay Context */}
+            {/* Map Canvas Box */}
             <div style={{
                 position: 'relative',
                 borderRadius: '14px',
@@ -101,8 +106,8 @@ const VenueMap = ({ meeting, userLocation, cardStyle, signInError, signingIn, fo
                     zoom={16}
                     style={{ height: '100%', width: '100%' }}
                     zoomControl={false}
-                    scrollWheelZoom={!isSuspended}
-                    dragging={!isSuspended}
+                    scrollWheelZoom={true}
+                    dragging={true}
                 >
                     <TileLayer
                         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -129,7 +134,7 @@ const VenueMap = ({ meeting, userLocation, cardStyle, signInError, signingIn, fo
                     )}
                 </MapContainer>
 
-                {/* SUSPENDED ACCOUNT OVERLAY */}
+                {/* TRANSPARENT GLASS SUSPENSION OVERLAY */}
                 {isSuspended && (
                     <div style={{
                         position: 'absolute',
@@ -138,8 +143,9 @@ const VenueMap = ({ meeting, userLocation, cardStyle, signInError, signingIn, fo
                         right: 0,
                         bottom: 0,
                         zIndex: 2000,
-                        background: 'rgba(255, 240, 240, 0.85)',
-                        backdropFilter: 'blur(6px)',
+                        background: 'rgba(255, 255, 255, 0.45)', // 45% transparency to clearly show the map
+                        backdropFilter: 'blur(3px)',             // Light blur for readability
+                        WebkitBackdropFilter: 'blur(3px)',
                         display: 'flex',
                         flexDirection: 'column',
                         alignItems: 'center',
@@ -148,26 +154,42 @@ const VenueMap = ({ meeting, userLocation, cardStyle, signInError, signingIn, fo
                         textAlign: 'center'
                     }}>
                         <div style={{
-                            background: '#ffe5e5',
+                            background: 'rgba(255, 229, 229, 0.90)',
                             padding: '10px',
                             borderRadius: '50%',
                             marginBottom: '8px',
                             display: 'flex',
                             alignItems: 'center',
-                            justifyContent: 'center'
+                            justifyContent: 'center',
+                            boxShadow: '0 2px 8px rgba(229, 62, 62, 0.2)'
                         }}>
-                            <Lock size={22} color="#e53e3e" />
+                            <Lock size={20} color="#e53e3e" />
                         </div>
-                        <div style={{ fontSize: '0.92rem', fontWeight: 700, color: '#e53e3e', marginBottom: '4px' }}>
+                        <div style={{
+                            fontSize: '0.9rem',
+                            fontWeight: 700,
+                            color: '#e53e3e',
+                            marginBottom: '4px',
+                            textShadow: '0 1px 2px rgba(255,255,255,0.8)'
+                        }}>
                             Account Suspended
                         </div>
-                        <div style={{ fontSize: '0.78rem', color: '#4a5e52', lineHeight: 1.5, maxWidth: '85%' }}>
-                            {signInError}
+                        <div style={{
+                            fontSize: '0.78rem',
+                            fontWeight: 600,
+                            color: '#2d3748',
+                            lineHeight: 1.4,
+                            maxWidth: '85%',
+                            background: 'rgba(255, 255, 255, 0.75)',
+                            padding: '6px 12px',
+                            borderRadius: '8px'
+                        }}>
+                            {suspensionReason}
                         </div>
                     </div>
                 )}
 
-                {/* BOTTOM ACTION & DISTANCE BAR (Only shown when active) */}
+                {/* BOTTOM CONTROL BAR */}
                 {!isSuspended && (
                     <div style={{
                         position: 'absolute',
@@ -175,7 +197,7 @@ const VenueMap = ({ meeting, userLocation, cardStyle, signInError, signingIn, fo
                         left: '10px',
                         right: '10px',
                         zIndex: 1000,
-                        background: 'rgba(255, 255, 255, 0.85)',
+                        background: 'rgba(255, 255, 255, 0.75)',
                         backdropFilter: 'blur(4px)',
                         padding: '10px 12px',
                         borderRadius: '12px',
