@@ -4,6 +4,7 @@ import pool from '../../config/db.js'
 import { buildClearanceSlipPdf } from '../../utils/clearance.js'
 
 
+
 export const generateClearanceSlip = async (memberId, meetingId) => {
     // 1. Get clearance slip record
     const slipResult = await pool.query(

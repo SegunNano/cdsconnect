@@ -1,4 +1,5 @@
 import pool from '../../config/db.js'
+import { createNotification } from '../notifications/notifications.service.js'
 
 export const logExpense = async (coordinatorId, amount, description) => {
     // Check treasury has enough
@@ -27,12 +28,35 @@ export const logExpense = async (coordinatorId, amount, description) => {
         [amount, description, coordinatorId]
     )
 
+
+    const loggerResult = await pool.query(
+        'SELECT first_name, last_name, role FROM members WHERE id = $1',
+        [coordinatorId]
+    )
+    const logger = loggerResult.rows[0]
+
+    // Notify all coordinators
+    const coordinators = await pool.query(
+        `SELECT id FROM members 
+        WHERE member_type = 'staff'`
+    )
+
+    await Promise.all(coordinators.rows.map(c =>
+        createNotification(
+            c.id,
+            'Expense Logged',
+            `${logger.first_name} ${logger.last_name} (${logger.role.replace('_', ' ')}) logged an expense of ₦${amount.toLocaleString()} — ${description}`,
+            'expense_logged'
+        )
+    ))
+
     return {
         expense: result.rows[0],
         previous_balance: balance,
         new_balance: balance - amount
     }
 }
+
 
 export const getAllExpenses = async () => {
     const result = await pool.query(

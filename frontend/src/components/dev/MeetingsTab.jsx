@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Plus, Locate } from 'lucide-react'
 import LocationPickerMap from './LocationPickerMap'
 import { createMeeting } from '../../services/dev.service'
-import { DEFAULT_VENUE_LAT, DEFAULT_VENUE_LNG } from '../../constants'
+import { DEFAULT_RADIUS_METERS, DEFAULT_VENUE_LAT, DEFAULT_VENUE_LNG } from '../../constants'
 
 export default function MeetingsTab({ meetings, inputStyle, sectionHead, card, onCreated }) {
     const [form, setForm] = useState({
@@ -13,7 +13,7 @@ export default function MeetingsTab({ meetings, inputStyle, sectionHead, card, o
         sign_in_close: '',
         venue_lat: DEFAULT_VENUE_LAT,
         venue_lng: DEFAULT_VENUE_LNG,
-        radius_meters: 100,
+        radius_meters: DEFAULT_RADIUS_METERS,
         meeting_cost: 1,
         lateness_cost: 1,
         useDefault: true

@@ -1,5 +1,5 @@
 import { createNotificationForAll } from '../notifications/notifications.service.js'
-import { NOTIFICATION_TYPES } from '../../constants.js'
+import { DEFAULT_RADIUS_METERS, NOTIFICATION_TYPES } from '../../constants.js'
 import pool from '../../config/db.js'
 
 const formatMeeting = (meeting) => ({
@@ -48,7 +48,7 @@ export const createMeeting = async (data) => {
             formatWAT(sign_in_open),
             formatWAT(late_threshold), 
             formatWAT(sign_in_close),
-            venue_lat, venue_lng, radius_meters || 100,
+            venue_lat, venue_lng, radius_meters || DEFAULT_RADIUS_METERS,
             meeting_cost || 1, lateness_cost || 1
         ]
     )
