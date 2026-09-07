@@ -17,7 +17,10 @@ import VerifySlip from './pages/public/VerifySlip'
 import Onboarding from './pages/auth/Onboarding'
 import TokenHistory from './pages/member/TokenHistory'
 import Treasury from './pages/member/Treasury'
+import UnderConstruction from './pages/public/UnderConstruction' // Import building page
 
+// Set to true to override all routes, or false to restore normal app flow
+const IS_MAINTENANCE_MODE = import.meta.env.VITE_MAINTENANCE_MODE === 'true'
 
 function HomeRedirect() {
     const { member, loading } = useAuth()
@@ -28,6 +31,17 @@ function HomeRedirect() {
 }
 
 export default function App() {
+    // Overrides all pages when active
+    if (IS_MAINTENANCE_MODE) {
+        return (
+            <BrowserRouter>
+                <Routes>
+                    <Route path="*" element={<UnderConstruction />} />
+                </Routes>
+            </BrowserRouter>
+        )
+    }
+
     return (
         <AuthProvider>
             <BrowserRouter>

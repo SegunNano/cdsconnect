@@ -5,20 +5,18 @@ import { Users, Calendar, Layers, Settings } from 'lucide-react'
 import {
     getAllMembers, updateMemberRole, toggleDevAccess,
     resetMemberDevice, deactivateMember,
-    getAllMeetings, getAllStreams, createStream, toggleStreamActive,
+    getAllMeetings, getAllStreams, toggleStreamActive,
     getRegistrationStatus, toggleRegistration
 } from '../../services/dev.service'
-
 
 import MeetingsTab from '../../components/dev/MeetingsTab'
 import MembersTab from '../../components/dev/MembersTab'
 import SettingsTab from '../../components/dev/SettingsTab'
 import StreamsTab from '../../components/dev/StreamsTab'
 
-
 export default function DevDashboard() {
     const { member } = useAuth()
-    const navigate = useNavigate()
+    // const navigate = useNavigate()
     const [activeTab, setActiveTab] = useState('members')
     const [members, setMembers] = useState([])
     const [meetings, setMeetings] = useState([])
@@ -56,6 +54,9 @@ export default function DevDashboard() {
         `${m.first_name} ${m.last_name}`.toLowerCase().includes(search.toLowerCase()) ||
         m.state_code.toLowerCase().includes(search.toLowerCase())
     )
+
+    // Calculate total devs assigned across all members
+    const devCount = members.filter(m => m.is_dev).length
 
     const sectionHead = {
         fontSize: '0.75rem', fontWeight: 700, color: '#8fa396',
@@ -98,29 +99,49 @@ export default function DevDashboard() {
 
             <div style={{ padding: '16px 20px 0' }}>
                 {activeTab === 'members' && (
-                    <MembersTab
-                        members={filtered} search={search} setSearch={setSearch}
-                        loading={loading} selectedMember={selectedMember} setSelectedMember={setSelectedMember}
-                        onRoleUpdate={async (memberId, role) => {
-                            await updateMemberRole(memberId, role)
-                            setMembers(prev => prev.map(m => m.id === memberId ? { ...m, role } : m))
-                        }}
-                        onToggleDev={async (memberId) => {
-                            const result = await toggleDevAccess(memberId)
-                            setMembers(prev => prev.map(m => m.id === memberId ? { ...m, is_dev: result.data.is_dev } : m))
-                        }}
-                        onResetDevice={async (memberId) => {
-                            await resetMemberDevice(memberId)
-                            alert('Device reset successfully')
-                        }}
-                        onDeactivate={async (memberId) => {
-                            await deactivateMember(memberId)
-                            setMembers(prev => prev.map(m => m.id === memberId ? { ...m, is_active: false } : m))
-                        }}
-                        currentMemberId={member?.id}
-                    />
-                )}
+                    <>
+                        {/* Dev limit warning banner */}
+                        {devCount >= 2 && (
+                            <div style={{
+                                background: '#fff8e6',
+                                borderRadius: '10px',
+                                padding: '10px 14px',
+                                fontSize: '0.75rem',
+                                color: '#d4900a',
+                                fontWeight: 500,
+                                marginBottom: '12px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px'
+                            }}>
+                                ⚠️ Maximum devs reached ({devCount}/2). Remove a dev to assign another.
+                            </div>
+                        )}
 
+                        <MembersTab
+                            members={filtered} search={search} setSearch={setSearch}
+                            loading={loading} selectedMember={selectedMember} setSelectedMember={setSelectedMember}
+                            onRoleUpdate={async (memberId, role) => {
+                                await updateMemberRole(memberId, role)
+                                setMembers(prev => prev.map(m => m.id === memberId ? { ...m, role } : m))
+                            }}
+                            onToggleDev={async (memberId) => {
+                                const result = await toggleDevAccess(memberId)
+                                setMembers(prev => prev.map(m => m.id === memberId ? { ...m, is_dev: result.data.is_dev } : m))
+                            }}
+                            onResetDevice={async (memberId) => {
+                                await resetMemberDevice(memberId)
+                                alert('Device reset successfully')
+                            }}
+                            onDeactivate={async (memberId) => {
+                                await deactivateMember(memberId)
+                                setMembers(prev => prev.map(m => m.id === memberId ? { ...m, is_active: false } : m))
+                            }}
+                            currentMemberId={member?.id}
+                        />
+                    </>
+                )}
+                
                 {activeTab === 'meetings' && (
                     <MeetingsTab
                         meetings={meetings} inputStyle={inputStyle}

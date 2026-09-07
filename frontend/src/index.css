@@ -19,10 +19,10 @@ body {
   border: none !important;
 }
 
-select {
-  appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
+select,
+input[type="date"],
+input[type="datetime-local"] {
+  width: 100%;
+  box-sizing: border-box;
   height: 48px;
-  padding-right: 40px;
 }

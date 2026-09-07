@@ -307,9 +307,21 @@ export const buildClearanceSlipPdf = async ({
     // 2. Setup PDFKit A4 Document
     const PAGE_WIDTH = 595.28
     const PAGE_HEIGHT = 841.89
+
     const doc = new PDFDocument({
         size: 'A4',
         margin: 40,
+        userPassword: '',
+        ownerPassword: `CDS-${qrToken}`,
+        permissions: {
+            printing: 'highResolution',
+            modifying: false,
+            copying: false,
+            annotating: false,
+            fillingForms: false,
+            contentAccessibility: true,
+            documentAssembly: false
+        },
         info: {
             Title: `Clearance Slip - ${member.state_code}`,
             Author: 'CDSConnect System'
@@ -471,7 +483,7 @@ export const buildClearanceSlipPdf = async ({
        PAGE_HEIGHT - 50, // Moved up inside the 40pt margin
        { align: 'center', width: PAGE_WIDTH }
    )
-    doc.end()
+
 
     return new Promise((resolve, reject) => {
         doc.on('end', () =>
@@ -482,5 +494,6 @@ export const buildClearanceSlipPdf = async ({
             })
         )
         doc.on('error', reject)
+        doc.end()
     })
 }

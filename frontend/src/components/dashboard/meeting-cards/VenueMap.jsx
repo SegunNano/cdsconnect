@@ -70,7 +70,7 @@ const VenueMap = ({ meeting, userLocation, cardStyle, signInError, signingIn, fo
 
     const missedTitle = suspensionData.missed_meeting?.title
     const suspensionReason = missedTitle
-        ? `Account suspended for unverified attendance in "${missedTitle}".`
+        ? `Your account is suspended due to unclosed attendance in "${missedTitle}".`
         : signInError || 'Your account is suspended due to unclosed attendance in the previous meeting.'
 
     return (
