@@ -1,21 +1,22 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import {
     ArrowLeft, User, Mail, Hash,
     Calendar, Layers, LogOut,
     Wallet, Edit2, Check, X,
-    KeyRound, ChevronRight, Fingerprint, UserLock
+    KeyRound, ChevronRight, Fingerprint
 } from 'lucide-react'
-import { updateMyProfile } from '../../services/members.service'
+import { getMyProfile, updateMyProfile } from '../../services/members.service'
 import { resetPin } from '../../services/pin.sevice'
 import { BREAKOUT_SESSIONS } from '../../constants'
 import PinInput from '../../components/common/PinInput'
 
 export default function Profile() {
-    const { member, logout, setMember } = useAuth()
+    const { member, logout, completeOnboarding } = useAuth()
     const navigate = useNavigate()
 
+    const [loadingProfile, setLoadingProfile] = useState(true)
     const [editing, setEditing] = useState(false)
     const [form, setForm] = useState({})
     const [saving, setSaving] = useState(false)
@@ -29,7 +30,47 @@ export default function Profile() {
     const [pinError, setPinError] = useState('')
     const [pinSuccess, setPinSuccess] = useState(false)
 
+    // Fetch fresh profile from PostgreSQL on mount
+    useEffect(() => {
+        let isMounted = true
 
+        const fetchLatestProfile = async () => {
+            try {
+                const response = await getMyProfile()
+                const freshMember = response.data
+
+                if (isMounted && freshMember) {
+                    // Update Auth Context state & localStorage via completeOnboarding
+                    completeOnboarding(freshMember)
+                    setForm(freshMember)
+                }
+            } catch (err) {
+                console.error('Failed to fetch updated profile:', err)
+            } finally {
+                if (isMounted) setLoadingProfile(false)
+            }
+        }
+
+        fetchLatestProfile()
+
+        return () => {
+            isMounted = false
+        }
+    }, [])
+
+    if (loadingProfile) return (
+        <div style={{
+            minHeight: '100vh',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontFamily: "'Plus Jakarta Sans', sans-serif",
+            color: '#8fa396',
+            fontSize: '0.88rem'
+        }}>
+            Loading...
+        </div>
+    )
 
     const startEditing = () => {
         setForm({
@@ -54,10 +95,11 @@ export default function Profile() {
         setSaveError('')
         try {
             const result = await updateMyProfile(form)
-            // Update stored member
             const updated = result.data
-            localStorage.setItem('member', JSON.stringify(updated))
-            setMember(updated)
+        
+            // Syncs React Auth Context, localStorage, and credential binding
+            completeOnboarding(updated)
+        
             setEditing(false)
         } catch (err) {
             setSaveError(err.response?.data?.message || 'Failed to save changes')

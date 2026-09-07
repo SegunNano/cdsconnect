@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
-import { Fingerprint, X } from 'lucide-react'
+import { Check, Fingerprint, X } from 'lucide-react'
 import { registerDevice } from '../../services/webauthn'
 import { getMyProfile } from '../../services/members.service'
 
@@ -111,7 +111,7 @@ export default function Onboarding() {
                             justifyContent: 'center',
                             margin: '0 auto 24px'
                         }}>
-                            <span style={{ fontSize: '2.5rem' }}>✅</span>
+                            <Check size={40} color="#008751" strokeWidth={2.5} />
                         </div>
                         <h2 style={{
                             fontSize: '1.2rem',
