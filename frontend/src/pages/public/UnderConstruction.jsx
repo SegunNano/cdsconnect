@@ -1,9 +1,9 @@
-import  { useState } from 'react'
-
+import React, { useState, useEffect } from 'react';
 
 export default function UnderConstruction() {
   const [email, setEmail] = useState('');
   const [subscribed, setSubscribed] = useState(false);
+  const [progress, setProgress] = useState(78.0);
 
   const theme = {
     fontFamily: "'Plus Jakarta Sans', sans-serif",
@@ -17,6 +17,29 @@ export default function UnderConstruction() {
     border: '#e8ece9',
     shadow: '0 2px 12px rgba(0,0,0,0.07)',
   };
+
+  // Asymptotic progress animation logic
+useEffect(() => {
+  let interTime = 1000; // Starting delay in ms
+  let timerId;
+
+  const updateProgress = () => {
+    setProgress((prev) => {
+      const distanceRemaining = 99.9 - prev;
+      const increment = distanceRemaining * 0.012;
+      return Math.min(prev + increment, 99.9);
+    });
+
+    // Exponentially increase delay (capped at 30s to prevent stalling entirely)
+    interTime = Math.min(interTime * 1.2, 30000);
+    timerId = setTimeout(updateProgress, interTime);
+  };
+
+  // Start the initial timeout
+  timerId = setTimeout(updateProgress, interTime);
+
+  return () => clearTimeout(timerId);
+}, []);
 
   const handleSubscribe = (e) => {
     e.preventDefault();
@@ -33,6 +56,14 @@ export default function UnderConstruction() {
       justifyContent: 'center',
       padding: '24px 16px 100px 16px',
     }}>
+      <style>{`
+        @keyframes pulseGlow {
+          0% { opacity: 0.6; }
+          50% { opacity: 1; }
+          100% { opacity: 0.6; }
+        }
+      `}</style>
+      
       <div style={{
         maxWidth: '390px',
         width: '100%',
@@ -58,7 +89,8 @@ export default function UnderConstruction() {
               height: '8px',
               borderRadius: '50%',
               backgroundColor: theme.primaryGreen,
-              display: 'inline-block'
+              display: 'inline-block',
+              animation: 'pulseGlow 1.5s infinite ease-in-out'
             }} />
             System Maintenance
           </span>
@@ -73,7 +105,7 @@ export default function UnderConstruction() {
           textAlign: 'center',
           marginBottom: '16px',
         }}>
-          {/* Construction Icon */}
+          {/* Icon */}
           <div style={{
             width: '40px',
             height: '40px',
@@ -109,7 +141,7 @@ export default function UnderConstruction() {
             We are optimizing database infrastructure and enhancing system workflows. Access will resume shortly.
           </p>
 
-          {/* Progress Bar Container */}
+          {/* Dynamic Progress Bar Container */}
           <div style={{
             backgroundColor: theme.bgColor,
             padding: '12px',
@@ -120,10 +152,18 @@ export default function UnderConstruction() {
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontWeight: 600, color: theme.darkText, marginBottom: '6px' }}>
               <span>Deployment Progress</span>
-              <span style={{ color: theme.primaryGreen }}>78%</span>
+              <span style={{ color: theme.primaryGreen, fontFamily: 'monospace' }}>
+                {progress.toFixed(1)}%
+              </span>
             </div>
             <div style={{ width: '100%', height: '6px', backgroundColor: theme.border, borderRadius: '3px', overflow: 'hidden' }}>
-              <div style={{ width: '78%', height: '100%', backgroundColor: theme.primaryGreen, borderRadius: '3px' }} />
+              <div style={{
+                width: `${progress}%`,
+                height: '100%',
+                backgroundColor: theme.primaryGreen,
+                borderRadius: '3px',
+                transition: 'width 0.3s ease-out',
+              }} />
             </div>
           </div>
 
@@ -180,7 +220,7 @@ export default function UnderConstruction() {
           )}
         </div>
 
-        {/* System Terminal Card */}
+        {/* Terminal Logs */}
         <div style={{
           backgroundColor: theme.white,
           borderRadius: '14px',
@@ -188,7 +228,7 @@ export default function UnderConstruction() {
           boxShadow: theme.shadow,
           border: `1px solid ${theme.border}`,
         }}>
-          <div style={{ fontSize: '11px', fontWeight: 700, color: theme.secondaryIcon, textTransform: 'uppercase', tracking: '0.5px', marginBottom: '8px' }}>
+          <div style={{ fontSize: '11px', fontWeight: 700, color: theme.secondaryIcon, textTransform: 'uppercase', marginBottom: '8px' }}>
             Live Logs
           </div>
           <div style={{
@@ -201,7 +241,9 @@ export default function UnderConstruction() {
           }}>
             <div>[OK] PostgreSQL migrations completed</div>
             <div>[OK] API endpoints synced</div>
-            <div style={{ color: theme.primaryGreen }}>[RUNNING] Cache warming in progress...</div>
+            <div style={{ color: theme.primaryGreen }}>
+              [RUNNING] Optimizing asset bundles...
+            </div>
           </div>
         </div>
       </div>
