@@ -21,9 +21,9 @@ export const registerDevice = async () => {
     return verifyRes.data
 }
 
-export const authenticateWithDevice = async (email) => {
+export const authenticateWithDevice = async (email, clientCredentialId) => {
     // Get challenge from server
-    const optionsRes = await api.post('/auth/webauthn/login/options', { email })
+    const optionsRes = await api.post('/auth/webauthn/login/options', { email, clientCredentialId })
     const options = optionsRes.data.data
 
     // Trigger browser to sign challenge

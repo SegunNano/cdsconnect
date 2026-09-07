@@ -18,7 +18,9 @@ export default function Onboarding() {
             await registerDevice()
             const memberRes = await getMyProfile()
             const updatedMember = memberRes.data
-
+            if (updatedMember.credential_id) {
+                localStorage.setItem('clientCredentialId', updatedMember.credential_id)
+            }
             setStep('success')
             setTimeout(() => {
                 completeOnboarding(updatedMember)

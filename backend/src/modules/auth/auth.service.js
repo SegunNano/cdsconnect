@@ -199,7 +199,7 @@ export const verifyRegistration = async (memberId, credential) => {
 
 // ── WEBAUTHN LOGIN OPTIONS ────────────────────────
 
-export const getAuthenticationOptions = async (email) => {
+export const getAuthenticationOptions = async (email, clientCredentialId=null) => {
     const result = await pool.query(
         'SELECT * FROM members WHERE email = $1',
         [email]
@@ -212,6 +212,22 @@ export const getAuthenticationOptions = async (email) => {
 
     if (!member.credential_id) {
         throw { status: 400, message: 'No device registered. Please register your device first.' }
+    }
+    
+    if (member.credential_id || clientCredentialId) {
+        if (!clientCredentialId) {
+            throw {
+                status: 403,
+                message: 'Device not recognised. Log in with your passkey or contact your dev.'
+            }
+        }
+    
+        if (clientCredentialId !== member.credential_id) {
+            throw {
+                status: 403,
+                message: 'This device is not authorised for this account. Contact your dev.'
+            }
+        }
     }
 
     const options = await generateAuthenticationOptions({
@@ -300,19 +316,10 @@ export const loginWithPin = async (email, pin, clientCredentialId = null) => {
 
     
 
-    if (member.credential_id || clientCredentialId) {
-        if (!clientCredentialId) {
-            throw {
-                status: 403,
-                message: 'Device not recognised. Log in with your passkey or contact your dev.'
-            }
-        }
-    
-        if (clientCredentialId !== member.credential_id) {
-            throw {
-                status: 403,
-                message: 'This device is not authorised for this account. Contact your dev.'
-            }
+    if ( member.credential_id && (!clientCredentialId || clientCredentialId !== member.credential_id)) {
+        throw {
+            status: 403,
+            message: 'This device is not authorised for this account. Contact your dev.'
         }
     }
     const token = generateToken({
@@ -324,3 +331,4 @@ export const loginWithPin = async (email, pin, clientCredentialId = null) => {
 
     return { member, token }
 }
+

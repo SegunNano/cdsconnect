@@ -40,7 +40,8 @@ export const verifyWebAuthnRegistration = async (req, res, next) => {
 
 export const getWebAuthnLoginOptions = async (req, res, next) => {
     try {
-        const options = await getAuthenticationOptions(req.body.email)
+        const { email, clientCredentialId } = req.body
+        const options = await getAuthenticationOptions(email, clientCredentialId)
         res.status(200).json({ success: true, data: options })
     } catch (err) {
         next(err)

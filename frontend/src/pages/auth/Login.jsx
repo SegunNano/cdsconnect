@@ -25,7 +25,8 @@ export default function Login() {
         setPasskeyLoading(true)
         setError('')
         try {
-            const result = await authenticateWithDevice(email)
+            const clientCredentialId = localStorage.getItem('cds_credential_id')
+            const result = await authenticateWithDevice(email, clientCredentialId)
             login(result.data.member, result.data.token)
             navigate('/')
         } catch (err) {
