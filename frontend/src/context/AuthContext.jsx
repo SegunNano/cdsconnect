@@ -21,6 +21,9 @@ export const AuthProvider = ({ children }) => {
     const completeOnboarding = (updatedMemberData) => {
         localStorage.setItem('member', JSON.stringify(updatedMemberData))
         setMember(updatedMemberData)
+        if (updatedMemberData?.credential_id) {
+            localStorage.setItem('cds_credential_id', updatedMemberData.credential_id)
+        }
     }
 
     const login = (memberData, tokenData) => {
