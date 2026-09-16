@@ -34,6 +34,7 @@ export const checkIfSuspended = async (memberId) => {
                 SELECT MAX(meeting_date) 
                 FROM meetings 
                 WHERE sign_in_close < NOW()
+                AND meeting_date >= mem.created_at::DATE
             )
             AND (
                 a.id IS NULL
@@ -64,6 +65,7 @@ export const getMissedMeeting = async (memberId) => {
             SELECT MAX(meeting_date) 
             FROM meetings 
             WHERE sign_in_close < NOW()
+            AND meeting_date >= mem.created_at::DATE
         )
         AND (
             a.id IS NULL
@@ -339,6 +341,8 @@ export const getMemberAttendance = async (memberId) => {
             ON a.meeting_id = m.id AND a.member_id = $1
         LEFT JOIN excuse_requests er 
             ON er.meeting_id = m.id AND er.member_id = $1
+         JOIN members mem ON mem.id = $1
+        WHERE m.meeting_date >= mem.created_at::DATE
         ORDER BY m.meeting_date DESC`,
         [memberId]
     )
