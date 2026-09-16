@@ -2,6 +2,7 @@ import express from 'express'
 import cors from 'cors'
 import helmet from 'helmet'
 import rateLimit from 'express-rate-limit'
+import { globalSanitizer } from './middlewares/sanitizers.js'
 import dotenv from 'dotenv'
 dotenv.config()
 
@@ -24,18 +25,19 @@ import errorMiddleware from './middlewares/error.middleware.js'
 
 const app = express()
 
-// ── SECURITY ─────────────────────────────────────
+// ── 1. PROXY & HEADERS ───────────────────────────
+app.set('trust proxy', 1)
 app.use(helmet())
-// console.log(process.env.NODE_ENV)
 
 if (process.env.NODE_ENV === 'development') {
-    // Bypass ngrok browser warning
+    // Bypass ngrok browser warning page
     app.use((req, res, next) => {
         res.setHeader('ngrok-skip-browser-warning', 'true')
         next()
     })
 }
 
+// ── 2. CORS ──────────────────────────────────────
 const allowedOrigins = [
     'http://localhost:5173',
     ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : [])
@@ -43,40 +45,34 @@ const allowedOrigins = [
 
 app.use(cors({
     origin: (origin, callback) => {
-        // 1. Allow non-browser / same-origin requests (Render health checks, cURL, server-to-server)
-        if (!origin) {
+        if (!origin || process.env.NODE_ENV === 'development') {
             return callback(null, true)
         }
-
-        // 2. Allow all during development
-        if (process.env.NODE_ENV === 'development') {
-            return callback(null, true)
-        }
-
-        // 3. Check allowed origins in production
         if (allowedOrigins.includes(origin)) {
             return callback(null, true)
         }
-
         return callback(new Error(`CORS policy blocked access for origin: ${origin}`))
     },
     credentials: true
 }))
 
-// ── RATE LIMITING ────────────────────────────────
+// ── 3. RATE LIMITING ──────────────────────────────
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     limit: 1000,
     standardHeaders: true,
     legacyHeaders: false
 })
-app.set('trust proxy', 1)
 app.use(limiter)
 
-// ── BODY PARSER ──────────────────────────────────
-app.use(express.json())
+// ── 4. BODY PARSERS (MUST COME BEFORE SANITIZER) ──
+app.use(express.json({ limit: '10kb' })) // Prevents massive payload freezes
+app.use(express.urlencoded({ extended: true, limit: '10kb' }))
 
-// ── ROUTES ───────────────────────────────────────
+// ── 5. GLOBAL SANITIZER ───────────────────────────
+app.use(globalSanitizer) // Now req.body is defined and gets cleaned properly!
+
+// ── 6. ROUTES ────────────────────────────────────
 app.use('/api/auth', authRoutes)
 app.use('/api/members', memberRoutes)
 app.use('/api/meetings', meetingRoutes)
@@ -93,7 +89,7 @@ app.use('/api/pin', pinRoutes)
 app.use('/api/device', deviceRoutes)
 app.use('/api/verify', verifyRoutes)
 
-// ── ERROR HANDLER ────────────────────────────────
+// ── 7. ERROR HANDLER ─────────────────────────────
 app.use(errorMiddleware)
 
 export default app

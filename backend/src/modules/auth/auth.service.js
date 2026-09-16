@@ -2,6 +2,7 @@ import pool from '../../config/db.js'
 import { hashPin, comparePin, validatePin } from '../../utils/pin.js'
 import { getMe, getMemberForLogin } from '../members/members.service.js'
 import { generateToken } from '../../utils/jwt.js'
+import { cleanInput } from '../../middlewares/sanitizers.js'
 import {
     generateRegistrationOptions,
     verifyRegistrationResponse,
@@ -19,6 +20,7 @@ const RP_ID = getRpId(ORIGIN)
 
 // ── REGISTRATION ─────────────────────────────────
 
+
 export const registerMember = async (data) => {
     const {
         first_name,
@@ -32,7 +34,28 @@ export const registerMember = async (data) => {
         breakout_session
     } = data
 
-    // Validate PIN
+    // 1. Sanitize incoming text inputs
+    const cleanFirstName = cleanInput(first_name)
+    const cleanLastName = cleanInput(last_name)
+    const cleanStateCode = cleanInput(state_code)?.toUpperCase()
+    const cleanEmail = cleanInput(email)?.toLowerCase()
+    const cleanGender = cleanInput(gender)
+    const cleanBreakout = cleanInput(breakout_session)
+
+    // 2. Validate essential fields exist and aren't blank after sanitization
+    if (!cleanFirstName || !cleanLastName) {
+        throw { status: 400, message: 'First name and last name are required.' }
+    }
+
+    if (!cleanEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+        throw { status: 400, message: 'A valid email address is required.' }
+    }
+
+    if (!cleanStateCode) {
+        throw { status: 400, message: 'State code is required.' }
+    }
+
+    // 3. Validate PIN
     const pinValidation = validatePin(pin)
     if (!pinValidation.valid) {
         throw { status: 400, message: pinValidation.message }
@@ -42,37 +65,36 @@ export const registerMember = async (data) => {
         throw { status: 400, message: 'PINs do not match' }
     }
 
-    // Check registration is open
+    // 4. Check registration state
     const settings = await pool.query(
         'SELECT registration_open FROM settings LIMIT 1'
     )
-    console.log(settings.rows[0])
     if (settings.rows.length > 0 && !settings.rows[0].registration_open) {
         throw { status: 403, message: 'Registration is currently closed. Contact the coordinator.' }
     }
 
-    // Check stream exists and is active
+    // 5. Check stream exists and is active
     const streamResult = await pool.query(
-        'SELECT * FROM streams WHERE id = $1 AND is_active = true',
+        'SELECT id FROM streams WHERE id = $1 AND is_active = true',
         [stream_id]
     )
     if (streamResult.rows.length === 0) {
         throw { status: 400, message: 'Invalid or inactive stream selected.' }
     }
 
-    // Check duplicate email or state code
+    // 6. Check duplicate email or state code
     const existing = await pool.query(
         'SELECT id FROM members WHERE email = $1 OR state_code = $2',
-        [email, state_code]
+        [cleanEmail, cleanStateCode]
     )
     if (existing.rows.length > 0) {
         throw { status: 409, message: 'Email or state code already registered.' }
     }
 
-    // Hash PIN
+    // 7. Hash PIN
     const pin_hash = await hashPin(pin)
 
-    // Insert member
+    // 8. Insert member using sanitized inputs
     const result = await pool.query(`
         INSERT INTO members (
             first_name, last_name, state_code, email,
@@ -80,22 +102,22 @@ export const registerMember = async (data) => {
             member_type
         ) VALUES (
             $1, $2, $3, $4, $5, $6, $7, $8, 'corps_member'
-        ) RETURNING
-            id, first_name, last_name, state_code,
-            email, role, is_dev, gender,
-            stream_id, breakout_session,
-            token_balance, is_active, member_type,
-            created_at
+        ) RETURNING id
     `, [
-        first_name.trim(), last_name.trim(),
-        state_code.trim(), email,
-        pin_hash, gender, stream_id, breakout_session
+        cleanFirstName, 
+        cleanLastName,
+        cleanStateCode, 
+        cleanEmail,
+        pin_hash, 
+        cleanGender, 
+        stream_id, 
+        cleanBreakout
     ])
 
     const memberId = result.rows[0].id
     const member = await getMe(memberId)
 
-    // Generate JWT
+    // 9. Generate JWT
     const token = generateToken({
         id: member.id,
         role: member.role,

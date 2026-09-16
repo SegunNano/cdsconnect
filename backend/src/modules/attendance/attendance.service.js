@@ -22,21 +22,24 @@ import { issueClearance } from '../../utils/clearance.js'
 export const checkIfSuspended = async (memberId) => {
     const result = await pool.query(
         `SELECT EXISTS (
-            SELECT 1
-            FROM meetings m
-            LEFT JOIN attendance a 
-                ON a.meeting_id = m.id AND a.member_id = $1
-            LEFT JOIN excuse_requests er
-                ON er.meeting_id = m.id AND er.member_id = $1
-                AND er.status IN ('approved', 'approved_not_needed')
-            WHERE m.sign_in_close < NOW()
-            AND m.meeting_date = (
-                SELECT MAX(meeting_date) 
-                FROM meetings 
-                WHERE sign_in_close < NOW()
-                AND meeting_date >= mem.created_at::DATE
+            WITH latest_meeting AS (
+                SELECT m.id
+                FROM meetings m
+                JOIN members mem ON mem.id = $1
+                WHERE m.sign_in_close < NOW()
+                  AND m.meeting_date >= mem.created_at::DATE
+                ORDER BY m.meeting_date DESC, m.sign_in_close DESC
+                LIMIT 1
             )
-            AND (
+            SELECT 1
+            FROM latest_meeting lm
+            LEFT JOIN attendance a 
+                ON a.meeting_id = lm.id AND a.member_id = $1
+            LEFT JOIN excuse_requests er
+                ON er.meeting_id = lm.id 
+                AND er.member_id = $1
+                AND er.status IN ('approved', 'approved_not_needed')
+            WHERE (
                 a.id IS NULL
                 OR (
                     a.signed_out_at IS NULL 
@@ -47,9 +50,9 @@ export const checkIfSuspended = async (memberId) => {
             AND er.id IS NULL
         ) AS is_suspended`,
         [memberId]
-    )
-    return result.rows[0].is_suspended
-}
+    );
+    return result.rows[0].is_suspended;
+};
 
 export const getMissedMeeting = async (memberId) => {
     const result = await pool.query(
@@ -60,7 +63,9 @@ export const getMissedMeeting = async (memberId) => {
         LEFT JOIN excuse_requests er
             ON er.meeting_id = m.id AND er.member_id = $1
             AND er.status IN ('approved', 'approved_not_needed')
+        JOIN members mem ON mem.id = $1
         WHERE m.sign_in_close < NOW()
+        AND m.meeting_date >= mem.created_at::DATE
         AND m.meeting_date = (
             SELECT MAX(meeting_date) 
             FROM meetings 
@@ -341,7 +346,7 @@ export const getMemberAttendance = async (memberId) => {
             ON a.meeting_id = m.id AND a.member_id = $1
         LEFT JOIN excuse_requests er 
             ON er.meeting_id = m.id AND er.member_id = $1
-         JOIN members mem ON mem.id = $1
+        JOIN members mem ON mem.id = $1
         WHERE m.meeting_date >= mem.created_at::DATE
         ORDER BY m.meeting_date DESC`,
         [memberId]
@@ -367,8 +372,12 @@ export const getTodayAttendanceStatus = async (memberId) => {
 
     
     // Get today's meeting
-    const meetingResult = await pool.query(
-        'SELECT * FROM meetings WHERE meeting_date::DATE = CURRENT_DATE'
+     const meetingResult = await pool.query(
+        `SELECT m.* FROM meetings m
+        JOIN members mem ON mem.id = $1
+        WHERE m.meeting_date = CURRENT_DATE
+        AND m.meeting_date >= mem.created_at::DATE`,
+        [memberId]
     )
 
     if (meetingResult.rows.length === 0) {

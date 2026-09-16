@@ -4,7 +4,6 @@ import {
     getMembers,
     updateRole,
     toggleDev,
-    resetDevice,
     extendService,
     deactivate,
     updateProfile
@@ -26,7 +25,6 @@ router.patch('/me', authMiddleware, updateProfile)
 router.get('/', devOrRole('treasurer', 'financial_secretary'), getMembers)
 router.patch('/:id/role', devMiddleware, updateRole)
 router.patch('/:id/dev', devMiddleware, toggleDev)
-router.patch('/:id/device', devMiddleware, resetDevice)
 router.patch('/:id/extend', devMiddleware, extendService)
 router.patch('/:id/deactivate', devMiddleware, deactivate)
 

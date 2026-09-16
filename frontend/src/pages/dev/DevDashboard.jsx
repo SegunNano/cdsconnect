@@ -117,10 +117,12 @@ export default function DevDashboard() {
                                 ⚠️ Maximum devs reached ({devCount}/2). Remove a dev to assign another.
                             </div>
                         )}
-
                         <MembersTab
-                            members={filtered} search={search} setSearch={setSearch}
-                            loading={loading} selectedMember={selectedMember} setSelectedMember={setSelectedMember}
+                            members={filtered} 
+                            search={search} 
+                            loading={loading} 
+                            selectedMember={selectedMember} 
+                            setSelectedMember={setSelectedMember}
                             onRoleUpdate={async (memberId, role) => {
                                 await updateMemberRole(memberId, role)
                                 setMembers(prev => prev.map(m => m.id === memberId ? { ...m, role } : m))

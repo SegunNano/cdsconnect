@@ -1,5 +1,6 @@
 import pool from '../../config/db.js'
 import { ROLES } from '../../constants.js'
+import { cleanInput } from '../../middlewares/sanitizers.js'
 
 export const getMemberForLogin = async (email) => {
     const result = await pool.query(
@@ -55,25 +56,85 @@ export const getMe = async (memberId) => {
 
 
 export const getAllMembers = async () => {
-    const result = await pool.query(
+
+    // 1. Fetch all members with stream details
+    const membersResult = await pool.query(
         `SELECT 
             m.id, m.first_name, m.last_name, m.state_code,
             m.email, m.role, m.is_dev, m.gender,
             m.stream_id, m.breakout_session,
             m.token_balance, m.is_active, m.member_type,
-            m.created_at,
-            m.reinstatement_count,
-            s.year AS stream_year,
-            s.batch AS stream_batch,
-            s.stream AS stream_number,
-            s.callup_date,
-            s.service_end
+            m.created_at, m.reinstatement_count,
+            s.year AS stream_year, s.batch AS stream_batch,
+            s.stream AS stream_number, s.callup_date, s.service_end
         FROM members m
         LEFT JOIN streams s ON m.stream_id = s.id
         ORDER BY m.created_at DESC`
-    )
-    return result.rows
-}
+    );
+
+    // 2. Fetch the single latest meeting where sign-out has passed
+    const meetingResult = await pool.query(
+        `SELECT id, meeting_date 
+         FROM meetings 
+         WHERE sign_in_close < NOW() 
+         ORDER BY meeting_date DESC, sign_in_close DESC 
+         LIMIT 1`
+    );
+
+    const latestMeeting = meetingResult.rows[0];
+
+    // If no past meeting exists, no one is suspended
+    if (!latestMeeting) {
+        return membersResult.rows.map((member) => ({
+            ...member,
+            is_suspended: false,
+        }));
+    }
+
+    // 3. Get sets of valid member IDs for attendance & approved excuses
+    const [attendanceResult, excusesResult] = await Promise.all([
+        pool.query(
+            `SELECT member_id 
+             FROM attendance 
+             WHERE meeting_id = $1 
+               AND (signed_out_at IS NOT NULL OR marked_present_by IS NOT NULL OR excuse_id IS NOT NULL)`,
+            [latestMeeting.id]
+        ),
+        pool.query(
+            `SELECT member_id 
+             FROM excuse_requests 
+             WHERE meeting_id = $1 
+               AND status IN ('approved', 'approved_not_needed')`,
+            [latestMeeting.id]
+        ),
+    ]);
+
+    const attendedMemberIds = new Set(attendanceResult.rows.map((r) => Number(r.member_id)));
+    const excusedMemberIds = new Set(excusesResult.rows.map((r) => Number(r.member_id)));
+
+    // Format meeting date to pure "YYYY-MM-DD"
+    const meetingDateStr = new Date(latestMeeting.meeting_date).toISOString().split('T')[0];
+
+    // 4. Map over members and attach `is_suspended`
+    return membersResult.rows.map((member) => {
+        const memberJoinedDateStr = new Date(member.created_at).toISOString().split('T')[0];
+
+        // Member registered after the meeting date -> Not suspended
+        if (meetingDateStr < memberJoinedDateStr) {
+            return { ...member, is_suspended: false };
+        }
+
+        const memberId = Number(member.id);
+        const hasAttended = attendedMemberIds.has(memberId);
+        const hasExcuse = excusedMemberIds.has(memberId);
+
+        return {
+            ...member,
+            is_suspended: !hasAttended && !hasExcuse,
+        };
+    });
+};
+
 
 export const updateMemberRole = async (memberId, role) => {
     // Validate that the requested role actually exists
@@ -158,19 +219,7 @@ export const toggleDevAccess = async (adminId, targetMemberId) => {
     return result.rows[0]
 }
 
-export const resetDeviceFingerprint = async (memberId) => {
-    const result = await pool.query(
-        `UPDATE members 
-        SET device_fingerprint = NULL 
-        WHERE id = $1 
-        RETURNING id, first_name, last_name`,
-        [memberId]
-    )
-    if (result.rows.length === 0) {
-        throw { status: 404, message: 'Member not found' }
-    }
-    return result.rows[0]
-}
+
 
 export const extendServiceYear = async (memberId, newEndDate, reason) => {
     const result = await pool.query(
@@ -200,9 +249,24 @@ export const deactivateMember = async (memberId) => {
     return result.rows[0]
 }
 
-export const updateMemberProfile = async (memberId, data) => {
-    const { first_name, last_name, gender, breakout_session } = data
 
+
+export const updateMemberProfile = async (memberId, data) => {
+    // 1. Sanitize incoming text fields
+    const sanitizedFirstName = cleanInput(data.first_name);
+    const sanitizedLastName = cleanInput(data.last_name);
+    const sanitizedGender = cleanInput(data.gender);
+    const sanitizedBreakoutSession = cleanInput(data.breakout_session);
+
+    // 2. Reject if sanitization reduced names to empty strings (e.g., input was `<script><script>`)
+    if (data.first_name && !sanitizedFirstName) {
+        throw new Error('Invalid first name provided.');
+    }
+    if (data.last_name && !sanitizedLastName) {
+        throw new Error('Invalid last name provided.');
+    }
+
+    // 3. Database Update with safe parameters
     const result = await pool.query(
         `UPDATE members SET
             first_name = COALESCE($1, first_name),
@@ -211,8 +275,14 @@ export const updateMemberProfile = async (memberId, data) => {
             breakout_session = COALESCE($4, breakout_session)
         WHERE id = $5
         RETURNING *`,
-        [first_name, last_name, gender, breakout_session, memberId]
-    )
+        [
+            sanitizedFirstName || null, 
+            sanitizedLastName || null, 
+            sanitizedGender || null, 
+            sanitizedBreakoutSession || null, 
+            memberId
+        ]
+    );
 
-    return await getMe(memberId)
-}
+    return await getMe(memberId);
+};

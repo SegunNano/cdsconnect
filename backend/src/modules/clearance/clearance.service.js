@@ -299,6 +299,7 @@ export const getMyClearanceSlips = async (memberId) => {
         `SELECT cs.*, m.title AS meeting_title, m.meeting_date
         FROM clearance_slips cs
         JOIN meetings m ON cs.meeting_id = m.id
+        JOIN members mem ON mem.id = $1
         WHERE cs.member_id = $1
         AND m.meeting_date >= mem.created_at::DATE
         ORDER BY cs.generated_at DESC`,

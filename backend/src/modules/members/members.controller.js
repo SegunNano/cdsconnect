@@ -3,7 +3,6 @@ import {
     getAllMembers,
     updateMemberRole,
     toggleDevAccess,
-    resetDeviceFingerprint,
     extendServiceYear,
     deactivateMember,
     updateMemberProfile
@@ -39,15 +38,6 @@ export const updateRole = async (req, res, next) => {
 export const toggleDev = async (req, res, next) => {
     try {
         const member = await toggleDevAccess(req.member.id, req.params.id)
-        res.status(200).json({ success: true, data: member })
-    } catch (err) {
-        next(err)
-    }
-}
-
-export const resetDevice = async (req, res, next) => {
-    try {
-        const member = await resetDeviceFingerprint(req.params.id)
         res.status(200).json({ success: true, data: member })
     } catch (err) {
         next(err)

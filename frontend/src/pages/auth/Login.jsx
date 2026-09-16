@@ -32,7 +32,7 @@ export default function Login() {
         } catch (err) {
             // WebAuthn failed or denied — show PIN form
             setShowPin(true)
-            setError(err.response?.data?.message || '')
+            setError(err.response?.data?.message || 'Something went wrong, try using pin')
         } finally {
             setPasskeyLoading(false)
         }

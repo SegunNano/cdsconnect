@@ -25,26 +25,10 @@ export default function MembersTab({
     const [devErrors, setDevErrors] = useState({})
     const [actionLoading, setActionLoading] = useState({})
 
-    const [suspensions, setSuspensions] = useState({})
     
     // State to handle the Mark Present Modal
     const [markPresentMember, setMarkPresentMember] = useState(null)
 
-    useEffect(() => {
-        const checkSuspensions = async () => {
-            const results = {}
-            await Promise.all(
-                members.map(async (m) => {
-                    try {
-                        const res = await api.get(`/attendance/suspension/${m.id}`)
-                        results[m.id] = res.data.data
-                    } catch (err) {}
-                })
-            )
-            setSuspensions(results)
-        }
-        if (members.length > 0) checkSuspensions()
-    }, [members])
 
     const handleRoleUpdate = async (memberId, role) => {
         setActionLoading(prev => ({ ...prev, [`role_${memberId}`]: true }))
@@ -201,7 +185,7 @@ export default function MembersTab({
                                             INACTIVE
                                         </span>
                                     )}
-                                    {suspensions[m.id]?.is_suspended && (
+                                    {m.is_suspended && (
                                         <span style={{
                                             background: '#fff0f0', color: '#e53e3e',
                                             fontSize: '0.6rem', fontWeight: 700,
