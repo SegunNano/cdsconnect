@@ -4,5 +4,6 @@ CREATE TABLE topups (
     tokens_added INTEGER NOT NULL,
     naira_value INTEGER NOT NULL,
     performed_by INTEGER REFERENCES members(id),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
+

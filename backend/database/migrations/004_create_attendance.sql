@@ -3,9 +3,9 @@ CREATE TABLE attendance (
     member_id INTEGER REFERENCES members(id),
     meeting_id INTEGER REFERENCES meetings(id),
     sequence_number INTEGER NOT NULL,
-    signed_in_at TIMESTAMP,
-    signed_out_at TIMESTAMP,
+    signed_in_at TIMESTAMPTZ,
+    signed_out_at TIMESTAMPTZ,
     tokens_deducted INTEGER NOT NULL,
     is_late BOOLEAN DEFAULT false,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );

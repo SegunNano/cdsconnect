@@ -16,5 +16,6 @@ CREATE TABLE members (
     breakout_session VARCHAR(50) NOT NULL,
     stream_id INTEGER REFERENCES streams(id),
     is_active BOOLEAN DEFAULT true,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
+

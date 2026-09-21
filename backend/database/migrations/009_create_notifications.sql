@@ -5,5 +5,6 @@ CREATE TABLE notifications (
     message TEXT NOT NULL,
     type VARCHAR(50) NOT NULL,
     is_read BOOLEAN DEFAULT false,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
+

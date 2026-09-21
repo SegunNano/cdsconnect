@@ -5,7 +5,9 @@ CREATE TABLE excuse_requests (
     reason TEXT NOT NULL,
     status VARCHAR(20) DEFAULT 'pending',
     reviewed_by INTEGER REFERENCES members(id),
-    reviewed_at TIMESTAMP,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    reviewed_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT unique_excuse UNIQUE (member_id, meeting_id)
 );
+
+
