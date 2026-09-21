@@ -10,15 +10,46 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout source repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Push to production
+      - name: Prepare production files
+        run: |
+          mkdir /tmp/prod-files
+          rsync -av \
+            --exclude='.git' \
+            --exclude='.github' \
+            ./ /tmp/prod-files/
+
+      - name: Clone production repository
         env:
           PROD_REPO_TOKEN: ${{ secrets.PROD_REPO_TOKEN }}
         run: |
-          git remote add production https://x-access-token:${PROD_REPO_TOKEN}@github.com/infotechnysclagos/cdsconnect.git
-          git push production main
+          git clone https://x-access-token:${PROD_REPO_TOKEN}@github.com/infotechnysclagos/cdsconnect.git /tmp/production
+
+      - name: Sync files
+        run: |
+          rsync -av --delete \
+            --exclude='.git' \
+            /tmp/prod-files/ /tmp/production/
+
+      - name: Commit and push production
+        env:
+          PROD_REPO_TOKEN: ${{ secrets.PROD_REPO_TOKEN }}
+        run: |
+          cd /tmp/production
+
+          git config user.name "GitHub Actions"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add -A
+
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "Sync from SegunNano/cdsconnect"
+            git push origin main
+          fi
