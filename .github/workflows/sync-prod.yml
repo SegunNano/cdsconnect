@@ -12,10 +12,10 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Push to production
+        env:
+          PROD_REPO_TOKEN: ${{ secrets.PROD_REPO_TOKEN }}
         run: |
-          git remote add production https://x-access-token:${{ secrets.PROD_REPO_TOKEN }}@github.com/infotechnysclagos/cdsconnect.git
+          git remote add production https://x-access-token:${PROD_REPO_TOKEN}@github.com/infotechnysclagos/cdsconnect.git
           git push production main
