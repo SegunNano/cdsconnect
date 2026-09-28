@@ -118,16 +118,16 @@ export const getAllMembers = async () => {
     // 4. Map over members and attach `is_suspended`
     return membersResult.rows.map((member) => {
         const memberJoinedDateStr = new Date(member.created_at).toISOString().split('T')[0];
-
-        // Member registered after the meeting date -> Not suspended
-        if (meetingDateStr < memberJoinedDateStr) {
+        
+        // Staff members or members registered after the meeting date -> Not suspended
+        if (member.member_type === 'staff' || meetingDateStr < memberJoinedDateStr) {
             return { ...member, is_suspended: false };
         }
-
+    
         const memberId = Number(member.id);
         const hasAttended = attendedMemberIds.has(memberId);
         const hasExcuse = excusedMemberIds.has(memberId);
-
+    
         return {
             ...member,
             is_suspended: !hasAttended && !hasExcuse,

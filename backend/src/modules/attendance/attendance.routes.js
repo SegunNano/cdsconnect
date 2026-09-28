@@ -27,6 +27,6 @@ router.get('/suspension', getSuspensionStatus)
 // Dev only
 router.post('/mark-present', devMiddleware, manualMarkPresent)
 router.post('/reinstate', devMiddleware, reinstate)
-router.get('/suspension/:memberId', devMiddleware, getSuspensionStatus)
+router.get('/suspension/:memberId', getSuspensionStatus)
 
 export default router

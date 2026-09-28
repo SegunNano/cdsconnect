@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react"
 import { MapContainer, TileLayer, Marker, Circle, useMap } from 'react-leaflet'
 import { MapPin, Lock } from 'lucide-react'
-import axios from 'axios'
 import { venuePin, userPin, getDistanceInMeters } from "../leafletIcons"
 import api from "../../../services/api"
 
