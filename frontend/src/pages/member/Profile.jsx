@@ -236,7 +236,7 @@ export default function Profile() {
                                 display: 'flex', alignItems: 'center',
                                 gap: '4px', fontSize: '0.75rem',
                                 fontWeight: 600, color: 'white',
-                                fontFamily: "'Plus Jakarta Sans', sans-serif"
+                                fontFamily: "Plus Jakarta Sans', sans-serif"
                             }}
                         >
                             <Check size={14} color="white" />
