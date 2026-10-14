@@ -1,6 +1,8 @@
 import { verifyToken } from '../utils/jwt.js'
+import pool from '../config/db.js'
 
-export default (req, res, next) => {
+// Added `async` keyword here
+export default async (req, res, next) => {
     const authHeader = req.headers.authorization
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -14,12 +16,27 @@ export default (req, res, next) => {
 
     try {
         const decoded = verifyToken(token)
+
+        // Query database for member's current token_version
         const memberResult = await pool.query(
             'SELECT token_version FROM members WHERE id = $1',
             [decoded.id]
         )
+
+        // Handle deleted or non-existent member
+        if (memberResult.rows.length === 0) {
+            return res.status(401).json({ 
+                success: false, 
+                message: 'Unauthorised. User no longer exists.' 
+            })
+        }
+
+        // Verify token_version matches DB state (forces logout on password/PIN reset or remote revocation)
         if (memberResult.rows[0].token_version !== decoded.token_version) {
-            return res.status(401).json({ success: false, message: 'Session expired. Please log in again.' })
+            return res.status(401).json({ 
+                success: false, 
+                message: 'Session expired. Please log in again.' 
+            })
         }
         
         req.member = decoded
@@ -31,4 +48,3 @@ export default (req, res, next) => {
         })
     }
 }
-
