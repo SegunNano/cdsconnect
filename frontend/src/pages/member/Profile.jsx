@@ -24,6 +24,7 @@ export default function Profile() {
 
     // PIN reset state
     const [showPinForm, setShowPinForm] = useState(false)
+    const [currentPin, setCurrentPin] = useState('')
     const [newPin, setNewPin] = useState('')
     const [confirmPin, setConfirmPin] = useState('')
     const [pinLoading, setPinLoading] = useState(false)
@@ -110,13 +111,15 @@ export default function Profile() {
 
     const handlePinReset = async (e) => {
         e.preventDefault()
-        if (newPin.length < 4) { setPinError('PIN must be at least 4 digits'); return }
+        if (currentPin.length < 4) { setPinError('Current PIN is required'); return }
+        if (newPin.length < 4) { setPinError('New PIN must be at least 4 digits'); return }
         if (newPin !== confirmPin) { setPinError('PINs do not match'); return }
         setPinLoading(true)
         setPinError('')
         try {
-            await resetPin(newPin, confirmPin)
+            await resetPin(currentPin, newPin, confirmPin)
             setPinSuccess(true)
+            setCurrentPin('')
             setNewPin('')
             setConfirmPin('')
             setTimeout(() => { setPinSuccess(false); setShowPinForm(false) }, 2000)
@@ -147,7 +150,6 @@ export default function Profile() {
         outline: 'none',
         fontFamily: "'Plus Jakarta Sans', sans-serif"
     }
-
 
     return (
         <div style={{
@@ -321,9 +323,6 @@ export default function Profile() {
                             <div style={{ fontSize: '0.68rem', color: '#8fa396', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px' }}>State Code</div>
                             <div style={{ fontSize: '0.88rem', color: '#0d1b12', fontWeight: 500 }}>{member?.state_code}</div>
                         </div>
-                        {editing && (
-                            <></>
-                        )}
                     </div>
 
                     {/* EMAIL — not editable */}
@@ -372,9 +371,6 @@ export default function Profile() {
                                     : '—'}
                             </div>
                         </div>
-                        {editing && (
-                            <></>
-                        )}
                     </div>
 
                     {/* BREAKOUT SESSION */}
@@ -431,7 +427,7 @@ export default function Profile() {
                 }}>
                     {/* RESET PIN */}
                     <div
-                        onClick={() => { setShowPinForm(!showPinForm); setPinError(''); setPinSuccess(false) }}
+                        onClick={() => { setShowPinForm(!showPinForm); setPinError(''); setPinSuccess(false); setCurrentPin(''); setNewPin(''); setConfirmPin('') }}
                         style={{
                             display: 'flex', alignItems: 'center',
                             gap: '12px', padding: '14px 0',
@@ -471,6 +467,16 @@ export default function Profile() {
                                             {pinError}
                                         </div>
                                     )}
+
+                                    <div style={{ marginBottom: '16px' }}>
+                                        <div style={{ fontSize: '0.68rem', fontWeight: 600, color: '#4a5e52', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '10px', textAlign: 'center' }}>
+                                            Current PIN
+                                        </div>
+                                        <PinInput
+                                            value={currentPin}
+                                            onChange={val => { setCurrentPin(val); setPinError('') }}
+                                        />
+                                    </div>
 
                                     <div style={{ marginBottom: '16px' }}>
                                         <div style={{ fontSize: '0.68rem', fontWeight: 600, color: '#4a5e52', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '10px', textAlign: 'center' }}>

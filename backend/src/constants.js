@@ -43,5 +43,6 @@ export const EXCUSE_STATUS = {
     PENDING: 'pending',
     APPROVED: 'approved',
     APPROVED_NOT_NEEDED: 'approved_not_needed',
-    REJECTED: 'rejected'
+    REJECTED: 'rejected',
+    INCOME_LOGGED: 'income_logged'
 }

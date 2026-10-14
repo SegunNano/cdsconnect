@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react'
+import api from '../services/api'
 
 const AuthContext = createContext()
 
@@ -7,19 +8,42 @@ export const AuthProvider = ({ children }) => {
     const [token, setToken] = useState(null)
     const [loading, setLoading] = useState(true)
 
+    // On mount, check if token exists and fetch current member profile from API
     useEffect(() => {
-        const storedMember = localStorage.getItem('member')
         const storedToken = localStorage.getItem('token')
 
-        if (storedMember && storedToken) {
-            setMember(JSON.parse(storedMember))
+        if (storedToken) {
             setToken(storedToken)
+            fetchProfile(storedToken)
+        } else {
+            setLoading(false)
         }
-        setLoading(false)
     }, [])
 
+    const fetchProfile = async (authToken) => {
+        try {
+            const response = await api.get('/auth/me', {
+                headers: { Authorization: `Bearer ${authToken}` }
+            })
+            const memberData = response.data.data || response.data
+            setMember(memberData)
+
+            // Keep passkey credential binding intact on phone/device
+            if (memberData?.credential_id) {
+                localStorage.setItem('cds_credential_id', memberData.credential_id)
+            }
+        } catch (err) {
+            console.error('Failed to fetch user profile:', err)
+            // If token is expired or invalid, purge session state
+            setMember(null)
+            setToken(null)
+            localStorage.removeItem('token')
+        } finally {
+            setLoading(false)
+        }
+    }
+
     const completeOnboarding = (updatedMemberData) => {
-        localStorage.setItem('member', JSON.stringify(updatedMemberData))
         setMember(updatedMemberData)
         if (updatedMemberData?.credential_id) {
             localStorage.setItem('cds_credential_id', updatedMemberData.credential_id)
@@ -29,21 +53,29 @@ export const AuthProvider = ({ children }) => {
     const login = (memberData, tokenData) => {
         setMember(memberData)
         setToken(tokenData)
-        localStorage.setItem('member', JSON.stringify(memberData))
+        
+        // Store only token in localStorage
         localStorage.setItem('token', tokenData)
 
-        // Persist credential_id across logouts if returned by the backend
+        // Store passkey credential_id for hardware/device binding
         if (memberData?.credential_id) {
             localStorage.setItem('cds_credential_id', memberData.credential_id)
         }
     }
 
-    const logout = () => {
+    const logout = async () => {
+        try {
+            await api.post('/auth/logout')
+        } catch (err) {
+            console.error('Logout error:', err)
+        }
         setMember(null)
         setToken(null)
-        localStorage.removeItem('member')
+        
+        // Purge session token only
         localStorage.removeItem('token')
-        // NOTE: We deliberately DO NOT remove 'cds_credential_id' so device binding stays intact
+
+        // NOTE: 'cds_credential_id' is explicitly kept so hardware/device binding stays intact
     }
 
     return (

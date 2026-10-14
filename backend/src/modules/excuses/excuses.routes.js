@@ -6,6 +6,8 @@ import authMiddleware from '../../middlewares/auth.middleware.js'
 import staffMiddleware from '../../middlewares/staff.middleware.js'
 import { requireRole } from '../../middlewares/role.middleware.js'
 import devMiddleware from '../../middlewares/dev.middleware.js'
+import { fileTypeFromBuffer } from 'file-type'
+import crypto from 'crypto'
 
 const router = Router()
 
@@ -14,26 +16,38 @@ router.use(authMiddleware)
 // Member
 const upload = multer({ storage: multer.memoryStorage() })
 
-router.post('/upload', upload.single('evidence'), async (req, res, next) => {
+router.post('/upload', authMiddleware, upload.single('evidence'), async (req, res, next) => {
     try {
         const file = req.file
         if (!file) throw { status: 400, message: 'No file uploaded' }
 
-        const fileName = `${Date.now()}_${file.originalname}`
+        // Validate actual file content — not just extension
+        const { fileTypeFromBuffer } = await import('file-type')
+        const detected = await fileTypeFromBuffer(file.buffer)
+
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf']
+        if (!detected || !allowedTypes.includes(detected.mime)) {
+            throw { status: 400, message: 'Invalid file type. Only JPG, PNG, WebP and PDF are allowed.' }
+        }
+
+        // Random filename — not timestamp based
+        const randomName = crypto.randomBytes(16).toString('hex')
+        const extension = detected.ext
+        const fileName = `${randomName}.${extension}`
 
         const { data, error } = await supabase.storage
-        .from('evidence')
+            .from('evidence')
             .upload(fileName, file.buffer, {
-                contentType: file.mimetype
+                contentType: detected.mime
             })
-            
+
         if (error) throw { status: 500, message: error.message }
-        
+
         const { data: urlData } = supabase.storage
             .from('evidence')
             .getPublicUrl(fileName)
 
-            res.status(200).json({
+        res.status(200).json({
             success: true,
             data: { url: urlData.publicUrl }
         })

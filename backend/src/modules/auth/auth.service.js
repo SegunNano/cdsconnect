@@ -311,7 +311,8 @@ export const verifyAuthentication = async (email, credential) => {
         id: member.id,
         role: member.role,
         is_dev: member.is_dev,
-        member_type: member.member_type
+        member_type: member.member_type,
+        token_version: member.token_version
     })
 
     return { member, token }
@@ -341,7 +342,8 @@ export const loginWithPin = async (email, pin, clientCredentialId = null) => {
         id: member.id,
         role: member.role,
         is_dev: member.is_dev,
-        member_type: member.member_type
+        member_type: member.member_type,
+        token_version: member.token_version
     })
 
     return { member, token }

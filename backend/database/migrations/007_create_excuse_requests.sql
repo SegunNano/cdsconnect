@@ -7,7 +7,6 @@ CREATE TABLE excuse_requests (
     reviewed_by INTEGER REFERENCES members(id),
     reviewed_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT unique_excuse UNIQUE (member_id, meeting_id)
+    CONSTRAINT unique_excuse UNIQUE (member_id, meeting_id),
+    evidence_url TEXT
 );
-
-

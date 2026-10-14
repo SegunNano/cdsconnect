@@ -6,6 +6,9 @@ CREATE TABLE attendance (
     signed_in_at TIMESTAMPTZ,
     signed_out_at TIMESTAMPTZ,
     tokens_deducted INTEGER NOT NULL,
-    is_late BOOLEAN DEFAULT false,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+    is_late BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    marked_present_by INTEGER,
+    mark_reason TEXT,
+    excuse_id INTEGER
 );

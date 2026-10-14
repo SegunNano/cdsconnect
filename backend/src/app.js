@@ -22,6 +22,7 @@ import pinRoutes from './modules/pin/pin.routes.js'
 import deviceRoutes from './modules/device/device.routes.js'
 import verifyRoutes from './modules/verify/verify.routes.js'
 import errorMiddleware from './middlewares/error.middleware.js'
+import incomeRoutes from './modules/income/income.routes.js'
 
 const app = express()
 
@@ -87,6 +88,7 @@ app.use('/api/clearance', clearanceRoutes)
 app.use('/api/notifications', notificationRoutes)
 app.use('/api/pin', pinRoutes)
 app.use('/api/device', deviceRoutes)
+app.use('/api/income', incomeRoutes)
 app.use('/api/verify', verifyRoutes)
 
 // ── 7. ERROR HANDLER ─────────────────────────────

@@ -69,18 +69,27 @@ export const getAllExpenses = async () => {
     return result.rows
 }
 
+
 export const getTreasurySummary = async () => {
-    const incomeResult = await pool.query(
+    const tokenIncomeResult = await pool.query(
         'SELECT COALESCE(SUM(naira_value), 0) AS total FROM topups'
+    )
+    const externalIncomeResult = await pool.query(
+        'SELECT COALESCE(SUM(amount_naira), 0) AS total FROM income'
     )
     const expensesResult = await pool.query(
         'SELECT COALESCE(SUM(amount_naira), 0) AS total FROM expenses'
     )
     const topupsResult = await pool.query(
         `SELECT t.*,
-            m.first_name, m.last_name, m.state_code
+            m.first_name AS member_first_name,
+            m.last_name AS member_last_name,
+            m.state_code,
+            tr.first_name AS treasurer_first_name,
+            tr.last_name AS treasurer_last_name
         FROM topups t
         JOIN members m ON t.member_id = m.id
+        JOIN members tr ON t.performed_by = tr.id
         ORDER BY t.created_at DESC`
     )
     const expenseListResult = await pool.query(
@@ -90,15 +99,27 @@ export const getTreasurySummary = async () => {
         JOIN members m ON e.performed_by = m.id
         ORDER BY e.created_at DESC`
     )
+    const incomeListResult = await pool.query(
+        `SELECT i.*,
+            m.first_name, m.last_name
+        FROM income i
+        JOIN members m ON i.recorded_by = m.id
+        ORDER BY i.created_at DESC`
+    )
 
-    const totalIncome = parseInt(incomeResult.rows[0].total)
+    const tokenIncome = parseInt(tokenIncomeResult.rows[0].total)
+    const externalIncome = parseInt(externalIncomeResult.rows[0].total)
     const totalExpenses = parseInt(expensesResult.rows[0].total)
+    const totalIncome = tokenIncome + externalIncome
 
     return {
+        token_income: tokenIncome,
+        external_income: externalIncome,
         total_income: totalIncome,
         total_expenses: totalExpenses,
         balance: totalIncome - totalExpenses,
         topups: topupsResult.rows,
-        expenses: expenseListResult.rows
+        expenses: expenseListResult.rows,
+        external_income_list: incomeListResult.rows
     }
 }

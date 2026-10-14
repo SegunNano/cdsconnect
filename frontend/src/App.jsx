@@ -71,6 +71,8 @@ export default function App() {
 
                     {/* Coordinator */}
                     <Route path="/coordinator" element={<ProtectedRoute><CoordinatorDashboard /></ProtectedRoute>} />
+                    {/* DEV */}
+                    <Route path="/dev" element={<ProtectedRoute requireDev={true}><DevDashboard /></ProtectedRoute>} />
 
                     <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>

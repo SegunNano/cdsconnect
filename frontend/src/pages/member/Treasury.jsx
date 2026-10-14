@@ -14,7 +14,8 @@ export default function Treasury() {
     const [summary, setSummary] = useState(null)
     const [loading, setLoading] = useState(true)
     const [showForm, setShowForm] = useState(false)
-    const [form, setForm] = useState({ amount: '', description: '' })
+    const [logType, setLogType] = useState('expense') // 'expense' | 'income'
+    const [form, setForm] = useState({ amount: '', description: '', source: '' })
     const [submitting, setSubmitting] = useState(false)
     const [error, setError] = useState('')
 
@@ -38,22 +39,40 @@ export default function Treasury() {
         e.preventDefault()
         setSubmitting(true)
         setError('')
+
+        const numericAmount = parseInt(form.amount, 10)
+
         try {
-            const result = await api.post('/expenses', {
-                amount: parseInt(form.amount),
-                description: form.description
-            })
-            // Update summary
-            setSummary(prev => ({
-                ...prev,
-                total_expenses: prev.total_expenses + parseInt(form.amount),
-                balance: prev.balance - parseInt(form.amount),
-                expenses: [result.data.data.expense, ...prev.expenses]
-            }))
-            setForm({ amount: '', description: '' })
+            if (logType === 'expense') {
+                const result = await api.post('/expenses', {
+                    amount: numericAmount,
+                    description: form.description
+                })
+                setSummary(prev => ({
+                    ...prev,
+                    total_expenses: (prev.total_expenses || 0) + numericAmount,
+                    balance: (prev.balance || 0) - numericAmount,
+                    expenses: [result.data.data.expense, ...(prev.expenses || [])]
+                }))
+            } else {
+                const result = await api.post('/income', {
+                    amount: numericAmount,
+                    description: form.description,
+                    source: form.source
+                })
+                const newIncome = result.data.data.income || result.data.data
+                setSummary(prev => ({
+                    ...prev,
+                    external_income: (prev.external_income || 0) + numericAmount,
+                    balance: (prev.balance || 0) + numericAmount,
+                    external_income_list: [newIncome, ...(prev.external_income_list || [])]
+                }))
+            }
+
+            setForm({ amount: '', description: '', source: '' })
             setShowForm(false)
         } catch (err) {
-            setError(err.response?.data?.message || 'Failed to log expense')
+            setError(err.response?.data?.message || `Failed to log ${logType}`)
         } finally {
             setSubmitting(false)
         }
@@ -97,7 +116,7 @@ export default function Treasury() {
                 padding: '52px 20px 16px',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'space-between',
+                justifySpaceBetween: 'space-between',
                 boxShadow: '0 1px 0 #e8ece9'
             }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -137,14 +156,14 @@ export default function Treasury() {
                         }}
                     >
                         <Plus size={14} color={showForm ? '#4a5e52' : 'white'} />
-                        {showForm ? 'Cancel' : 'Log Expense'}
+                        {showForm ? 'Cancel' : 'Log Transaction'}
                     </button>
                 )}
             </div>
 
             <div style={{ padding: '16px 20px 0' }}>
 
-                {/* LOG EXPENSE FORM */}
+                {/* LOG TRANSACTION FORM */}
                 {showForm && canLog && (
                     <div style={{
                         background: '#ffffff',
@@ -153,6 +172,40 @@ export default function Treasury() {
                         boxShadow: '0 2px 12px rgba(0,0,0,0.07)',
                         marginBottom: '16px'
                     }}>
+                        {/* TOGGLE BUTTONS */}
+                        <div style={{ display: 'flex', gap: '8px', marginBottom: '14px' }}>
+                            <button
+                                type="button"
+                                onClick={() => setLogType('expense')}
+                                style={{
+                                    flex: 1, padding: '10px',
+                                    background: logType === 'expense' ? '#e53e3e' : '#f2f4f7',
+                                    color: logType === 'expense' ? 'white' : '#4a5e52',
+                                    border: 'none', borderRadius: '10px',
+                                    fontWeight: 600, fontSize: '0.82rem',
+                                    cursor: 'pointer',
+                                    fontFamily: "'Plus Jakarta Sans', sans-serif"
+                                }}
+                            >
+                                Log Expense
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setLogType('income')}
+                                style={{
+                                    flex: 1, padding: '10px',
+                                    background: logType === 'income' ? '#008751' : '#f2f4f7',
+                                    color: logType === 'income' ? 'white' : '#4a5e52',
+                                    border: 'none', borderRadius: '10px',
+                                    fontWeight: 600, fontSize: '0.82rem',
+                                    cursor: 'pointer',
+                                    fontFamily: "'Plus Jakarta Sans', sans-serif"
+                                }}
+                            >
+                                Log Income
+                            </button>
+                        </div>
+
                         {error && (
                             <div style={{
                                 background: '#fff0f0', color: '#e53e3e',
@@ -164,6 +217,7 @@ export default function Treasury() {
                                 {error}
                             </div>
                         )}
+
                         <form onSubmit={handleSubmit}>
                             <div style={{ marginBottom: '12px' }}>
                                 <label style={labelStyle}>Amount (₦)</label>
@@ -177,23 +231,41 @@ export default function Treasury() {
                                     style={inputStyle}
                                 />
                             </div>
+
+                            {logType === 'income' && (
+                                <div style={{ marginBottom: '12px' }}>
+                                    <label style={labelStyle}>Source</label>
+                                    <input
+                                        type="text"
+                                        value={form.source || ''}
+                                        onChange={e => setForm({ ...form, source: e.target.value })}
+                                        placeholder="e.g. LGA donation, External sponsor"
+                                        required
+                                        style={inputStyle}
+                                    />
+                                </div>
+                            )}
+
                             <div style={{ marginBottom: '16px' }}>
                                 <label style={labelStyle}>Description</label>
                                 <input
                                     type="text"
                                     value={form.description}
                                     onChange={e => setForm({ ...form, description: e.target.value })}
-                                    placeholder="e.g. Printing — clearance slips"
+                                    placeholder={logType === 'expense' ? "e.g. Printing — clearance slips" : "e.g. CDS project support"}
                                     required
                                     style={inputStyle}
                                 />
                             </div>
+
                             <button
                                 type="submit"
                                 disabled={submitting}
                                 style={{
                                     width: '100%',
-                                    background: submitting ? '#c2e0cf' : '#008751',
+                                    background: submitting
+                                        ? '#c2e0cf'
+                                        : (logType === 'expense' ? '#e53e3e' : '#008751'),
                                     border: 'none', borderRadius: '12px',
                                     padding: '13px', cursor: submitting ? 'not-allowed' : 'pointer',
                                     fontSize: '0.88rem', fontWeight: 700,
@@ -201,7 +273,9 @@ export default function Treasury() {
                                     fontFamily: "'Plus Jakarta Sans', sans-serif"
                                 }}
                             >
-                                {submitting ? 'Logging...' : 'Log Expense'}
+                                {submitting
+                                    ? 'Logging...'
+                                    : (logType === 'expense' ? 'Log Expense' : 'Log Income')}
                             </button>
                         </form>
                     </div>
@@ -232,59 +306,26 @@ export default function Treasury() {
                                 fontSize: '2.2rem', fontWeight: 800,
                                 color: 'white', lineHeight: 1, marginBottom: '6px'
                             }}>
-                                ₦{summary.balance.toLocaleString()}
+                                ₦{(summary.balance || 0).toLocaleString()}
                             </div>
                             <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.6)' }}>
                                 Treasurer should be holding this amount
                             </div>
                         </div>
 
-                        {/* INCOME + EXPENSES */}
-                        <div style={{
-                            display: 'grid',
-                            gridTemplateColumns: '1fr 1fr',
-                            gap: '10px',
-                            marginBottom: '16px'
-                        }}>
-                            <div style={{
-                                background: '#ffffff', borderRadius: '14px',
-                                padding: '16px', boxShadow: '0 2px 12px rgba(0,0,0,0.07)'
-                            }}>
-                                <div style={{
-                                    display: 'flex', alignItems: 'center',
-                                    gap: '6px', marginBottom: '8px'
-                                }}>
-                                    <TrendingUp size={14} color="#008751" />
-                                    <div style={{ fontSize: '0.68rem', fontWeight: 600, color: '#8fa396', textTransform: 'uppercase' }}>
-                                        Total Income
-                                    </div>
-                                </div>
-                                <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#008751' }}>
-                                    ₦{summary.total_income.toLocaleString()}
-                                </div>
-                                <div style={{ fontSize: '0.68rem', color: '#8fa396', marginTop: '3px' }}>
-                                    From token purchases
-                                </div>
+                        {/* 3-COLUMN SUMMARY CARDS */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', marginBottom: '12px' }}>
+                            <div style={{ background: '#ffffff', borderRadius: '14px', padding: '14px', boxShadow: '0 2px 12px rgba(0,0,0,0.07)' }}>
+                                <div style={{ fontSize: '0.6rem', fontWeight: 600, color: '#8fa396', textTransform: 'uppercase', marginBottom: '6px' }}>Token Income</div>
+                                <div style={{ fontSize: '1rem', fontWeight: 800, color: '#008751' }}>₦{(summary.token_income || summary.total_income || 0).toLocaleString()}</div>
                             </div>
-                            <div style={{
-                                background: '#ffffff', borderRadius: '14px',
-                                padding: '16px', boxShadow: '0 2px 12px rgba(0,0,0,0.07)'
-                            }}>
-                                <div style={{
-                                    display: 'flex', alignItems: 'center',
-                                    gap: '6px', marginBottom: '8px'
-                                }}>
-                                    <TrendingDown size={14} color="#e53e3e" />
-                                    <div style={{ fontSize: '0.68rem', fontWeight: 600, color: '#8fa396', textTransform: 'uppercase' }}>
-                                        Total Spent
-                                    </div>
-                                </div>
-                                <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#e53e3e' }}>
-                                    ₦{summary.total_expenses.toLocaleString()}
-                                </div>
-                                <div style={{ fontSize: '0.68rem', color: '#8fa396', marginTop: '3px' }}>
-                                    Logged expenses
-                                </div>
+                            <div style={{ background: '#ffffff', borderRadius: '14px', padding: '14px', boxShadow: '0 2px 12px rgba(0,0,0,0.07)' }}>
+                                <div style={{ fontSize: '0.6rem', fontWeight: 600, color: '#8fa396', textTransform: 'uppercase', marginBottom: '6px' }}>External</div>
+                                <div style={{ fontSize: '1rem', fontWeight: 800, color: '#4f46e5' }}>₦{(summary.external_income || 0).toLocaleString()}</div>
+                            </div>
+                            <div style={{ background: '#ffffff', borderRadius: '14px', padding: '14px', boxShadow: '0 2px 12px rgba(0,0,0,0.07)' }}>
+                                <div style={{ fontSize: '0.6rem', fontWeight: 600, color: '#8fa396', textTransform: 'uppercase', marginBottom: '6px' }}>Spent</div>
+                                <div style={{ fontSize: '1rem', fontWeight: 800, color: '#e53e3e' }}>₦{(summary.total_expenses || 0).toLocaleString()}</div>
                             </div>
                         </div>
 
@@ -297,7 +338,7 @@ export default function Treasury() {
                             Expense History
                         </div>
 
-                        {summary.expenses.length === 0 ? (
+                        {!summary.expenses || summary.expenses.length === 0 ? (
                             <div style={{
                                 background: '#ffffff', borderRadius: '14px',
                                 padding: '24px', textAlign: 'center',
@@ -346,7 +387,7 @@ export default function Treasury() {
                                             fontSize: '0.95rem', fontWeight: 800,
                                             color: '#e53e3e'
                                         }}>
-                                            -₦{expense.amount_naira.toLocaleString()}
+                                            -₦{(expense.amount_naira || expense.amount || 0).toLocaleString()}
                                         </div>
                                     </div>
                                 ))}
@@ -359,10 +400,10 @@ export default function Treasury() {
                             textTransform: 'uppercase', letterSpacing: '0.8px',
                             marginBottom: '10px', marginTop: '16px'
                         }}>
-                            Income History
+                            Token Income History
                         </div>
 
-                        {summary.topups.length === 0 ? (
+                        {!summary.topups || summary.topups.length === 0 ? (
                             <div style={{
                                 background: '#ffffff', borderRadius: '14px',
                                 padding: '24px', textAlign: 'center',
@@ -411,7 +452,57 @@ export default function Treasury() {
                                             fontSize: '0.95rem', fontWeight: 800,
                                             color: '#008751'
                                         }}>
-                                            +₦{topup.naira_value.toLocaleString()}
+                                            +₦{(topup.naira_value || 0).toLocaleString()}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {/* EXTERNAL INCOME LIST */}
+                        <div style={{
+                            fontSize: '0.75rem', fontWeight: 700, color: '#8fa396',
+                            textTransform: 'uppercase', letterSpacing: '0.8px',
+                            marginBottom: '10px', marginTop: '16px'
+                        }}>
+                            External Income
+                        </div>
+
+                        {!summary.external_income_list || summary.external_income_list.length === 0 ? (
+                            <div style={{
+                                background: '#ffffff', borderRadius: '14px',
+                                padding: '24px', textAlign: 'center',
+                                color: '#8fa396', fontSize: '0.82rem',
+                                boxShadow: '0 2px 12px rgba(0,0,0,0.07)'
+                            }}>
+                                No external income recorded yet
+                            </div>
+                        ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                {summary.external_income_list.map(item => (
+                                    <div key={item.id} style={{
+                                        background: '#ffffff', borderRadius: '12px',
+                                        padding: '14px 16px', boxShadow: '0 2px 12px rgba(0,0,0,0.07)',
+                                        display: 'flex', alignItems: 'center', gap: '12px'
+                                    }}>
+                                        <div style={{
+                                            width: '40px', height: '40px',
+                                            background: '#eef2ff', borderRadius: '12px',
+                                            display: 'flex', alignItems: 'center',
+                                            justifyContent: 'center', flexShrink: 0
+                                        }}>
+                                            <TrendingUp size={18} color="#4f46e5" />
+                                        </div>
+                                        <div style={{ flex: 1 }}>
+                                            <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#0d1b12', marginBottom: '2px' }}>
+                                                {item.description}
+                                            </div>
+                                            <div style={{ fontSize: '0.7rem', color: '#8fa396' }}>
+                                                From {item.source} · By {item.first_name} {item.last_name} · {new Date(item.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                            </div>
+                                        </div>
+                                        <div style={{ fontSize: '0.95rem', fontWeight: 800, color: '#4f46e5' }}>
+                                            +₦{(item.amount_naira || item.amount || 0).toLocaleString()}
                                         </div>
                                     </div>
                                 ))}

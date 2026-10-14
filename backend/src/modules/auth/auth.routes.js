@@ -25,4 +25,18 @@ router.post('/webauthn/login/verify', verifyWebAuthnLogin)
 // PIN login — fallback
 router.post('/login/pin', pinLogin)
 
+
+router.post('/logout', authMiddleware, async (req, res, next) => {
+    try {
+        // Increment token_version — invalidates all existing tokens
+        await pool.query(
+            'UPDATE members SET token_version = token_version + 1 WHERE id = $1',
+            [req.member.id]
+        )
+        res.status(200).json({ success: true, message: 'Logged out successfully.' })
+    } catch (err) {
+        next(err)
+    }
+})
+
 export default router
