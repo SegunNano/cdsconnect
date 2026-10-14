@@ -8,40 +8,37 @@ export const AuthProvider = ({ children }) => {
     const [token, setToken] = useState(null)
     const [loading, setLoading] = useState(true)
 
-    // On mount, check if token exists and fetch current member profile from API
+    // On initial app load, re-authenticate session using stored token
     useEffect(() => {
         const storedToken = localStorage.getItem('token')
 
-        if (storedToken) {
-            setToken(storedToken)
-            fetchProfile(storedToken)
-        } else {
+        if (!storedToken) {
             setLoading(false)
+            return
         }
-    }, [])
 
-    const fetchProfile = async (authToken) => {
-        try {
-            const response = await api.get('/auth/me', {
-                headers: { Authorization: `Bearer ${authToken}` }
+        setToken(storedToken)
+
+        // Fetch fresh member data from server on app load
+        api.get('/members/me')
+            .then(res => {
+                const memberData = res.data.data || res.data
+                setMember(memberData)
+
+                // Preserve passkey credential binding on device
+                if (memberData?.credential_id) {
+                    localStorage.setItem('cds_credential_id', memberData.credential_id)
+                }
             })
-            const memberData = response.data.data || response.data
-            setMember(memberData)
-
-            // Keep passkey credential binding intact on phone/device
-            if (memberData?.credential_id) {
-                localStorage.setItem('cds_credential_id', memberData.credential_id)
-            }
-        } catch (err) {
-            console.error('Failed to fetch user profile:', err)
-            // If token is expired or invalid, purge session state
-            setMember(null)
-            setToken(null)
-            localStorage.removeItem('token')
-        } finally {
-            setLoading(false)
-        }
-    }
+            .catch(err => {
+                console.error('Session validation failed:', err)
+                // Token is invalid, revoked (token_version mismatch), or expired
+                localStorage.removeItem('token')
+                setToken(null)
+                setMember(null)
+            })
+            .finally(() => setLoading(false))
+    }, [])
 
     const completeOnboarding = (updatedMemberData) => {
         setMember(updatedMemberData)
@@ -54,10 +51,9 @@ export const AuthProvider = ({ children }) => {
         setMember(memberData)
         setToken(tokenData)
         
-        // Store only token in localStorage
+        // Store ONLY the token in localStorage
         localStorage.setItem('token', tokenData)
 
-        // Store passkey credential_id for hardware/device binding
         if (memberData?.credential_id) {
             localStorage.setItem('cds_credential_id', memberData.credential_id)
         }
@@ -72,10 +68,8 @@ export const AuthProvider = ({ children }) => {
         setMember(null)
         setToken(null)
         
-        // Purge session token only
+        // Remove token only — keep cds_credential_id intact for WebAuthn binding
         localStorage.removeItem('token')
-
-        // NOTE: 'cds_credential_id' is explicitly kept so hardware/device binding stays intact
     }
 
     return (
