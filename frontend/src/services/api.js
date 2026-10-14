@@ -8,7 +8,7 @@ const api = axios.create({
     }
 })
 
-// Attach JWT token to every request
+// Dynamically attach JWT token before every outgoing HTTP request
 api.interceptors.request.use((config) => {
     const token = localStorage.getItem('token')
     if (token) {
@@ -17,14 +17,13 @@ api.interceptors.request.use((config) => {
     return config
 })
 
-// Handle expired token globally
+// Global response interceptor
 api.interceptors.response.use(
     (response) => response,
     (error) => {
         if (error.response?.status === 401) {
+            // Clear invalid token from storage without forcing window.location reload
             localStorage.removeItem('token')
-            localStorage.removeItem('member')
-            window.location.href = '/login'
         }
         return Promise.reject(error)
     }

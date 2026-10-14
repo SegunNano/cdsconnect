@@ -4,11 +4,11 @@ import api from '../services/api'
 const AuthContext = createContext()
 
 export const AuthProvider = ({ children }) => {
+    // Synchronously read token so protected routes don't bounce early
+    const [token, setToken] = useState(() => localStorage.getItem('token'))
     const [member, setMember] = useState(null)
-    const [token, setToken] = useState(null)
     const [loading, setLoading] = useState(true)
 
-    // On initial app load, re-authenticate session using stored token
     useEffect(() => {
         const storedToken = localStorage.getItem('token')
 
@@ -17,27 +17,27 @@ export const AuthProvider = ({ children }) => {
             return
         }
 
-        setToken(storedToken)
-
-        // Fetch fresh member data from server on app load
+        // Fetch latest profile state directly from PostgreSQL via Express API
         api.get('/members/me')
             .then(res => {
-                const memberData = res.data.data || res.data
-                setMember(memberData)
+                const freshMember = res.data.data || res.data
+                setMember(freshMember)
 
-                // Preserve passkey credential binding on device
-                if (memberData?.credential_id) {
-                    localStorage.setItem('cds_credential_id', memberData.credential_id)
+                // Maintain hardware-bound WebAuthn credential ID
+                if (freshMember?.credential_id) {
+                    localStorage.setItem('cds_credential_id', freshMember.credential_id)
                 }
             })
             .catch(err => {
-                console.error('Session validation failed:', err)
-                // Token is invalid, revoked (token_version mismatch), or expired
+                console.error('Failed to restore session:', err)
+                // Token was revoked (token_version mismatch) or expired
                 localStorage.removeItem('token')
                 setToken(null)
                 setMember(null)
             })
-            .finally(() => setLoading(false))
+            .finally(() => {
+                setLoading(false)
+            })
     }, [])
 
     const completeOnboarding = (updatedMemberData) => {
@@ -51,7 +51,7 @@ export const AuthProvider = ({ children }) => {
         setMember(memberData)
         setToken(tokenData)
         
-        // Store ONLY the token in localStorage
+        // Store ONLY token in localStorage
         localStorage.setItem('token', tokenData)
 
         if (memberData?.credential_id) {
@@ -63,12 +63,12 @@ export const AuthProvider = ({ children }) => {
         try {
             await api.post('/auth/logout')
         } catch (err) {
-            console.error('Logout error:', err)
+            console.error('Logout failed:', err)
         }
         setMember(null)
         setToken(null)
         
-        // Remove token only — keep cds_credential_id intact for WebAuthn binding
+        // Remove token only — keep device passkey binding intact
         localStorage.removeItem('token')
     }
 
