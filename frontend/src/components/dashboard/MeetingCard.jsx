@@ -15,7 +15,7 @@ function TodaysMeeting () {
 }
 
 export function MeetingCard({ meeting, member, attendance, signingIn, signInError, userLocation, handleSignIn, todayAttendance }) {
-    
+    console.log({meeting, member, attendance, signingIn, signInError, userLocation, handleSignIn, todayAttendance})
     const cardStyle = {
         background: '#ffffff',
         borderRadius: '18px',
@@ -41,9 +41,12 @@ export function MeetingCard({ meeting, member, attendance, signingIn, signInErro
         minute: '2-digit'
     })
 
-    // Check attendance status flags
-    const hasSignedIn = Boolean(attendance?.signed_in_at)
-    const hasSignedOut = Boolean(attendance?.signed_out_at)
+    // FIX: Fallback to todayAttendance if top-level attendance prop is null
+    const activeAttendance = attendance || todayAttendance
+
+    // Check attendance status flags using the combined active record
+    const hasSignedIn = Boolean(activeAttendance?.signed_in_at)
+    const hasSignedOut = Boolean(activeAttendance?.signed_out_at)
 
     // ==========================================
     // 1. SIGNED-IN / SIGNED-OUT CARD STATES
@@ -54,12 +57,13 @@ export function MeetingCard({ meeting, member, attendance, signingIn, signInErro
                 hasSignedOut={hasSignedOut}
                 cardStyle={cardStyle}
                 meeting={meeting}
-                attendance={todayAttendance}
+                attendance={activeAttendance} // Pass the resolved record here
                 member={member}
             />
         )
     }
 
+    // ... (rest of your state conditions remain unchanged)
     // ==========================================
     // 2. UPCOMING MEETING STATE
     // ==========================================

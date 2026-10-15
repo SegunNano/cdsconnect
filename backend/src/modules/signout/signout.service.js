@@ -4,31 +4,37 @@ import { createNotification } from '../notifications/notifications.service.js'
 import { issueClearance } from '../../utils/clearance.js'
 
 const isSameDay = (meetingDate) => {
-    const todayStr = new Date().toISOString().split('T')[0]
+    // Format today's date in Africa/Lagos timezone
+    const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Africa/Lagos' })
+    
+    // Format meeting date string safely
     const meetingStr = typeof meetingDate === 'string'
         ? meetingDate.split('T')[0]
-        : new Date(meetingDate).toISOString().split('T')[0]
+        : new Date(meetingDate).toLocaleDateString('en-CA', { timeZone: 'Africa/Lagos' })
     
-     return todayStr === meetingStr
+    return todayStr === meetingStr
 }
+
 
 export const getMeetingSignOutList = async (meetingId) => {
     // Check meeting is today
+
     const meetingResult = await pool.query(
         'SELECT * FROM meetings WHERE id = $1',
         [meetingId]
     )
-
+    
     if (meetingResult.rows.length === 0) {
         throw { status: 404, message: 'Meeting not found' }
     }
-
+    
     const meeting = meetingResult.rows[0]
     const meetingDate = new Date(meeting.meeting_date)
-        .toISOString().split('T')[0]
+    .toISOString().split('T')[0]
     const today = new Date().toISOString().split('T')[0]
-
+    
     if (!isSameDay(meeting.meeting_date, new Date())) {     
+        console.log({meetingId})
         throw { status: 403, message: 'Sign-out is no longer available for this meeting.' }
     }
 

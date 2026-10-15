@@ -101,23 +101,7 @@ export default function DevDashboard() {
                 {activeTab === 'members' && (
                     <>
                         {/* Dev limit warning banner */}
-                        {devCount >= 2 && (
-                            <div style={{
-                                background: '#fff8e6',
-                                borderRadius: '10px',
-                                padding: '10px 14px',
-                                fontSize: '0.75rem',
-                                color: '#d4900a',
-                                fontWeight: 500,
-                                marginBottom: '12px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '6px'
-                            }}>
-                                ⚠️ Maximum devs reached ({devCount}/2). Remove a dev to assign another.
-                            </div>
-                        )}
-                        <MembersTab
+                            <MembersTab
                             members={filtered} 
                             search={search} 
                             loading={loading} 
