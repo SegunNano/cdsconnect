@@ -50,7 +50,7 @@ async function seedDevMember() {
             `, [pinHash, streamId])
             
             console.log('✅ Dev member seeded')
-            console.log('Email: infotechnysclagos.com')
+            console.log('Email: infotechnysclagos@gmail.com')
             console.log(`PIN: ${pin}`)
             console.log(`⚠️  Save this PIN — it will not be shown again`)
             console.log('⚠️  Change this PIN immediately after first login')

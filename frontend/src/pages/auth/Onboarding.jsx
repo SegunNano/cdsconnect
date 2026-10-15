@@ -12,8 +12,6 @@ export default function Onboarding() {
     const [error, setError] = useState('')
 
     const handleRegisterPasskey = async () => {
-        console.log('Token in storage:', localStorage.getItem('token'))
-    console.log('Member:', member)
         setStep('registering')
         setError('')
         try {
