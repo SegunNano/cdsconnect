@@ -33,6 +33,7 @@ export const getMe = async (memberId) => {
             m.email, m.role, m.is_dev, m.gender,
             m.stream_id, m.breakout_session,
             m.token_balance, m.is_active, m.member_type,
+            m.token_version, -- <--- FIXED: Now included!
             m.credential_id,
             m.created_at,
             m.reinstatement_count,
