@@ -8,23 +8,22 @@ const api = axios.create({
     }
 })
 
-// Dynamically attach JWT token before every outgoing HTTP request
+// Attach JWT token dynamically before EVERY request
 api.interceptors.request.use((config) => {
     const token = localStorage.getItem('token')
+    console.log('Attaching token:', token)
     if (token) {
         config.headers.Authorization = `Bearer ${token}`
     }
     return config
 })
 
-// Global response interceptor
+// Clean response interceptor without hard browser redirects
 api.interceptors.response.use(
     (response) => response,
     (error) => {
-        if (error.response?.status === 401) {
-            // Clear invalid token from storage without forcing window.location reload
-            localStorage.removeItem('token')
-        }
+        // Just reject the error promise so individual try/catch blocks 
+        // or AuthContext can handle it natively
         return Promise.reject(error)
     }
 )

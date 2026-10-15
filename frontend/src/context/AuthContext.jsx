@@ -4,7 +4,7 @@ import api from '../services/api'
 const AuthContext = createContext()
 
 export const AuthProvider = ({ children }) => {
-    // Synchronously read token so protected routes don't bounce early
+    // 1. Lazy-initialize token so it exists immediately on first render
     const [token, setToken] = useState(() => localStorage.getItem('token'))
     const [member, setMember] = useState(null)
     const [loading, setLoading] = useState(true)
@@ -17,28 +17,39 @@ export const AuthProvider = ({ children }) => {
             return
         }
 
-        // Fetch latest profile state directly from PostgreSQL via Express API
+        // Validate session with server on initial mount/refresh
         api.get('/members/me')
             .then(res => {
-                const freshMember = res.data.data || res.data
-                setMember(freshMember)
-
-                // Maintain hardware-bound WebAuthn credential ID
-                if (freshMember?.credential_id) {
-                    localStorage.setItem('cds_credential_id', freshMember.credential_id)
-                }
+                // Support both unwrapped response.data or nested response.data.data
+                const memberData = res.data?.data || res.data || res
+                setMember(memberData)
             })
-            .catch(err => {
-                console.error('Failed to restore session:', err)
-                // Token was revoked (token_version mismatch) or expired
-                localStorage.removeItem('token')
-                setToken(null)
-                setMember(null)
+            .catch((err) => {
+                console.error('Session restoration failed:', err.response?.data || err.message)
+                // Only wipe token if server explicitly rejects it with a 401
+                if (err.response?.status === 401) {
+                    localStorage.removeItem('token')
+                    setToken(null)
+                    setMember(null)
+                }
             })
             .finally(() => {
                 setLoading(false)
             })
     }, [])
+
+    const login = (memberData, tokenData) => {
+        // 1. Synchronously write token to localStorage FIRST
+        localStorage.setItem('token', tokenData)
+
+        if (memberData?.credential_id) {
+            localStorage.setItem('cds_credential_id', memberData.credential_id)
+        }
+
+        // 2. Update React state SECOND
+        setToken(tokenData)
+        setMember(memberData)
+    }
 
     const completeOnboarding = (updatedMemberData) => {
         setMember(updatedMemberData)
@@ -47,29 +58,17 @@ export const AuthProvider = ({ children }) => {
         }
     }
 
-    const login = (memberData, tokenData) => {
-        setMember(memberData)
-        setToken(tokenData)
-        
-        // Store ONLY token in localStorage
-        localStorage.setItem('token', tokenData)
-
-        if (memberData?.credential_id) {
-            localStorage.setItem('cds_credential_id', memberData.credential_id)
-        }
-    }
-
     const logout = async () => {
         try {
             await api.post('/auth/logout')
         } catch (err) {
-            console.error('Logout failed:', err)
+            console.error('Logout error:', err)
+        } finally {
+            setMember(null)
+            setToken(null)
+            // Remove auth token — preserve cds_credential_id for passkey logins
+            localStorage.removeItem('token')
         }
-        setMember(null)
-        setToken(null)
-        
-        // Remove token only — keep device passkey binding intact
-        localStorage.removeItem('token')
     }
 
     return (

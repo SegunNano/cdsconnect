@@ -11,15 +11,11 @@ import {
 } from '@simplewebauthn/server'
 import { getRpId } from '../../utils/utils.js'
 
-
 const RP_NAME = 'CDSConnect'
 const ORIGIN = process.env.FRONTEND_URL || 'http://localhost:5173'
 const RP_ID = getRpId(ORIGIN)
 
-
-
 // ── REGISTRATION ─────────────────────────────────
-
 
 export const registerMember = async (data) => {
     const {
@@ -117,12 +113,13 @@ export const registerMember = async (data) => {
     const memberId = result.rows[0].id
     const member = await getMe(memberId)
 
-    // 9. Generate JWT
+    // 9. Generate JWT — INCLUDING token_version
     const token = generateToken({
         id: member.id,
         role: member.role,
         is_dev: member.is_dev,
-        member_type: member.member_type
+        member_type: member.member_type,
+        token_version: member.token_version // <--- FIXED: Added token_version
     })
 
     return { member, token }
@@ -144,7 +141,6 @@ export const getRegistrationOptions = async (memberId) => {
     const options = await generateRegistrationOptions({
         rpName: RP_NAME,
         rpID: RP_ID,
-        // Pass userID as a plain string or Uint8Array
         userID: new TextEncoder().encode(String(member.id)),
         userName: member.email,
         userDisplayName: `${member.first_name} ${member.last_name}`,
@@ -186,13 +182,16 @@ export const verifyRegistration = async (memberId, credential) => {
         throw { status: 400, message: 'No registration challenge found for this member' }
     }
 
+    // Convert member.id to base64url string to match generateRegistrationOptions output
+    const expectedUserID = Buffer.from(String(member.id)).toString('base64url')
+
     // Verify registration response with SimpleWebAuthn
     const verification = await verifyRegistrationResponse({
         response: credential,
         expectedChallenge: member.webauthn_challenge,
         expectedOrigin: ORIGIN,
         expectedRPID: RP_ID,
-        expectedUserID: String(member.id)
+        expectedUserID: expectedUserID // <--- FIXED: Base64URL string match
     })
 
     if (!verification.verified || !verification.registrationInfo) {
@@ -216,12 +215,12 @@ export const verifyRegistration = async (memberId, credential) => {
         ]
     )
 
-    return { verified: true }
+    return { verified: true, credentialId: id }
 }
 
 // ── WEBAUTHN LOGIN OPTIONS ────────────────────────
 
-export const getAuthenticationOptions = async (email, clientCredentialId=null) => {
+export const getAuthenticationOptions = async (email, clientCredentialId = null) => {
     const result = await pool.query(
         'SELECT * FROM members WHERE email = $1',
         [email]
@@ -248,7 +247,7 @@ export const getAuthenticationOptions = async (email, clientCredentialId=null) =
     const options = await generateAuthenticationOptions({
         rpID: RP_ID,
         allowCredentials: [{
-            id: member.credential_id, // SimpleWebAuthn accepts Base64URL string directly here
+            id: member.credential_id,
             type: 'public-key'
         }],
         userVerification: 'preferred'
@@ -277,7 +276,6 @@ export const verifyAuthentication = async (email, credential) => {
 
     const raw = result.rows[0]
 
-
     if (!raw.webauthn_challenge) {
         throw { status: 400, message: 'No active login challenge found for this member' }
     }
@@ -288,7 +286,7 @@ export const verifyAuthentication = async (email, credential) => {
         expectedOrigin: ORIGIN,
         expectedRPID: RP_ID,
         credential: {
-            id: raw.credential_id, // Pass Base64URL string directly
+            id: raw.credential_id,
             publicKey: Buffer.from(raw.public_key, 'base64url'),
             counter: Number(raw.sign_count)
         }
@@ -330,14 +328,13 @@ export const loginWithPin = async (email, pin, clientCredentialId = null) => {
 
     const member = await getMe(authMember.id)
 
-    
-
-    if ( member.credential_id && (!clientCredentialId || clientCredentialId !== member.credential_id)) {
+    if (member.credential_id && (!clientCredentialId || clientCredentialId !== member.credential_id)) {
         throw {
             status: 403,
             message: 'This device is not authorised for this account. Contact your dev.'
         }
     }
+
     const token = generateToken({
         id: member.id,
         role: member.role,
@@ -348,4 +345,3 @@ export const loginWithPin = async (email, pin, clientCredentialId = null) => {
 
     return { member, token }
 }
-

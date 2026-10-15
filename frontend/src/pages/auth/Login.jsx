@@ -27,12 +27,20 @@ export default function Login() {
         try {
             const clientCredentialId = localStorage.getItem('cds_credential_id')
             const result = await authenticateWithDevice(email, clientCredentialId)
-            login(result.data.member, result.data.token)
+            
+            // Extract token safely whether wrapped in result.data or raw result
+            const token = result?.data?.token || result?.token
+            const member = result?.data?.member || result?.member
+
+            if (!token) {
+                throw new Error('No authentication token returned from server')
+            }
+
+            login(member, token)
             navigate('/')
         } catch (err) {
-            // WebAuthn failed or denied — show PIN form
             setShowPin(true)
-            setError(err.response?.data?.message || 'Something went wrong, try using pin')
+            setError(err.response?.data?.message || err.message || 'Something went wrong, try using pin')
         } finally {
             setPasskeyLoading(false)
         }
@@ -49,17 +57,24 @@ export default function Login() {
 
         try {
             const clientCredentialId = localStorage.getItem('cds_credential_id')
-
             const result = await loginService(email, pin, clientCredentialId)
-            login(result.data.member, result.data.token)
+
+            // Extract token safely whether wrapped in result.data or raw result
+            const token = result?.data?.token || result?.token
+            const member = result?.data?.member || result?.member
+
+            if (!token) {
+                throw new Error('No authentication token returned from server')
+            }
+
+            login(member, token)
             navigate('/')
         } catch (err) {
-            setError(err.response?.data?.message || 'Something went wrong')
+            setError(err.response?.data?.message || err.message || 'Something went wrong')
         } finally {
             setLoading(false)
         }
     }
-
 
     const inputStyle = {
         width: '100%',

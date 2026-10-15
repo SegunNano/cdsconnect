@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getMyProfile } from '../../services/members.service'
+import { useAuth } from '../../context/AuthContext'
 import { getActiveMeeting } from '../../services/meetings.service'
-import { signIn, getTodayStatus } from '../../services/attendance.service'
+import { signIn, getTodayStatus, getMyAttendance } from '../../services/attendance.service'
 import api from '../../services/api'
 
 import { UserTopBar } from '../../components/dashboard/UserTopBar'
@@ -15,8 +15,10 @@ import { getStableLocation } from '../../utils/usePreciseLocation'
 
 export default function Dashboard() {
     const navigate = useNavigate()
+    
+    // Get member state directly from AuthContext
+    const { member } = useAuth()
 
-    const [member, setMember] = useState(null)
     const [meeting, setMeeting] = useState(null)
     const [unreadCount, setUnreadCount] = useState(0)
     const [loading, setLoading] = useState(true)
@@ -30,52 +32,57 @@ export default function Dashboard() {
     const [todayAttendance, setTodayAttendance] = useState(null)
 
     useEffect(() => {
-        const fetchData = async () => {
-            try {
-                // 1. Fetch user profile first (essential for authentication)
-                const memberRes = await getMyProfile()
-                setMember(memberRes.data)
+        const fetchDashboardData = async () => {
+            if (!member) return
 
-                // 2. Fetch secondary endpoints with Promise.allSettled so a failure on one doesn't crash the session
+            try {
+                // Fetch secondary endpoints safely using updated service functions
                 const [meetingRes, attendanceRes, unreadRes, todayAttendanceRes] = await Promise.allSettled([
                     getActiveMeeting(),
-                    api.get('/attendance/me'),
+                    getMyAttendance(),
                     api.get('/notifications/unread'),
                     getTodayStatus()
                 ])
 
                 if (meetingRes.status === 'fulfilled') {
-                    setMeeting(meetingRes.value.data)
+                    const res = meetingRes.value
+                    setMeeting(res?.data || res)
                 }
 
                 if (unreadRes.status === 'fulfilled') {
-                    setUnreadCount(unreadRes.value.data?.data?.count || 0)
+                    const res = unreadRes.value
+                    setUnreadCount(res?.data?.count ?? res?.count ?? 0)
                 }
 
                 if (todayAttendanceRes.status === 'fulfilled') {
-                    setTodayAttendance(todayAttendanceRes.value.data?.attendance)
+                    const res = todayAttendanceRes.value
+                    setTodayAttendance(res?.attendance || res?.data?.attendance || null)
                 }
 
                 if (attendanceRes.status === 'fulfilled') {
-                    const allAttendance = attendanceRes.value.data?.data || []
-                    setRecentAttendance(allAttendance.slice(0, 3))
+                    const res = attendanceRes.value
+                    const allAttendance = res?.data || res || []
+                    const attendanceList = Array.isArray(allAttendance) ? allAttendance : []
+                    
+                    setRecentAttendance(attendanceList.slice(0, 3))
 
                     const today = new Date().toISOString().split('T')[0]
-                    const todayRecord = allAttendance.find(a => {
+                    const todayRecord = attendanceList.find(a => {
+                        if (!a?.meeting_date) return false
                         const recordDate = new Date(a.meeting_date).toISOString().split('T')[0]
                         return recordDate === today
                     })
                     setAttendance(todayRecord || null)
                 }
             } catch (err) {
-                console.error('Failed to load dashboard profile:', err)
+                console.error('Non-critical dashboard fetch error:', err)
             } finally {
                 setLoading(false)
             }
         }
 
-        fetchData()
-    }, [])
+        fetchDashboardData()
+    }, [member])
 
     useEffect(() => {
         if (meeting?.state === 'open_on_time' || meeting?.state === 'open_late') {
@@ -101,23 +108,32 @@ export default function Dashboard() {
         try {
             await signIn(userLocation.lat, userLocation.lng)
 
-            const [memberRes, meetingRes, attendanceRes, todayAttendanceRes] = await Promise.allSettled([
-                getMyProfile(),
+            const [meetingRes, attendanceRes, todayAttendanceRes] = await Promise.allSettled([
                 getActiveMeeting(),
-                api.get('/attendance/me'),
+                getMyAttendance(),
                 getTodayStatus()
             ])
 
-            if (memberRes.status === 'fulfilled') setMember(memberRes.value.data)
-            if (meetingRes.status === 'fulfilled') setMeeting(meetingRes.value.data)
-            if (todayAttendanceRes.status === 'fulfilled') setTodayAttendance(todayAttendanceRes.value.data?.attendance)
+            if (meetingRes.status === 'fulfilled') {
+                const res = meetingRes.value
+                setMeeting(res?.data || res)
+            }
+
+            if (todayAttendanceRes.status === 'fulfilled') {
+                const res = todayAttendanceRes.value
+                setTodayAttendance(res?.attendance || res?.data?.attendance || null)
+            }
 
             if (attendanceRes.status === 'fulfilled') {
-                const allAttendance = attendanceRes.value.data?.data || []
-                setRecentAttendance(allAttendance.slice(0, 3))
+                const res = attendanceRes.value
+                const allAttendance = res?.data || res || []
+                const attendanceList = Array.isArray(allAttendance) ? allAttendance : []
+
+                setRecentAttendance(attendanceList.slice(0, 3))
 
                 const today = new Date().toISOString().split('T')[0]
-                const todayRecord = allAttendance.find(a => {
+                const todayRecord = attendanceList.find(a => {
+                    if (!a?.meeting_date) return false
                     const recordDate = new Date(a.meeting_date).toISOString().split('T')[0]
                     return recordDate === today
                 })
@@ -130,25 +146,9 @@ export default function Dashboard() {
         }
     }
 
-    if (loading) {
-        return (
-            <div style={{
-                minHeight: '100vh',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontFamily: "'Plus Jakarta Sans', sans-serif",
-                color: '#8fa396',
-                fontSize: '0.88rem'
-            }}>
-                Loading...
-            </div>
-        )
-    }
-
     if (!member) return null
 
-    const initials = `${member.first_name[0]}${member.last_name[0]}`.toUpperCase()
+    const initials = `${member.first_name?.[0] || ''}${member.last_name?.[0] || ''}`.toUpperCase()
 
     return (
         <>
@@ -207,10 +207,10 @@ export default function Dashboard() {
                                 Token Balance
                             </div>
                             <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#008751', lineHeight: 1, marginBottom: '4px' }}>
-                                {member.token_balance}
+                                {member.token_balance ?? 0}
                             </div>
                             <div style={{ fontSize: '0.7rem', color: '#8fa396' }}>
-                                ≈ ₦{(member.token_balance * 500).toLocaleString()} value
+                                ≈ ₦{((member.token_balance || 0) * 500).toLocaleString()} value
                             </div>
                         </div>
 
