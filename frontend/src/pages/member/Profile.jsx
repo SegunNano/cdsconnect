@@ -5,7 +5,8 @@ import {
     ArrowLeft, User, Mail, Hash,
     Calendar, Layers, LogOut,
     Wallet, Edit2, Check, X,
-    KeyRound, ChevronRight, Fingerprint
+    KeyRound, ChevronRight, Fingerprint,
+    CheckCircle2
 } from 'lucide-react'
 import { getMyProfile, updateMyProfile } from '../../services/members.service'
 import { resetPin } from '../../services/pin.sevice'
@@ -111,13 +112,20 @@ export default function Profile() {
 
     const handlePinReset = async (e) => {
         e.preventDefault()
-        if (currentPin.length < 4) { setPinError('Current PIN is required'); return }
-        if (newPin.length < 4) { setPinError('New PIN must be at least 4 digits'); return }
-        if (newPin !== confirmPin) { setPinError('PINs do not match'); return }
+
+        const currentStr = Array.isArray(currentPin) ? currentPin.join('') : String(currentPin || '')
+        const newStr = Array.isArray(newPin) ? newPin.join('') : String(newPin || '')
+        const confirmStr = Array.isArray(confirmPin) ? confirmPin.join('') : String(confirmPin || '')
+
+        if (currentStr.length < 4) { setPinError('Current PIN is required'); return }
+        if (newStr.length < 4) { setPinError('New PIN must be 4 digits'); return }
+        if (newStr !== confirmStr) { setPinError('New PIN and Confirm PIN do not match'); return }
+        if (currentStr === newStr) { setPinError('New PIN must be different from current PIN'); return }
+
         setPinLoading(true)
         setPinError('')
         try {
-            await resetPin(currentPin, newPin, confirmPin)
+            await resetPin(currentStr, newStr, confirmStr)
             setPinSuccess(true)
             setCurrentPin('')
             setNewPin('')
@@ -236,7 +244,7 @@ export default function Profile() {
                                 display: 'flex', alignItems: 'center',
                                 gap: '4px', fontSize: '0.75rem',
                                 fontWeight: 600, color: 'white',
-                                fontFamily: "Plus Jakarta Sans', sans-serif"
+                                fontFamily: "'Plus Jakarta Sans', sans-serif"
                             }}
                         >
                             <Check size={14} color="white" />
@@ -325,7 +333,7 @@ export default function Profile() {
                         </div>
                     </div>
 
-                    {/* EMAIL — not editable */}
+                    {/* EMAIL */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 0', borderBottom: '1px solid #f2f4f7' }}>
                         <div style={{ width: '36px', height: '36px', background: '#e6f4ee', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                             <Mail size={16} color="#008751" />
@@ -451,9 +459,10 @@ export default function Profile() {
                                 <div style={{
                                     background: '#e6f4ee', borderRadius: '10px',
                                     padding: '12px', textAlign: 'center',
-                                    fontSize: '0.82rem', fontWeight: 600, color: '#008751'
+                                    fontSize: '0.82rem', fontWeight: 600, color: '#008751',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
                                 }}>
-                                    ✅ PIN updated successfully
+                                    <CheckCircle2 size={16} color="#008751" /> PIN updated successfully
                                 </div>
                             ) : (
                                 <form onSubmit={handlePinReset}>
@@ -529,8 +538,14 @@ export default function Profile() {
                         </div>
                         <div style={{ flex: 1 }}>
                             <div style={{ fontSize: '0.68rem', color: '#8fa396', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px' }}>Passkey</div>
-                            <div style={{ fontSize: '0.88rem', color: '#0d1b12', fontWeight: 500 }}>
-                                {member?.credential_id ? 'Device bound ✅' : 'Not set up'}
+                            <div style={{ fontSize: '0.88rem', color: '#0d1b12', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                {member?.credential_id ? (
+                                    <>
+                                        Device bound <CheckCircle2 size={16} color="#008751" />
+                                    </>
+                                ) : (
+                                    'Not set up'
+                                )}
                             </div>
                         </div>
                     </div>

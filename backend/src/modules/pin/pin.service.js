@@ -1,5 +1,5 @@
 import pool from '../../config/db.js'
-import { hashPin, validatePin } from '../../utils/pin.js'
+import { comparePin, hashPin, validatePin } from '../../utils/pin.js'
 
 export const resetPin = async (memberId, currentPin, newPin, confirmPin) => {
     const pinValidation = validatePin(newPin)
