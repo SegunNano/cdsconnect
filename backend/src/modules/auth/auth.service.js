@@ -163,6 +163,8 @@ export const getRegistrationOptions = async (memberId) => {
 
 // ── WEBAUTHN REGISTRATION VERIFY ─────────────────
 
+// ── WEBAUTHN REGISTRATION VERIFY ─────────────────
+
 export const verifyRegistration = async (memberId, credential) => {
     if (!credential) {
         throw { status: 400, message: 'WebAuthn response credential is required' }
@@ -182,16 +184,16 @@ export const verifyRegistration = async (memberId, credential) => {
         throw { status: 400, message: 'No registration challenge found for this member' }
     }
 
-    // Convert member.id to base64url string to match generateRegistrationOptions output
     const expectedUserID = Buffer.from(String(member.id)).toString('base64url')
 
-    // Verify registration response with SimpleWebAuthn
+    // Verify registration response
     const verification = await verifyRegistrationResponse({
         response: credential,
         expectedChallenge: member.webauthn_challenge,
         expectedOrigin: ORIGIN,
         expectedRPID: RP_ID,
-        expectedUserID: expectedUserID // <--- FIXED: Base64URL string match
+        expectedUserID: expectedUserID,
+        requireUserVerification: false // <--- FIXED: Prevents rejection if UV flag is not set by authenticator
     })
 
     if (!verification.verified || !verification.registrationInfo) {

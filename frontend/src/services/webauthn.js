@@ -13,8 +13,8 @@ export const registerDevice = async () => {
         throw new Error('Failed to retrieve WebAuthn registration options.')
     }
 
-    // 2. Pass options to browser WebAuthn prompt
-    const credential = await startRegistration(options)
+    // 2. Pass options object using optionsJSON key (SimpleWebAuthn v10+ spec)
+    const credential = await startRegistration({ optionsJSON: options })
 
     // 3. Verify credential with backend
     const verifyRes = await api.post('/auth/webauthn/register/verify', credential)
@@ -39,7 +39,7 @@ export const authenticateWithDevice = async (email, clientCredentialId) => {
     }
 
     // 2. Trigger browser hardware assertion prompt
-    const credential = await startAuthentication(options)
+    const credential = await startAuthentication({ optionsJSON: options })
 
     // 3. Send assertion response to server for verification
     const verifyRes = await api.post('/auth/webauthn/login/verify', { email, credential })
