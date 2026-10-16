@@ -97,25 +97,35 @@ export const getAllExcuses = async () => {
     )
     return result.rows
 }
-
 export const reviewExcuse = async (coordinatorId, excuseId, decision) => {
-        // Get excuse first to get evidence URL
+    // 1. Validate decision format first
+    if (!['approved', 'rejected'].includes(decision)) {
+        throw { status: 400, message: 'Decision must be approved or rejected.' }
+    }
+
+    // 2. Get excuse and joined meeting details
     const excuseResult = await pool.query(
-        'SELECT * FROM excuse_requests WHERE id = $1',
+        `SELECT er.*, m.title AS meeting_title, m.meeting_cost
+         FROM excuse_requests er
+         JOIN meetings m ON er.meeting_id = m.id
+         WHERE er.id = $1`,
         [excuseId]
     )
 
     if (excuseResult.rows.length === 0) {
-        throw { status: 404, message: 'Excuse not found' }
+        throw { status: 404, message: 'Excuse request not found.' }
     }
 
     const excuse = excuseResult.rows[0]
 
-    // Delete file from bucket regardless of decision
+    // 3. Ensure excuse hasn't already been reviewed
+    if (excuse.status !== 'pending') {
+        throw { status: 409, message: 'This excuse has already been reviewed.' }
+    }
+
+    // 4. Delete evidence file from bucket safely
     if (excuse.evidence_url) {
         try {
-            // Extract file path from URL
-            // URL format: https://xxx.supabase.co/storage/v1/object/public/evidence/filename.ext
             const urlParts = excuse.evidence_url.split('/evidence/')
             if (urlParts.length > 1) {
                 const filePath = urlParts[1]
@@ -125,31 +135,11 @@ export const reviewExcuse = async (coordinatorId, excuseId, decision) => {
                 console.log(`Deleted evidence file: ${filePath}`)
             }
         } catch (err) {
-            // Don't block review if deletion fails
             console.error('Failed to delete evidence file:', err)
         }
     }
 
-    // Update excuse status
-    await pool.query(
-        `UPDATE excuse_requests 
-        SET status = $1, reviewed_by = $2, reviewed_at = NOW()
-        WHERE id = $3`,
-        [decision, reviewerId, excuseId]
-    )
-    
-    if (!['approved', 'rejected'].includes(decision)) {
-        throw { status: 400, message: 'Decision must be approved or rejected.' }
-    }
-
-    if (excuseResult.rows.length === 0) {
-        throw { status: 404, message: 'Excuse request not found.' }
-    }
-
-    if (excuse.status !== 'pending') {
-        throw { status: 409, message: 'This excuse has already been reviewed.' }
-    }
-
+    // 5. Handle Approval
     if (decision === 'approved') {
         // Check if member already attended
         const attendance = await pool.query(
@@ -158,26 +148,21 @@ export const reviewExcuse = async (coordinatorId, excuseId, decision) => {
         )
 
         if (attendance.rows.length > 0) {
-            // Member attended — approve but don't deduct token
+            // Member attended — approve without deducting tokens
             await pool.query(
                 `UPDATE excuse_requests 
-                SET status = 'approved_not_needed', 
-                    reviewed_by = $1, 
-                    reviewed_at = $2
-                WHERE id = $3`,
-                [coordinatorId, new Date(), excuseId]
+                 SET status = 'approved_not_needed', 
+                     reviewed_by = $1, 
+                     reviewed_at = NOW()
+                 WHERE id = $2`,
+                [coordinatorId, excuseId]
             )
             return { status: 'approved_not_needed', message: 'Member attended. No token deducted.' }
         }
 
-        // Get meeting cost
-        const meetingResult = await pool.query(
-            'SELECT meeting_cost FROM meetings WHERE id = $1',
-            [excuse.meeting_id]
-        )
-        const meetingCost = meetingResult.rows[0].meeting_cost
+        const meetingCost = excuse.meeting_cost
 
-        // Check member has enough tokens
+        // Check member token balance
         const memberResult = await pool.query(
             'SELECT token_balance FROM members WHERE id = $1',
             [excuse.member_id]
@@ -192,24 +177,24 @@ export const reviewExcuse = async (coordinatorId, excuseId, decision) => {
             [meetingCost, excuse.member_id]
         )
 
-        // Create attendance record
+        // Get next sequence number
         const seqResult = await pool.query(
             `SELECT COALESCE(MAX(sequence_number), 0) + 1 AS next_seq
-            FROM attendance WHERE meeting_id = $1`,
+             FROM attendance WHERE meeting_id = $1`,
             [excuse.meeting_id]
         )
 
+        // Create attendance record
         await pool.query(
             `INSERT INTO attendance (
                 member_id, meeting_id, sequence_number,
                 signed_in_at, signed_out_at,
                 tokens_deducted, is_late, excuse_id
-            ) VALUES ($1, $2, $3, $4, $4, $5, false, $6)`,
+            ) VALUES ($1, $2, $3, NOW(), NOW(), $4, false, $5)`,
             [
                 excuse.member_id,
                 excuse.meeting_id,
                 seqResult.rows[0].next_seq,
-                new Date(),
                 meetingCost,
                 excuseId
             ]
@@ -218,37 +203,38 @@ export const reviewExcuse = async (coordinatorId, excuseId, decision) => {
         // Update excuse status
         await pool.query(
             `UPDATE excuse_requests 
-            SET status = 'approved', 
-                reviewed_by = $1, 
-                reviewed_at = $2
-            WHERE id = $3`,
-            [coordinatorId, new Date(), excuseId]
+             SET status = 'approved', 
+                 reviewed_by = $1, 
+                 reviewed_at = NOW()
+             WHERE id = $2`,
+            [coordinatorId, excuseId]
         )
 
         await createNotification(
-        excuse.member_id,
-        'Excuse Approved',
-        `Your excuse for ${meeting.title} has been approved.`,
-        NOTIFICATION_TYPES.EXCUSE_APPROVED
-    )
-    await issueClearance(excuse.member_id, excuse.meeting_id)
+            excuse.member_id,
+            'Excuse Approved',
+            `Your excuse for ${excuse.meeting_title} has been approved.`,
+            NOTIFICATION_TYPES.EXCUSE_APPROVED
+        )
+        await issueClearance(excuse.member_id, excuse.meeting_id)
 
         return { status: 'approved', message: 'Excuse approved. Token deducted and member marked present.' }
     }
 
-    // Rejected
+    // 6. Handle Rejection
     await pool.query(
         `UPDATE excuse_requests 
-        SET status = 'rejected', 
-            reviewed_by = $1, 
-            reviewed_at = $2
-        WHERE id = $3`,
-        [coordinatorId, new Date(), excuseId]
+         SET status = 'rejected', 
+             reviewed_by = $1, 
+             reviewed_at = NOW()
+         WHERE id = $2`,
+        [coordinatorId, excuseId]
     )
+
     await createNotification(
         excuse.member_id,
         'Excuse Rejected',
-        `Your excuse for ${meeting.title} has been rejected. You can contact the coordinaotor for clarity.`,
+        `Your excuse for ${excuse.meeting_title} has been rejected. You can contact the coordinator for clarity.`,
         NOTIFICATION_TYPES.EXCUSE_REJECTED
     )
 

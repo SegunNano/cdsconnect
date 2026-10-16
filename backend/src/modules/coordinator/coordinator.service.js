@@ -1,4 +1,8 @@
 import PDFDocument from 'pdfkit'
+import pool from '../../config/db.js'
+
+
+
 export const getCoordinatorOverview = async () => {
     // Total active corps members
     const membersResult = await pool.query(
@@ -159,9 +163,6 @@ export const getMeetingAttendanceReport = async (meetingId) => {
         }
     }
 }
-
-
-
 
 export const generateMembersPdf = async () => {
     const members = await getCoordinatorMembers()
