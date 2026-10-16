@@ -66,6 +66,8 @@ export default function Dashboard() {
                     
                     setRecentAttendance(attendanceList.slice(0, 3))
 
+                    console.log({attendanceList})
+
                     const today = new Date().toISOString().split('T')[0]
                     const todayRecord = attendanceList.find(a => {
                         if (!a?.meeting_date) return false

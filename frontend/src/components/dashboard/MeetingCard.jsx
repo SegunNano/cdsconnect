@@ -15,7 +15,6 @@ function TodaysMeeting () {
 }
 
 export function MeetingCard({ meeting, member, attendance, signingIn, signInError, userLocation, handleSignIn, todayAttendance }) {
-    console.log({meeting, member, attendance, signingIn, signInError, userLocation, handleSignIn, todayAttendance})
     const cardStyle = {
         background: '#ffffff',
         borderRadius: '18px',

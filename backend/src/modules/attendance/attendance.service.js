@@ -338,6 +338,7 @@ export const getMemberAttendance = async (memberId) => {
             a.signed_out_at,
             a.is_late,
             a.tokens_deducted,
+            a.sequence_number,
             a.excuse_id,
             a.marked_present_by,
             er.status AS excuse_status
