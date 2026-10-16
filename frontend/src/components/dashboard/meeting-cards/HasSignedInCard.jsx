@@ -60,7 +60,7 @@ const HasSignedInCard = ({meeting, hasSignedOut, cardStyle, attendance, member})
                             <QRCodeSVG
                                 value={JSON.stringify({
                                 meetingId: meeting.id,
-                                attendanceId: attendance.id,
+                                attendanceId: attendance.attendance_id,
                                 confirmedName: `${member.first_name} ${member.last_name}`,
                                 confirmedStateCode: member.state_code
                             })}

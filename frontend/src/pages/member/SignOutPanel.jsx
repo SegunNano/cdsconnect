@@ -62,40 +62,46 @@ export default function SignOutPanel() {
   }
 }, [scanFeedback])
 
-  const handleDirectQrSignOut = useCallback(async (decodedText) => {
+const handleDirectQrSignOut = useCallback(async (decodedText) => {
     setError('')
     try {
       let payload
       try {
         payload = JSON.parse(decodedText)
+        console.log('📦 SCANNED QR PAYLOAD:', payload)
       } catch (pErr) {
         throw new Error(`Scanned content is not valid JSON. Content: "${decodedText}"`)
       }
 
-      if (
-        !payload.meetingId ||
-        !payload.attendanceId ||
-        !payload.confirmedName ||
-        !payload.confirmedStateCode
-      ) {
+      // Flexible extraction supporting multiple naming conventions from different QR generators
+      const meetingId = payload.meetingId || payload.meeting_id || meeting?.id
+      const attendanceId = payload.attendanceId || payload.attendance_id || payload.id
+      const confirmedName = payload.confirmedName || payload.name || `${payload.first_name || ''} ${payload.last_name || ''}`.trim()
+      const confirmedStateCode = payload.confirmedStateCode || payload.stateCode || payload.state_code
+
+      if (!meetingId || !attendanceId) {
         throw new Error(
-          'QR code missing required JSON fields: meetingId, attendanceId, confirmedName, confirmedStateCode'
+          `QR code missing required identification fields. Received keys: ${Object.keys(payload).join(', ')}`
         )
       }
 
       setSigningOut(true)
-      const {meetingId, attendanceId, confirmedName, confirmedStateCode} =payload
-      await api.post('/signout/confirm', { meetingId, attendanceId, confirmedName, confirmedStateCode })
+      await api.post('/signout/confirm', { 
+        meetingId, 
+        attendanceId, 
+        confirmedName: confirmedName || 'Verified Member', 
+        confirmedStateCode: confirmedStateCode || 'N/A' 
+      })
 
       setAttendance((prev) =>
         prev.map((a) =>
-          a.id === payload.attendanceId
+          a.id === Number(attendanceId)
             ? { ...a, signed_out_at: new Date().toISOString() }
             : a
         )
       )
 
-      setScanFeedback(`Signed-out ${confirmedName} successfully!`)
+      setScanFeedback(`Signed-out successfully!`)
       setIsScanning(false)
     } catch (err) {
       console.error('Signout processing error:', err)
@@ -103,8 +109,7 @@ export default function SignOutPanel() {
     } finally {
       setSigningOut(false)
     }
-  }, [])
-
+  }, [meeting])
   useEffect(() => {
     let timeoutId = null
 
