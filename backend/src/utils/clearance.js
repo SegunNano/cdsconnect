@@ -306,7 +306,7 @@ export const buildClearanceSlipPdf = async ({
     // -------------------------------------------------------------
     // LAYER 5: Verification QR Code & Footer
     // -------------------------------------------------------------
-    const verifyUrl = `${process.env.FRONTEND_URL || 'https://cdsconnect.app'}/verify/${qrToken}`
+    const verifyUrl = `${process.env.FRONTEND_URL || 'https://infotechcdsconnect.app'}/verify/${qrToken}`
     const qrBuffer = await QRCode.toBuffer(verifyUrl, {
         width: 120,
         margin: 1,

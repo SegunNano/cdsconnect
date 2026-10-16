@@ -68,7 +68,6 @@ const handleDirectQrSignOut = useCallback(async (decodedText) => {
       let payload
       try {
         payload = JSON.parse(decodedText)
-        console.log('📦 SCANNED QR PAYLOAD:', payload)
       } catch (pErr) {
         throw new Error(`Scanned content is not valid JSON. Content: "${decodedText}"`)
       }

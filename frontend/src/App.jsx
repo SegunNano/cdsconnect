@@ -5,7 +5,6 @@ import Login from './pages/auth/Login'
 import Register from './pages/auth/Register'
 import Dashboard from './pages/member/Dashboard'
 import AttendanceHistory from './pages/member/AttendanceHistory'
-import ResetPin from './pages/member/ResetPin'
 import Profile from './pages/member/Profile'
 import ExcuseForm from './pages/member/ExcuseForm'
 import ClearanceSlip from './pages/member/ClearanceSlip'
@@ -57,7 +56,6 @@ export default function App() {
                     {/* Member */}
                     <Route path="/home" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
                     <Route path="/attendance" element={<ProtectedRoute><AttendanceHistory /></ProtectedRoute>} />
-                    <Route path="/reset-pin" element={<ProtectedRoute><ResetPin /></ProtectedRoute>} />
                     <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
                     <Route path="/excuse" element={<ProtectedRoute><ExcuseForm /></ProtectedRoute>} />
                     <Route path="/clearance" element={<ProtectedRoute><ClearanceSlip /></ProtectedRoute>} />

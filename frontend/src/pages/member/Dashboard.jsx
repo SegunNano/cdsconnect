@@ -219,7 +219,7 @@ export default function Dashboard() {
                         <ServiceProgressCard member={member} />
                     </div>
 
-                    <QuickActionsGrid onNavigate={navigate} />
+                    <QuickActionsGrid onNavigate={navigate} meeting={meeting} />
 
                     <RecentAttendanceList
                         attendance={recentAttendance}

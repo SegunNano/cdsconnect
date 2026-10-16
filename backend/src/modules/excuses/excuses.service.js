@@ -1,6 +1,7 @@
 import pool from '../../config/db.js'
 import { createNotification } from '../notifications/notifications.service.js'
 import { NOTIFICATION_TYPES } from '../../constants.js'
+import supabase from '../../config/supabase.js'
 
 export const fileExcuse = async (memberId, meetingId, reason, evidenceUrl) => {
     // Check meeting exists
@@ -98,20 +99,52 @@ export const getAllExcuses = async () => {
 }
 
 export const reviewExcuse = async (coordinatorId, excuseId, decision) => {
-    if (!['approved', 'rejected'].includes(decision)) {
-        throw { status: 400, message: 'Decision must be approved or rejected.' }
-    }
-
-    // Get excuse
+        // Get excuse first to get evidence URL
     const excuseResult = await pool.query(
         'SELECT * FROM excuse_requests WHERE id = $1',
         [excuseId]
     )
+
     if (excuseResult.rows.length === 0) {
-        throw { status: 404, message: 'Excuse request not found.' }
+        throw { status: 404, message: 'Excuse not found' }
     }
 
     const excuse = excuseResult.rows[0]
+
+    // Delete file from bucket regardless of decision
+    if (excuse.evidence_url) {
+        try {
+            // Extract file path from URL
+            // URL format: https://xxx.supabase.co/storage/v1/object/public/evidence/filename.ext
+            const urlParts = excuse.evidence_url.split('/evidence/')
+            if (urlParts.length > 1) {
+                const filePath = urlParts[1]
+                await supabase.storage
+                    .from('evidence')
+                    .remove([filePath])
+                console.log(`Deleted evidence file: ${filePath}`)
+            }
+        } catch (err) {
+            // Don't block review if deletion fails
+            console.error('Failed to delete evidence file:', err)
+        }
+    }
+
+    // Update excuse status
+    await pool.query(
+        `UPDATE excuse_requests 
+        SET status = $1, reviewed_by = $2, reviewed_at = NOW()
+        WHERE id = $3`,
+        [decision, reviewerId, excuseId]
+    )
+    
+    if (!['approved', 'rejected'].includes(decision)) {
+        throw { status: 400, message: 'Decision must be approved or rejected.' }
+    }
+
+    if (excuseResult.rows.length === 0) {
+        throw { status: 404, message: 'Excuse request not found.' }
+    }
 
     if (excuse.status !== 'pending') {
         throw { status: 409, message: 'This excuse has already been reviewed.' }

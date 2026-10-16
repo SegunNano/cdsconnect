@@ -10,13 +10,16 @@ export default function StateCodeInput({ value, onChange, disabled }) {
     const part2 = parts[1] || ''
     const part3 = parts[2] || ''
 
-    // Automatically focus Part 3 when Batch & Stream populates part1 and part2
+    // Automatically focus Part 3 only if focus isn't already inside the component
     useEffect(() => {
         if (disabled) return
 
-        if (part1 && part2 && !part3) {
+        const active = document.activeElement
+        const isFocusedInside = active === ref1.current || active === ref2.current || active === ref3.current
+
+        if (part1 && part2 && !part3 && !isFocusedInside) {
             ref3.current?.focus()
-        } else if (!part1) {
+        } else if (!part1 && !isFocusedInside) {
             ref1.current?.focus()
         }
     }, [part1, part2, disabled])
