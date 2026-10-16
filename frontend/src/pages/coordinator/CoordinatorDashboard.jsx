@@ -58,14 +58,52 @@ export default function CoordinatorDashboard() {
         }
     }
 
-    const downloadMembersPdf = () => {
-        window.open(`${import.meta.env.VITE_API_URL}/coordinator/members/pdf`, '_blank')
+    
+    const downloadPdf = async (endpoint, filename) => {
+        try {
+            const response = await api.get(endpoint, {
+                responseType: 'blob'
+            })
+        
+            const blobUrl = window.URL.createObjectURL(
+                new Blob([response.data], {
+                    type: 'application/pdf'
+                })
+            )
+        
+            const link = document.createElement('a')
+            link.href = blobUrl
+            link.download = filename
+            document.body.appendChild(link)
+            link.click()
+            link.remove()
+        
+            // Release the temporary URL after the download starts.
+            setTimeout(() => {
+                window.URL.revokeObjectURL(blobUrl)
+            }, 1000)
+        } catch (error) {
+            console.error('PDF download failed:', error)
+            alert('Unable to download PDF. Please try again.')
+        }
     }
-
+    
+    const downloadMembersPdf = () => {
+        return downloadPdf(
+            '/coordinator/members/pdf',
+            'coordinator_members.pdf'
+        )
+    }
+    
     const downloadAttendancePdf = () => {
         if (!selectedMeeting) return
-        window.open(`${import.meta.env.VITE_API_URL}/coordinator/attendance/${selectedMeeting}/pdf`, '_blank')
+    
+        return downloadPdf(
+            `/coordinator/attendance/${selectedMeeting}/pdf`,
+            'attendance_report.pdf'
+        )
     }
+
 
     const handleReview = async (excuseId, decision) => {
         setReviewing(excuseId)
