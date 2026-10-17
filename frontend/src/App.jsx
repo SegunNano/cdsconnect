@@ -16,7 +16,8 @@ import VerifySlip from './pages/public/VerifySlip'
 import Onboarding from './pages/auth/Onboarding'
 import TokenHistory from './pages/member/TokenHistory'
 import Treasury from './pages/member/Treasury'
-import UnderConstruction from './pages/public/UnderConstruction' // Import building page
+import UnderConstruction from './pages/public/UnderConstruction' 
+import CertificateCollate from './pages/member/CertificateCollate'
 
 // Set to true to override all routes, or false to restore normal app flow
 const IS_MAINTENANCE_MODE = import.meta.env.VITE_MAINTENANCE_MODE === 'true'
@@ -66,6 +67,8 @@ export default function App() {
                     <Route path="/tokens" element={<ProtectedRoute><TokenHistory /></ProtectedRoute>} />
                     <Route path="/treasury" element={<ProtectedRoute><Treasury /></ProtectedRoute>} />
                     <Route path="/verify/:qrToken" element={<VerifySlip />} />
+                    <Route path="/certificates/collate" element={<ProtectedRoute><CertificateCollate /></ProtectedRoute>} />
+
 
                     {/* Coordinator */}
                     <Route path="/coordinator" element={<ProtectedRoute><CoordinatorDashboard /></ProtectedRoute>} />

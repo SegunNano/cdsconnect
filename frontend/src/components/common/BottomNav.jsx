@@ -1,8 +1,11 @@
+import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import {
     Home, Calendar, FileText, User,
-    Coins, LogOut, Settings2, DollarSign
-    } from 'lucide-react'
+    Coins, LogOut, Settings2, DollarSign, Award
+} from 'lucide-react'
+import api from '../../services/api'
+
 const TREASURY_ROLES = [
     'treasurer', 'financial_secretary',
     'president', 'vice_president', 'secretary'
@@ -11,6 +14,15 @@ const TREASURY_ROLES = [
 export default function BottomNav({ member }) {
     const navigate = useNavigate()
     const location = useLocation()
+    const [showCertsTab, setShowCertsTab] = useState(false)
+
+    useEffect(() => {
+        if (member?.role === 'secretary' || member?.is_dev) {
+            api.get('/certificates/collate-status')
+                .then(res => setShowCertsTab(res.data.data.show_tab))
+                .catch(() => {})
+        }
+    }, [member])
 
     const tabs = [
         { path: '/home', label: 'Home', icon: Home },
@@ -23,11 +35,14 @@ export default function BottomNav({ member }) {
         ...(member?.role === 'president' || member?.role === 'vice_president'
             ? [{ path: '/signout', label: 'Sign Out', icon: LogOut }]
             : []),
+        ...(TREASURY_ROLES.includes(member?.role) || member?.is_dev
+            ? [{ path: '/treasury', label: 'Treasury', icon: DollarSign }]
+            : []),
+        ...(showCertsTab
+            ? [{ path: '/certificates/collate', label: 'Certs', icon: Award }]
+            : []),
         ...(member?.is_dev
             ? [{ path: '/dev', label: 'Dev', icon: Settings2 }]
-            : []),
-        ...(TREASURY_ROLES.includes(member?.role)
-            ? [{ path: '/treasury', label: 'Treasury', icon: DollarSign }]
             : [])
     ]
 

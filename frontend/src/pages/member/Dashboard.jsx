@@ -30,19 +30,24 @@ export default function Dashboard() {
     const [locationLoading, setLocationLoading] = useState(false)
     const [attendance, setAttendance] = useState(null)
     const [todayAttendance, setTodayAttendance] = useState(null)
+    const [certStatus, setCertStatus] = useState(null)
+
 
     useEffect(() => {
         const fetchDashboardData = async () => {
             if (!member) return
 
             try {
-                // Fetch secondary endpoints safely using updated service functions
-                const [meetingRes, attendanceRes, unreadRes, todayAttendanceRes] = await Promise.allSettled([
+                // In fetchDashboardData, add to Promise.allSettled
+                const [meetingRes, attendanceRes, unreadRes, todayAttendanceRes, certRes] = await Promise.allSettled([
                     getActiveMeeting(),
-                    getMyAttendance(),
+                    api.get('/attendance/me'),
                     api.get('/notifications/unread'),
-                    getTodayStatus()
+                    getTodayStatus(),
+                    api.get('/certificates/status')
                 ])
+
+if (certRes.status === 'fulfilled') setCertStatus(certRes.value.data.data)
 
                 if (meetingRes.status === 'fulfilled') {
                     const res = meetingRes.value
@@ -195,6 +200,7 @@ export default function Dashboard() {
                         userLocation={userLocation} 
                         locationLoading={locationLoading}
                         todayAttendance={todayAttendance}
+                        certStatus={certStatus}
                     />
 
                     {/* STATS ROW */}
