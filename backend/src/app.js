@@ -24,6 +24,7 @@ import verifyRoutes from './modules/verify/verify.routes.js'
 import errorMiddleware from './middlewares/error.middleware.js'
 import incomeRoutes from './modules/income/income.routes.js'
 import coordinatorRoutes from './modules/coordinator/coordinator.routes.js'
+import certificateRoutes from './modules/certificates/certificates.routes.js'
 
 const app = express()
 
@@ -92,6 +93,8 @@ app.use('/api/device', deviceRoutes)
 app.use('/api/income', incomeRoutes)
 app.use('/api/verify', verifyRoutes)
 app.use('/api/coordinator', coordinatorRoutes)
+app.use('/api/certificates', certificateRoutes)
+
 
 // ── 7. ERROR HANDLER ─────────────────────────────
 app.use(errorMiddleware)

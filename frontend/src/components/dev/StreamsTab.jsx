@@ -1,9 +1,11 @@
 import { useState } from 'react'
-import { Plus, ToggleLeft, ToggleRight } from 'lucide-react'
+import { Plus, ToggleLeft, ToggleRight, ChevronDown, ChevronUp } from 'lucide-react'
 import { createStream } from '../../services/dev.service'
 
-export default function StreamsTab({ streams, inputStyle, sectionHead, card, onCreated, onToggle }) {
+export default function StreamsTab({ streams, inputStyle, sectionHead, card, onCreated, onToggle, onUnlockCertificates }) {
     const [showForm, setShowForm] = useState(false)
+    const [expandedStreamId, setExpandedStreamId] = useState(null)
+    const [certCost, setCertCost] = useState({})
     const [form, setForm] = useState({
         year: new Date().getFullYear(),
         batch: 'A',
@@ -28,6 +30,10 @@ export default function StreamsTab({ streams, inputStyle, sectionHead, card, onC
         } finally {
             setLoading(false)
         }
+    }
+
+    const toggleExpand = (id) => {
+        setExpandedStreamId(prev => prev === id ? null : id)
     }
 
     const labelStyle = {
@@ -77,7 +83,6 @@ export default function StreamsTab({ streams, inputStyle, sectionHead, card, onC
                         </div>
                     )}
                     <form onSubmit={handleSubmit}>
-
                         {/* YEAR + BATCH + STREAM */}
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginBottom: '10px' }}>
                             <div>
@@ -154,36 +159,93 @@ export default function StreamsTab({ streams, inputStyle, sectionHead, card, onC
                 </div>
             )}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {streams.map(stream => (
-                    <div
-                        key={stream.id}
-                        style={{
-                            ...card,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            marginBottom: 0
-                        }}
-                    >
-                        <div>
-                            <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#0d1b12' }}>
-                                {stream.year} Batch {stream.batch} Stream {stream.stream}
-                            </div>
-                            <div style={{ fontSize: '0.72rem', color: '#8fa396', marginTop: '2px' }}>
-                                {stream.callup_date} → {stream.service_end}
-                            </div>
-                        </div>
-                        <button
-                            onClick={() => onToggle(stream.id)}
-                            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                {streams.map(stream => {
+                    const isExpanded = expandedStreamId === stream.id
+                    return (
+                        <div
+                            key={stream.id}
+                            style={{
+                                ...card,
+                                display: 'flex',
+                                flexDirection: 'column',
+                                marginBottom: 0
+                            }}
                         >
-                            {stream.is_active
-                                ? <ToggleRight size={28} color="#008751" />
-                                : <ToggleLeft size={28} color="#8fa396" />
-                            }
-                        </button>
-                    </div>
-                ))}
+                            {/* Main Row / Header */}
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <div 
+                                    onClick={() => toggleExpand(stream.id)}
+                                    style={{ flex: 1, cursor: 'pointer' }}
+                                >
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#0d1b12' }}>
+                                            {stream.year} Batch {stream.batch} Stream {stream.stream}
+                                        </div>
+                                        {isExpanded ? <ChevronUp size={16} color="#8fa396" /> : <ChevronDown size={16} color="#8fa396" />}
+                                    </div>
+                                    <div style={{ fontSize: '0.72rem', color: '#8fa396', marginTop: '2px' }}>
+                                        {stream.callup_date} → {stream.service_end}
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => onToggle(stream.id)}
+                                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                                >
+                                    {stream.is_active
+                                        ? <ToggleRight size={28} color="#008751" />
+                                        : <ToggleLeft size={28} color="#8fa396" />
+                                    }
+                                </button>
+                            </div>
+
+                            {/* Expanded Content — Certificate Controls */}
+                            {isExpanded && (
+                                <div style={{ marginTop: '10px', borderTop: '1px solid #f2f4f7', paddingTop: '10px' }}>
+                                    <div style={{ fontSize: '0.68rem', fontWeight: 600, color: '#4a5e52', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>
+                                        Certificates
+                                    </div>
+                                    {stream.certificate_unlocked ? (
+                                        <div style={{
+                                            background: '#e6f4ee', borderRadius: '10px',
+                                            padding: '10px 12px', fontSize: '0.78rem',
+                                            color: '#008751', fontWeight: 500
+                                        }}>
+                                            ✅ Unlocked · {stream.certificate_cost_tokens} tokens
+                                        </div>
+                                    ) : (
+                                        <div style={{ display: 'flex', gap: '8px' }}>
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                placeholder="Cost in tokens"
+                                                value={certCost[stream.id] || ''}
+                                                onChange={e => setCertCost(prev => ({ ...prev, [stream.id]: e.target.value }))}
+                                                style={{
+                                                    flex: 1, background: '#f2f4f7', border: 'none',
+                                                    borderRadius: '10px', padding: '10px 12px',
+                                                    fontSize: '0.82rem', outline: 'none',
+                                                    fontFamily: "'Plus Jakarta Sans', sans-serif"
+                                                }}
+                                            />
+                                            <button
+                                                onClick={() => onUnlockCertificates(stream.id, certCost[stream.id])}
+                                                style={{
+                                                    background: '#008751', border: 'none',
+                                                    borderRadius: '10px', padding: '10px 14px',
+                                                    cursor: 'pointer', fontSize: '0.78rem',
+                                                    fontWeight: 600, color: 'white',
+                                                    fontFamily: "'Plus Jakarta Sans', sans-serif"
+                                                }}
+                                            >
+                                                Unlock
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    )
+                })}
             </div>
         </>
     )

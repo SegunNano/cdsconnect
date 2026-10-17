@@ -59,3 +59,10 @@ export const toggleRegistration = async () => {
     const response = await api.patch('/settings/registration/toggle')
     return response.data
 }
+
+export const unlockCertificates = async (streamId, costTokens) => {
+    const response = await api.patch(`/streams/${streamId}/certificates`, {
+        certificate_cost_tokens: parseInt(costTokens)
+    })
+    return response.data
+}

@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { getAll, getActive, create, toggleActive } from './streams.controller.js'
+import { getAll, getActive, create, toggleActive, updateCertificate } from './streams.controller.js'
 import authMiddleware from '../../middlewares/auth.middleware.js'
 import devMiddleware from '../../middlewares/dev.middleware.js'
 
@@ -15,5 +15,6 @@ router.use(authMiddleware)
 router.get('/', devMiddleware, getAll)
 router.post('/', devMiddleware, create)
 router.patch('/:id/toggle', devMiddleware, toggleActive)
+router.patch('/:streamId/certificates', devMiddleware, updateCertificate)
 
 export default router
