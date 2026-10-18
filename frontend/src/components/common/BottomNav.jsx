@@ -17,7 +17,7 @@ export default function BottomNav({ member }) {
     const [showCertsTab, setShowCertsTab] = useState(false)
 
     useEffect(() => {
-        if (member?.role === 'secretary' || member?.is_dev) {
+        if (member?.role === 'general_secretary') {
             api.get('/certificates/collate-status')
                 .then(res => setShowCertsTab(res.data.data.show_tab))
                 .catch(() => {})
