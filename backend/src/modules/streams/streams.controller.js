@@ -4,6 +4,7 @@ import {
     createStream,
     toggleStreamActive
 } from './streams.service.js'
+import pool from '../../config/db.js'
 
 export const updateCertificate = async (req, res, next) => {
     try {

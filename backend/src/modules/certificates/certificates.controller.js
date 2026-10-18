@@ -3,6 +3,7 @@ import {
     buildMembershipCertificate, buildExcellenceCertificate,
     getPaidMembers
 } from './certificates.service.js'
+import pool from '../../config/db.js'
 
 export const getStatus = async (req, res, next) => {
     try {
@@ -118,4 +119,60 @@ export const getCollateData = async () => {
     })
 
     return Object.values(grouped)
+}
+
+
+export const collateStatus = async (req, res, next) => {
+    try {
+        const data = await getCollateStatus()
+
+        res.status(200).json({
+            success: true,
+            data
+        })
+    } catch (err) {
+        next(err)
+    }
+}
+
+export const collate = async (req, res, next) => {
+    try {
+        const data = await getCollateData()
+
+        res.status(200).json({
+            success: true,
+            data
+        })
+    } catch (err) {
+        next(err)
+    }
+}
+
+export const markCollateDone = async (req, res, next) => {
+    try {
+        const { streamId } = req.params
+
+        const result = await pool.query(
+            `UPDATE streams
+             SET certificates_distributed = true,
+                 certificate_unlocked = false
+             WHERE id = $1
+             RETURNING id`,
+            [streamId]
+        )
+
+        if (result.rowCount === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Stream not found.'
+            })
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'Stream marked as distributed.'
+        })
+    } catch (err) {
+        next(err)
+    }
 }

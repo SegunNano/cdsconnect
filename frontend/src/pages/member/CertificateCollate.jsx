@@ -1,27 +1,25 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Download, Award, FileText, CheckCircle } from 'lucide-react'
+import { ArrowLeft, Award, FileText, CheckCircle } from 'lucide-react'
 import api from '../../services/api'
 
-// Move downloadCert OUTSIDE your React component definition
+// Moved outside the component to prevent re-render issues and purity warnings
 const downloadCert = async (type, memberId) => {
     try {
-        const token = localStorage.getItem('token')
-        const response = await fetch(
-            `${import.meta.env.VITE_API_URL}/certificates/download/${type}?memberId=${memberId}`,
-            { headers: { Authorization: `Bearer ${token}` } }
-        )
-        const blob = await response.blob()
-        const url = window.URL.createObjectURL(blob)
+        const response = await api.get(`/certificates/download/${type}?memberId=${memberId}`, {
+            responseType: 'blob'
+        })
+        const url = window.URL.createObjectURL(new Blob([response.data]))
         const a = document.createElement('a')
         a.href = url
-        a.download = `certificate-${type}-${Date.now()}.pdf`
+        a.setAttribute('download', `certificate-${type}-${Date.now()}.pdf`)
         document.body.appendChild(a)
         a.click()
         window.URL.revokeObjectURL(url)
-        document.body.removeChild(a)
+        a.remove()
     } catch (err) {
         console.error('Download failed:', err)
+        alert('Failed to download certificate. Please try again.')
     }
 }
 
@@ -37,7 +35,6 @@ export default function CertificateCollate() {
             .catch(console.error)
             .finally(() => setLoading(false))
     }, [])
-
 
     const markDone = async (streamId) => {
         if (!window.confirm('Mark this batch as fully distributed? The tab will disappear once all batches are done.')) return

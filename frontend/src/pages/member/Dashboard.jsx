@@ -66,12 +66,11 @@ if (certRes.status === 'fulfilled') setCertStatus(certRes.value.data.data)
 
                 if (attendanceRes.status === 'fulfilled') {
                     const res = attendanceRes.value
-                    const allAttendance = res?.data || res || []
+                    const allAttendance = res?.data?.data || res?.data || res || []
                     const attendanceList = Array.isArray(allAttendance) ? allAttendance : []
                     
                     setRecentAttendance(attendanceList.slice(0, 3))
 
-                    console.log({attendanceList})
 
                     const today = new Date().toISOString().split('T')[0]
                     const todayRecord = attendanceList.find(a => {

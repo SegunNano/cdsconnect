@@ -13,6 +13,7 @@ import MeetingsTab from '../../components/dev/MeetingsTab'
 import MembersTab from '../../components/dev/MembersTab'
 import SettingsTab from '../../components/dev/SettingsTab'
 import StreamsTab from '../../components/dev/StreamsTab'
+import api from '../../services/api'
 
 export default function DevDashboard() {
     const { member } = useAuth()
@@ -25,6 +26,26 @@ export default function DevDashboard() {
     const [loading, setLoading] = useState(true)
     const [selectedMember, setSelectedMember] = useState(null)
     const [search, setSearch] = useState('')
+    const [certCost, setCertCost] = useState({})
+
+    // Add the handler
+    const handleUnlockCertificates = async (streamId, cost) => {
+        if (!cost || parseInt(cost) < 1) {
+            alert('Please enter a valid token cost')
+            return
+        }
+        try {
+            const result = await api.patch(`/streams/${streamId}/certificates`, {
+                certificate_cost_tokens: parseInt(cost)
+            })
+            setStreams(prev => prev.map(s =>
+                s.id === streamId ? result.data.data : s
+            ))
+            setCertCost(prev => ({ ...prev, [streamId]: '' }))
+        } catch (err) {
+            alert(err.response?.data?.message || 'Failed to unlock certificates')
+        }
+    }
 
     useEffect(() => {
         fetchAll()
@@ -54,9 +75,6 @@ export default function DevDashboard() {
         `${m.first_name} ${m.last_name}`.toLowerCase().includes(search.toLowerCase()) ||
         m.state_code.toLowerCase().includes(search.toLowerCase())
     )
-
-    // Calculate total devs assigned across all members
-    const devCount = members.filter(m => m.is_dev).length
 
     const sectionHead = {
         fontSize: '0.75rem', fontWeight: 700, color: '#8fa396',
@@ -145,6 +163,9 @@ export default function DevDashboard() {
                             const result = await toggleStreamActive(streamId)
                             setStreams(prev => prev.map(s => s.id === streamId ? result.data : s))
                         }}
+                        certCost={certCost}
+                        setCertCost={setCertCost}
+                        onUnlockCertificates={handleUnlockCertificates}
                     />
                 )}
 

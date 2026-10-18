@@ -2,10 +2,9 @@ import { useState } from 'react'
 import { Plus, ToggleLeft, ToggleRight, ChevronDown, ChevronUp } from 'lucide-react'
 import { createStream } from '../../services/dev.service'
 
-export default function StreamsTab({ streams, inputStyle, sectionHead, card, onCreated, onToggle, onUnlockCertificates }) {
+export default function StreamsTab({ streams, inputStyle, sectionHead, card, onCreated, onToggle, onUnlockCertificates, certCost, setCertCost, }) {
     const [showForm, setShowForm] = useState(false)
     const [expandedStreamId, setExpandedStreamId] = useState(null)
-    const [certCost, setCertCost] = useState({})
     const [form, setForm] = useState({
         year: new Date().getFullYear(),
         batch: 'A',
