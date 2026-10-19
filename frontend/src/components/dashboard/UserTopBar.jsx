@@ -1,5 +1,6 @@
 import { Bell } from 'lucide-react'
 import NotificationsModal from '../common/NotificationsModal'
+import { useNavigate } from 'react-router-dom'
 
 export function UserTopBar({ 
     firstName, 
@@ -9,6 +10,9 @@ export function UserTopBar({
     setShowNotifications, 
     setUnreadCount 
 }) {
+
+const  navigate =useNavigate()
+
     const today = new Date().toLocaleDateString('en-US', {
         weekday: 'long',
         day: 'numeric',
@@ -69,19 +73,31 @@ export function UserTopBar({
                     onRead={(count) => setUnreadCount(count)}
                 />
 
-                <div style={{
-                    width: '40px',
-                    height: '40px',
-                    borderRadius: '50%',
-                    background: '#e6f4ee',
-                    border: '2px solid #c2e0cf',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontWeight: 700,
-                    fontSize: '0.78rem',
-                    color: '#008751'
-                }}>
+                <div 
+                    onClick={() => navigate('/profile')}
+                    title="View profile"
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault()
+                            navigate('/profile')
+                        }
+                    }}
+                    style={{
+                        width: '40px',
+                        height: '40px',
+                        borderRadius: '50%',
+                        background: '#e6f4ee',
+                        border: '2px solid #c2e0cf',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontWeight: 700,
+                        fontSize: '0.78rem',
+                        color: '#008751'
+                    }}
+                >
                     {initials}
                 </div>
             </div>

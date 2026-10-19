@@ -282,9 +282,6 @@ export default function ClearanceSlip() {
                                             <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#0d1b12', marginBottom: '2px' }}>
                                                 Certificate of Membership
                                             </div>
-                                            <div style={{ fontSize: '0.7rem', color: '#8fa396' }}>
-                                                PDF · Landscape A4
-                                            </div>
                                         </div>
                                         <button
                                             onClick={() => downloadCert('membership')}
@@ -314,9 +311,6 @@ export default function ClearanceSlip() {
                                             <div style={{ flex: 1 }}>
                                                 <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#0d1b12', marginBottom: '2px' }}>
                                                     Certificate of Excellence
-                                                </div>
-                                                <div style={{ fontSize: '0.7rem', color: '#8fa396' }}>
-                                                    PDF · Landscape A4
                                                 </div>
                                             </div>
                                             <button

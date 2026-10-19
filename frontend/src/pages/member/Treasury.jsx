@@ -111,48 +111,80 @@ export default function Treasury() {
         }}>
 
             {/* HEADER */}
-            <div style={{
-                background: '#ffffff',
-                padding: '52px 20px 16px',
-                display: 'flex',
-                alignItems: 'center',
-                justifySpaceBetween: 'space-between',
-                boxShadow: '0 1px 0 #e8ece9'
-            }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+
+            <div
+                style={{
+                    background: '#ffffff',
+                    padding: '52px 20px 16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '16px',
+                    boxShadow: '0 1px 0 #e8ece9'
+                }}
+            >
+                {/* Header title */}
+                <div
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        minWidth: 0
+                    }}
+                >
                     <div
                         onClick={() => navigate('/')}
                         style={{
-                            width: '36px', height: '36px',
-                            background: '#f2f4f7', borderRadius: '50%',
-                            display: 'flex', alignItems: 'center',
-                            justifyContent: 'center', cursor: 'pointer'
+                            width: '36px',
+                            height: '36px',
+                            flexShrink: 0,
+                            background: '#f2f4f7',
+                            borderRadius: '50%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'pointer'
                         }}
                     >
                         <ArrowLeft size={18} color="#4a5e52" />
                     </div>
+                    
                     <div>
-                        <div style={{ fontSize: '1rem', fontWeight: 700, color: '#0d1b12' }}>
+                        <div style={{
+                            fontSize: '1rem',
+                            fontWeight: 700,
+                            color: '#0d1b12'
+                        }}>
                             Treasury
                         </div>
-                        <div style={{ fontSize: '0.72rem', color: '#8fa396' }}>
+                    
+                        <div style={{
+                            fontSize: '0.72rem',
+                            color: '#8fa396'
+                        }}>
                             Group finances
                         </div>
                     </div>
                 </div>
-
+                    
                 {canLog && (
                     <button
                         onClick={() => setShowForm(!showForm)}
                         style={{
                             background: showForm ? '#f2f4f7' : '#008751',
-                            border: 'none', borderRadius: '10px',
-                            padding: '8px 14px', cursor: 'pointer',
-                            display: 'flex', alignItems: 'center',
-                            gap: '6px', fontSize: '0.78rem',
+                            border: 'none',
+                            borderRadius: '10px',
+                            padding: '8px 14px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            fontSize: '0.78rem',
                             fontWeight: 600,
                             color: showForm ? '#4a5e52' : 'white',
-                            fontFamily: "'Plus Jakarta Sans', sans-serif"
+                            fontFamily: "'Plus Jakarta Sans', sans-serif",
+                            whiteSpace: 'nowrap',
+                            flexShrink: 0
                         }}
                     >
                         <Plus size={14} color={showForm ? '#4a5e52' : 'white'} />
@@ -160,6 +192,7 @@ export default function Treasury() {
                     </button>
                 )}
             </div>
+
 
             <div style={{ padding: '16px 20px 0' }}>
 
