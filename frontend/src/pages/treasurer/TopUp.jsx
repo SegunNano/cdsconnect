@@ -118,7 +118,6 @@ export default function TopUp() {
                     />
                 )}
 
-                // TopUp.jsx — update to match
                 <SearchBar
                     value={search}
                     onChange={setSearch}

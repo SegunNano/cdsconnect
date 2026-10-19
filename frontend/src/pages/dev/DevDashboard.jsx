@@ -71,10 +71,6 @@ export default function DevDashboard() {
         }
     }
 
-    const filtered = members.filter(m =>
-        `${m.first_name} ${m.last_name}`.toLowerCase().includes(search.toLowerCase()) ||
-        m.state_code.toLowerCase().includes(search.toLowerCase())
-    )
 
     const sectionHead = {
         fontSize: '0.75rem', fontWeight: 700, color: '#8fa396',
@@ -122,6 +118,7 @@ export default function DevDashboard() {
                             <MembersTab
                             members={filtered} 
                             search={search} 
+                            setSearch={setSearch}
                             loading={loading} 
                             selectedMember={selectedMember} 
                             setSelectedMember={setSelectedMember}
