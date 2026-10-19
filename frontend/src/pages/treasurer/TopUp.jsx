@@ -118,10 +118,11 @@ export default function TopUp() {
                     />
                 )}
 
-                <SearchBar 
-                    value={search} 
-                    onChange={e => setSearch(e.target.value)} 
-                    placeholder="Search by name or state code" 
+                // TopUp.jsx — update to match
+                <SearchBar
+                    value={search}
+                    onChange={setSearch}
+                    placeholder="Search by name or state code"
                 />
 
                 {loading && (

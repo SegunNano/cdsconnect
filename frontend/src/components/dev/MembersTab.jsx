@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { Users, ChevronRight, Shield, Smartphone, UserX, AlertCircle, UserCheck, X } from 'lucide-react'
+import { ChevronRight, Shield, Smartphone, UserX, AlertCircle, UserCheck, X } from 'lucide-react'
 import ManualMarkPresent from './ManualMarkPresent'
 import api from '../../services/api'
+import { SearchBar } from '../common/SearchBar'
 import { ROLES } from '../../constants'
 
 export default function MembersTab({
@@ -13,11 +14,15 @@ export default function MembersTab({
     const devCount = members.filter(m => m.is_dev).length
     const maxDevsReached = devCount >= 2
 
-    // Filter members into staff and corps members
     const corpsMembers = members.filter(m => m.member_type === 'corps_member')
     const staffMembers = members.filter(m => m.member_type === 'staff')
 
-    // Define section header style for reuse
+    // ── FILTERED CORPS MEMBERS BASED ON SEARCH ──────────────────
+    const filtered = corpsMembers.filter(m =>
+        `${m.first_name} ${m.last_name}`.toLowerCase().includes(search.toLowerCase()) ||
+        m.state_code.toLowerCase().includes(search.toLowerCase())
+    )
+
     const sectionHead = {
         fontSize: '0.72rem',
         fontWeight: 700,
@@ -27,7 +32,6 @@ export default function MembersTab({
         margin: '12px 0 8px 4px'
     }
 
-    // Build a map of which roles are already taken
     const takenRoles = {}
     members.forEach(m => {
         if (m.role && m.role !== 'member') {
@@ -38,12 +42,7 @@ export default function MembersTab({
     const [roleErrors, setRoleErrors] = useState({})
     const [devErrors, setDevErrors] = useState({})
     const [actionLoading, setActionLoading] = useState({})
-    
-    // Local state for tracking suspension overrides if needed, 
-    // or rely directly on m.is_suspended from props
     const [localSuspensions, setLocalSuspensions] = useState({})
-
-    // State to handle the Mark Present Modal
     const [markPresentMember, setMarkPresentMember] = useState(null)
 
     const handleRoleUpdate = async (memberId, role) => {
@@ -78,50 +77,24 @@ export default function MembersTab({
 
     return (
         <>
-            {/* DEV LIMIT WARNING */}
             {maxDevsReached && (
                 <div style={{
-                    background: '#fff8e6',
-                    borderRadius: '12px',
-                    padding: '10px 14px',
-                    fontSize: '0.75rem',
-                    color: '#d4900a',
-                    fontWeight: 500,
-                    marginBottom: '12px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px'
+                    background: '#fff8e6', borderRadius: '12px',
+                    padding: '10px 14px', fontSize: '0.75rem',
+                    color: '#d4900a', fontWeight: 500,
+                    marginBottom: '12px', display: 'flex',
+                    alignItems: 'center', gap: '6px'
                 }}>
                     <AlertCircle size={14} color="#d4900a" />
                     Maximum 2 devs reached. Remove a dev to assign another.
                 </div>
             )}
 
-            {/* SEARCH */}
-            <div style={{
-                background: '#ffffff',
-                borderRadius: '14px',
-                padding: '12px 16px',
-                boxShadow: '0 2px 12px rgba(0,0,0,0.07)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px',
-                marginBottom: '12px'
-            }}>
-                <Users size={16} color="#8fa396" />
-                <input
-                    type="text"
-                    value={search}
-                    onChange={e => setSearch(e.target.value)}
-                    placeholder="Search by name or state code"
-                    style={{
-                        flex: 1, border: 'none', outline: 'none',
-                        fontSize: '0.85rem', color: '#0d1b12',
-                        fontFamily: "'Plus Jakarta Sans', sans-serif",
-                        background: 'transparent'
-                    }}
-                />
-            </div>
+            <SearchBar
+                value={search}
+                onChange={setSearch}
+                placeholder="Search by name or state code"
+            />
 
             {loading && (
                 <div style={{ textAlign: 'center', color: '#8fa396', fontSize: '0.82rem', padding: '40px 0' }}>
@@ -129,14 +102,14 @@ export default function MembersTab({
                 </div>
             )}
 
-            {!loading && members.length === 0 && (
+            {!loading && filtered.length === 0 && (
                 <div style={{
                     background: '#ffffff', borderRadius: '14px',
                     padding: '30px', textAlign: 'center',
                     color: '#8fa396', fontSize: '0.82rem',
                     boxShadow: '0 2px 12px rgba(0,0,0,0.07)'
                 }}>
-                    No members found
+                    {search ? `No results for "${search}"` : 'No members found'}
                 </div>
             )}
 
@@ -147,7 +120,6 @@ export default function MembersTab({
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
                         {staffMembers.map(m => (
                             <div key={m.id}>
-                                {/* STAFF ROW */}
                                 <div
                                     onClick={() => setSelectedMember(selectedMember?.id === m.id ? null : m)}
                                     style={{
@@ -155,37 +127,27 @@ export default function MembersTab({
                                         borderRadius: selectedMember?.id === m.id ? '14px 14px 0 0' : '14px',
                                         padding: '14px 16px',
                                         boxShadow: '0 2px 12px rgba(0,0,0,0.07)',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '12px',
-                                        cursor: 'pointer',
-                                        border: selectedMember?.id === m.id
-                                            ? '2px solid #008751'
-                                            : '2px solid transparent',
+                                        display: 'flex', alignItems: 'center',
+                                        gap: '12px', cursor: 'pointer',
+                                        border: selectedMember?.id === m.id ? '2px solid #008751' : '2px solid transparent',
                                         borderBottom: selectedMember?.id === m.id ? 'none' : '2px solid transparent'
                                     }}
                                 >
                                     <div style={{
-                                        width: '40px', height: '40px',
-                                        borderRadius: '50%',
-                                        background: '#eef2ff',
-                                        display: 'flex', alignItems: 'center',
-                                        justifyContent: 'center',
+                                        width: '40px', height: '40px', borderRadius: '50%',
+                                        background: '#eef2ff', display: 'flex',
+                                        alignItems: 'center', justifyContent: 'center',
                                         fontWeight: 700, fontSize: '0.78rem',
                                         color: '#4f46e5', flexShrink: 0
                                     }}>
                                         {m.first_name[0]}{m.last_name[0]}
                                     </div>
                                     <div style={{ flex: 1, minWidth: 0 }}>
-                                        <div style={{ 
-                                            fontSize: '0.85rem', 
-                                            fontWeight: 600, 
-                                            color: '#0d1b12', 
-                                            display: 'flex', 
-                                            alignItems: 'center', 
-                                            gap: '6px',
-                                            flexWrap: 'wrap',
-                                            marginBottom: '2px'
+                                        <div style={{
+                                            fontSize: '0.85rem', fontWeight: 600,
+                                            color: '#0d1b12', display: 'flex',
+                                            alignItems: 'center', gap: '6px',
+                                            flexWrap: 'wrap', marginBottom: '2px'
                                         }}>
                                             <span>{m.first_name} {m.last_name}</span>
                                             <span style={{
@@ -201,53 +163,44 @@ export default function MembersTab({
                                         </div>
                                     </div>
                                     <ChevronRight
-                                        size={16}
-                                        color="#8fa396"
+                                        size={16} color="#8fa396"
                                         style={{
                                             transform: selectedMember?.id === m.id ? 'rotate(90deg)' : 'rotate(0)',
-                                            transition: 'transform 0.2s',
-                                            flexShrink: 0
+                                            transition: 'transform 0.2s', flexShrink: 0
                                         }}
                                     />
                                 </div>
 
-                                {/* STAFF EXPANDED ACTIONS */}
                                 {selectedMember?.id === m.id && (
                                     <div style={{
                                         background: '#f8fdf9',
                                         border: '2px solid #008751',
                                         borderTop: 'none',
                                         borderRadius: '0 0 14px 14px',
-                                        padding: '16px',
-                                        marginBottom: '8px'
+                                        padding: '16px', marginBottom: '8px'
                                     }}>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                            <button
-                                                onClick={async () => {
-                                                    setActionLoading(prev => ({ ...prev, [`device_${m.id}`]: true }))
-                                                    try {
-                                                        await onResetDevice(m.id)
-                                                    } finally {
-                                                        setActionLoading(prev => ({ ...prev, [`device_${m.id}`]: false }))
-                                                    }
-                                                }}
-                                                disabled={actionLoading[`device_${m.id}`]}
-                                                style={{
-                                                    background: '#f2f4f7', border: 'none',
-                                                    borderRadius: '10px', padding: '10px 14px',
-                                                    cursor: 'pointer', display: 'flex',
-                                                    alignItems: 'center', gap: '8px',
-                                                    fontSize: '0.78rem', fontWeight: 600,
-                                                    color: '#4a5e52',
-                                                    fontFamily: "'Plus Jakarta Sans', sans-serif",
-                                                    width: '100%',
-                                                    opacity: actionLoading[`device_${m.id}`] ? 0.6 : 1
-                                                }}
-                                            >
-                                                <Smartphone size={14} color="#4a5e52" />
-                                                {actionLoading[`device_${m.id}`] ? 'Resetting...' : 'Reset Device'}
-                                            </button>
-                                        </div>
+                                        <button
+                                            onClick={async () => {
+                                                setActionLoading(prev => ({ ...prev, [`device_${m.id}`]: true }))
+                                                try { await onResetDevice(m.id) }
+                                                finally { setActionLoading(prev => ({ ...prev, [`device_${m.id}`]: false })) }
+                                            }}
+                                            disabled={actionLoading[`device_${m.id}`]}
+                                            style={{
+                                                background: '#f2f4f7', border: 'none',
+                                                borderRadius: '10px', padding: '10px 14px',
+                                                cursor: 'pointer', display: 'flex',
+                                                alignItems: 'center', gap: '8px',
+                                                fontSize: '0.78rem', fontWeight: 600,
+                                                color: '#4a5e52',
+                                                fontFamily: "'Plus Jakarta Sans', sans-serif",
+                                                width: '100%',
+                                                opacity: actionLoading[`device_${m.id}`] ? 0.6 : 1
+                                            }}
+                                        >
+                                            <Smartphone size={14} color="#4a5e52" />
+                                            {actionLoading[`device_${m.id}`] ? 'Resetting...' : 'Reset Device'}
+                                        </button>
                                     </div>
                                 )}
                             </div>
@@ -258,14 +211,13 @@ export default function MembersTab({
                 </>
             )}
 
-            {/* CORPS MEMBERS */}
+            {/* CORPS MEMBERS — uses filtered */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {corpsMembers.map(m => {
+                {filtered.map(m => {
                     const isSuspended = localSuspensions[m.id]?.is_suspended ?? m.is_suspended
 
                     return (
                         <div key={m.id}>
-                            {/* MEMBER ROW */}
                             <div
                                 onClick={() => setSelectedMember(selectedMember?.id === m.id ? null : m)}
                                 style={{
@@ -273,24 +225,18 @@ export default function MembersTab({
                                     borderRadius: selectedMember?.id === m.id ? '14px 14px 0 0' : '14px',
                                     padding: '14px 16px',
                                     boxShadow: '0 2px 12px rgba(0,0,0,0.07)',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '12px',
-                                    cursor: 'pointer',
-                                    border: selectedMember?.id === m.id
-                                        ? '2px solid #008751'
-                                        : '2px solid transparent',
+                                    display: 'flex', alignItems: 'center',
+                                    gap: '12px', cursor: 'pointer',
+                                    border: selectedMember?.id === m.id ? '2px solid #008751' : '2px solid transparent',
                                     borderBottom: selectedMember?.id === m.id ? 'none' : '2px solid transparent'
                                 }}
                             >
-                                {/* AVATAR */}
                                 <div style={{
-                                    width: '40px', height: '40px',
-                                    borderRadius: '50%',
+                                    width: '40px', height: '40px', borderRadius: '50%',
                                     background: m.is_active ? '#e6f4ee' : '#f2f4f7',
                                     display: 'flex', alignItems: 'center',
-                                    justifyContent: 'center',
-                                    fontWeight: 700, fontSize: '0.78rem',
+                                    justifyContent: 'center', fontWeight: 700,
+                                    fontSize: '0.78rem',
                                     color: m.is_active ? '#008751' : '#8fa396',
                                     flexShrink: 0
                                 }}>
@@ -301,9 +247,8 @@ export default function MembersTab({
                                     <div style={{
                                         fontSize: '0.85rem', fontWeight: 600,
                                         color: m.is_active ? '#0d1b12' : '#8fa396',
-                                        marginBottom: '2px',
-                                        display: 'flex', alignItems: 'center', gap: '6px',
-                                        flexWrap: 'wrap'
+                                        marginBottom: '2px', display: 'flex',
+                                        alignItems: 'center', gap: '6px', flexWrap: 'wrap'
                                     }}>
                                         <span>{m.first_name} {m.last_name}</span>
                                         {m.is_dev && (
@@ -311,18 +256,14 @@ export default function MembersTab({
                                                 background: '#eef2ff', color: '#4f46e5',
                                                 fontSize: '0.6rem', fontWeight: 700,
                                                 padding: '2px 6px', borderRadius: '6px'
-                                            }}>
-                                                DEV
-                                            </span>
+                                            }}>DEV</span>
                                         )}
                                         {!m.is_active && (
                                             <span style={{
                                                 background: '#fff0f0', color: '#e53e3e',
                                                 fontSize: '0.6rem', fontWeight: 700,
                                                 padding: '2px 6px', borderRadius: '6px'
-                                            }}>
-                                                INACTIVE
-                                            </span>
+                                            }}>INACTIVE</span>
                                         )}
                                         {isSuspended && (
                                             <span style={{
@@ -341,28 +282,23 @@ export default function MembersTab({
                                 </div>
 
                                 <ChevronRight
-                                    size={16}
-                                    color="#8fa396"
+                                    size={16} color="#8fa396"
                                     style={{
                                         transform: selectedMember?.id === m.id ? 'rotate(90deg)' : 'rotate(0)',
-                                        transition: 'transform 0.2s',
-                                        flexShrink: 0
+                                        transition: 'transform 0.2s', flexShrink: 0
                                     }}
                                 />
                             </div>
 
-                            {/* EXPANDED ACTIONS */}
                             {selectedMember?.id === m.id && (
                                 <div style={{
                                     background: '#f8fdf9',
                                     border: '2px solid #008751',
                                     borderTop: 'none',
                                     borderRadius: '0 0 14px 14px',
-                                    padding: '16px',
-                                    marginBottom: '8px'
+                                    padding: '16px', marginBottom: '8px'
                                 }}>
-
-                                    {/* ROLE SELECTOR */}
+                                    {/* ROLE */}
                                     <div style={{ marginBottom: '12px' }}>
                                         <div style={{
                                             fontSize: '0.68rem', fontWeight: 600,
@@ -371,7 +307,6 @@ export default function MembersTab({
                                         }}>
                                             Role
                                         </div>
-
                                         {roleErrors[m.id] && (
                                             <div style={{
                                                 background: '#fff0f0', color: '#e53e3e',
@@ -383,22 +318,15 @@ export default function MembersTab({
                                                 {roleErrors[m.id]}
                                             </div>
                                         )}
-
                                         <select
                                             value={m.role}
-                                            onChange={async (e) => {
-                                                await handleRoleUpdate(m.id, e.target.value)
-                                            }}
+                                            onChange={async e => await handleRoleUpdate(m.id, e.target.value)}
                                             disabled={actionLoading[`role_${m.id}`]}
                                             style={{
-                                                width: '100%',
-                                                background: '#ffffff',
-                                                border: '1px solid #e8ece9',
-                                                borderRadius: '10px',
-                                                padding: '10px 12px',
-                                                fontSize: '0.82rem',
-                                                color: '#0d1b12',
-                                                outline: 'none',
+                                                width: '100%', background: '#ffffff',
+                                                border: '1px solid #e8ece9', borderRadius: '10px',
+                                                padding: '10px 12px', fontSize: '0.82rem',
+                                                color: '#0d1b12', outline: 'none',
                                                 fontFamily: "'Plus Jakarta Sans', sans-serif",
                                                 appearance: 'none',
                                                 opacity: actionLoading[`role_${m.id}`] ? 0.6 : 1
@@ -407,11 +335,7 @@ export default function MembersTab({
                                             {ROLES.map(role => {
                                                 const isTaken = takenRoles[role] && takenRoles[role] !== `${m.first_name} ${m.last_name}`
                                                 return (
-                                                    <option
-                                                        key={role}
-                                                        value={role}
-                                                        disabled={isTaken}
-                                                    >
+                                                    <option key={role} value={role} disabled={isTaken}>
                                                         {role.replace('_', ' ')}
                                                         {isTaken ? ` — taken by ${takenRoles[role]}` : ''}
                                                     </option>
@@ -420,7 +344,6 @@ export default function MembersTab({
                                         </select>
                                     </div>
 
-                                    {/* ACTION BUTTONS */}
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
 
                                         {/* TOGGLE DEV */}
@@ -430,8 +353,8 @@ export default function MembersTab({
                                                     <div style={{
                                                         background: '#fff0f0', color: '#e53e3e',
                                                         fontSize: '0.72rem', padding: '8px 10px',
-                                                        borderRadius: '8px',
-                                                        display: 'flex', alignItems: 'center', gap: '6px'
+                                                        borderRadius: '8px', display: 'flex',
+                                                        alignItems: 'center', gap: '6px'
                                                     }}>
                                                         <AlertCircle size={12} color="#e53e3e" />
                                                         {devErrors[m.id]}
@@ -439,10 +362,7 @@ export default function MembersTab({
                                                 )}
                                                 <button
                                                     onClick={() => handleToggleDev(m.id)}
-                                                    disabled={
-                                                        actionLoading[`dev_${m.id}`] ||
-                                                        (!m.is_dev && maxDevsReached)
-                                                    }
+                                                    disabled={actionLoading[`dev_${m.id}`] || (!m.is_dev && maxDevsReached)}
                                                     style={{
                                                         background: m.is_dev ? '#fff8e6' : '#eef2ff',
                                                         border: 'none', borderRadius: '10px',
@@ -459,11 +379,9 @@ export default function MembersTab({
                                                     <Shield size={14} color={m.is_dev ? '#d4900a' : '#4f46e5'} />
                                                     {actionLoading[`dev_${m.id}`]
                                                         ? 'Updating...'
-                                                        : m.is_dev
-                                                            ? 'Remove Dev Access'
-                                                            : maxDevsReached
-                                                                ? 'Dev limit reached (2/2)'
-                                                                : 'Grant Dev Access'
+                                                        : m.is_dev ? 'Remove Dev Access'
+                                                        : maxDevsReached ? 'Dev limit reached (2/2)'
+                                                        : 'Grant Dev Access'
                                                     }
                                                 </button>
                                             </>
@@ -473,11 +391,8 @@ export default function MembersTab({
                                         <button
                                             onClick={async () => {
                                                 setActionLoading(prev => ({ ...prev, [`device_${m.id}`]: true }))
-                                                try {
-                                                    await onResetDevice(m.id)
-                                                } finally {
-                                                    setActionLoading(prev => ({ ...prev, [`device_${m.id}`]: false }))
-                                                }
+                                                try { await onResetDevice(m.id) }
+                                                finally { setActionLoading(prev => ({ ...prev, [`device_${m.id}`]: false })) }
                                             }}
                                             disabled={actionLoading[`device_${m.id}`]}
                                             style={{
@@ -520,7 +435,7 @@ export default function MembersTab({
                                             </button>
                                         )}
 
-                                        {/* REINSTATE SUSPENDED MEMBER */}
+                                        {/* REINSTATE */}
                                         {isSuspended && m.id !== currentMemberId && (
                                             <button
                                                 onClick={async () => {
@@ -532,30 +447,33 @@ export default function MembersTab({
                                                             [m.id]: { is_suspended: false }
                                                         }))
                                                     } catch (err) {
-                                                        console.error(err)
+                                                        setRoleErrors(prev => ({
+                                                            ...prev,
+                                                            [m.id]: err.response?.data?.message || 'Reinstatement failed'
+                                                        }))
                                                     } finally {
                                                         setActionLoading(prev => ({ ...prev, [`reinstate_${m.id}`]: false }))
                                                     }
                                                 }}
                                                 disabled={actionLoading[`reinstate_${m.id}`]}
                                                 style={{
-                                                    background: '#e6f4ee', border: 'none',
+                                                    background: '#fff8e6', border: '1px solid #d4900a',
                                                     borderRadius: '10px', padding: '10px 14px',
                                                     cursor: 'pointer', display: 'flex',
                                                     alignItems: 'center', gap: '8px',
                                                     fontSize: '0.78rem', fontWeight: 600,
-                                                    color: '#008751',
+                                                    color: '#d4900a',
                                                     fontFamily: "'Plus Jakarta Sans', sans-serif",
                                                     width: '100%',
                                                     opacity: actionLoading[`reinstate_${m.id}`] ? 0.6 : 1
                                                 }}
                                             >
-                                                <UserCheck size={14} color="#008751" />
+                                                <UserCheck size={14} color="#d4900a" />
                                                 {actionLoading[`reinstate_${m.id}`] ? 'Reinstating...' : 'Reinstate Member'}
                                             </button>
                                         )}
 
-                                        {/* MARK PRESENT BUTTON */}
+                                        {/* MARK PRESENT */}
                                         {m.id !== currentMemberId && m.is_active && (
                                             <button
                                                 onClick={() => setMarkPresentMember(m)}
@@ -585,33 +503,22 @@ export default function MembersTab({
             {/* MANUAL MARK PRESENT MODAL */}
             {markPresentMember && (
                 <div style={{
-                    position: 'fixed',
-                    top: 0,
-                    left: 0,
-                    width: '100vw',
-                    height: '100vh',
-                    background: 'rgba(0, 0, 0, 0.5)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    zIndex: 1000,
-                    padding: '20px',
-                    boxSizing: 'border-box'
+                    position: 'fixed', top: 0, left: 0,
+                    width: '100vw', height: '100vh',
+                    background: 'rgba(0,0,0,0.5)',
+                    display: 'flex', alignItems: 'center',
+                    justifyContent: 'center', zIndex: 1000,
+                    padding: '20px', boxSizing: 'border-box'
                 }}>
                     <div style={{
-                        background: '#ffffff',
-                        borderRadius: '16px',
-                        padding: '20px',
-                        width: '100%',
-                        maxWidth: '400px',
+                        background: '#ffffff', borderRadius: '16px',
+                        padding: '20px', width: '100%', maxWidth: '400px',
                         boxShadow: '0 10px 25px rgba(0,0,0,0.15)',
                         position: 'relative'
                     }}>
                         <div style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            marginBottom: '14px'
+                            display: 'flex', justifyContent: 'space-between',
+                            alignItems: 'center', marginBottom: '14px'
                         }}>
                             <span style={{ fontSize: '0.88rem', fontWeight: 700, color: '#0d1b12' }}>
                                 Mark {markPresentMember.first_name} {markPresentMember.last_name} Present
@@ -619,21 +526,15 @@ export default function MembersTab({
                             <button
                                 onClick={() => setMarkPresentMember(null)}
                                 style={{
-                                    background: '#f2f4f7',
-                                    border: 'none',
-                                    borderRadius: '50%',
-                                    width: '28px',
-                                    height: '28px',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    cursor: 'pointer'
+                                    background: '#f2f4f7', border: 'none',
+                                    borderRadius: '50%', width: '28px', height: '28px',
+                                    display: 'flex', alignItems: 'center',
+                                    justifyContent: 'center', cursor: 'pointer'
                                 }}
                             >
                                 <X size={14} color="#4a5e52" />
                             </button>
                         </div>
-
                         <ManualMarkPresent
                             member={markPresentMember}
                             onSuccess={() => setMarkPresentMember(null)}

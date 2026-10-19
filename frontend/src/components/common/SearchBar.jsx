@@ -16,7 +16,7 @@ export function SearchBar({ value, onChange, placeholder = 'Search...' }) {
             <input
                 type="text"
                 value={value}
-                onChange={onChange}
+                onChange={e => onChange(e.target.value)}
                 placeholder={placeholder}
                 style={{
                     flex: 1,
