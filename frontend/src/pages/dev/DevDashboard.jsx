@@ -115,20 +115,27 @@ export default function DevDashboard() {
                 {activeTab === 'members' && (
                     <>
                         {/* Dev limit warning banner */}
-                            <MembersTab
-                            members={filtered} 
-                            search={search} 
+                        <MembersTab
+                            members={members}
+                            search={search}
                             setSearch={setSearch}
-                            loading={loading} 
-                            selectedMember={selectedMember} 
+                            loading={loading}
+                            selectedMember={selectedMember}
                             setSelectedMember={setSelectedMember}
                             onRoleUpdate={async (memberId, role) => {
                                 await updateMemberRole(memberId, role)
-                                setMembers(prev => prev.map(m => m.id === memberId ? { ...m, role } : m))
+                                setMembers(prev =>
+                                    prev.map(m => m.id === memberId ? { ...m, role } : m)
+                                )
                             }}
                             onToggleDev={async (memberId) => {
                                 const result = await toggleDevAccess(memberId)
-                                setMembers(prev => prev.map(m => m.id === memberId ? { ...m, is_dev: result.data.is_dev } : m))
+                                setMembers(prev =>
+                                    prev.map(m => m.id === memberId
+                                        ? { ...m, is_dev: result.data.is_dev }
+                                        : m
+                                    )
+                                )
                             }}
                             onResetDevice={async (memberId) => {
                                 await resetMemberDevice(memberId)
@@ -136,7 +143,12 @@ export default function DevDashboard() {
                             }}
                             onDeactivate={async (memberId) => {
                                 await deactivateMember(memberId)
-                                setMembers(prev => prev.map(m => m.id === memberId ? { ...m, is_active: false } : m))
+                                setMembers(prev =>
+                                    prev.map(m => m.id === memberId
+                                        ? { ...m, is_active: false }
+                                        : m
+                                    )
+                                )
                             }}
                             currentMemberId={member?.id}
                         />
