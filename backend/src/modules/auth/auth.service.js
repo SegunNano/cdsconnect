@@ -30,15 +30,15 @@ export const registerMember = async (data) => {
         breakout_session
     } = data
 
-    // 1. Sanitize incoming text inputs
+    // 1. Sanitize incoming text inputs thoroughly (with .trim())
     const cleanFirstName = cleanInput(first_name)
     const cleanLastName = cleanInput(last_name)
-    const cleanStateCode = cleanInput(state_code)?.toUpperCase()
-    const cleanEmail = cleanInput(email)?.toLowerCase()
+    const cleanStateCode = cleanInput(state_code)?.toUpperCase().trim()
+    const cleanEmail = cleanInput(email)?.toLowerCase().trim()
     const cleanGender = cleanInput(gender)
     const cleanBreakout = cleanInput(breakout_session)
 
-    // 2. Validate essential fields exist and aren't blank after sanitization
+    // 2. Validate essential fields
     if (!cleanFirstName || !cleanLastName) {
         throw { status: 400, message: 'First name and last name are required.' }
     }
@@ -78,7 +78,7 @@ export const registerMember = async (data) => {
         throw { status: 400, message: 'Invalid or inactive stream selected.' }
     }
 
-    // 6. Check duplicate email or state code
+    // 6. Application-level duplicate pre-check
     const existing = await pool.query(
         'SELECT id FROM members WHERE email = $1 OR state_code = $2',
         [cleanEmail, cleanStateCode]
@@ -90,39 +90,48 @@ export const registerMember = async (data) => {
     // 7. Hash PIN
     const pin_hash = await hashPin(pin)
 
-    // 8. Insert member using sanitized inputs
-    const result = await pool.query(`
-        INSERT INTO members (
-            first_name, last_name, state_code, email,
-            pin_hash, gender, stream_id, breakout_session,
-            member_type
-        ) VALUES (
-            $1, $2, $3, $4, $5, $6, $7, $8, 'corps_member'
-        ) RETURNING id
-    `, [
-        cleanFirstName, 
-        cleanLastName,
-        cleanStateCode, 
-        cleanEmail,
-        pin_hash, 
-        cleanGender, 
-        stream_id, 
-        cleanBreakout
-    ])
+    try {
+        // 8. Insert member (Protected by database UNIQUE constraint against race conditions)
+        const result = await pool.query(`
+            INSERT INTO members (
+                first_name, last_name, state_code, email,
+                pin_hash, gender, stream_id, breakout_session,
+                member_type
+            ) VALUES (
+                $1, $2, $3, $4, $5, $6, $7, $8, 'corps_member'
+            ) RETURNING id
+        `, [
+            cleanFirstName, 
+            cleanLastName,
+            cleanStateCode, 
+            cleanEmail,
+            pin_hash, 
+            cleanGender, 
+            stream_id, 
+            cleanBreakout
+        ])
 
-    const memberId = result.rows[0].id
-    const member = await getMe(memberId)
+        const memberId = result.rows[0].id
+        const member = await getMe(memberId)
 
-    // 9. Generate JWT — INCLUDING token_version
-    const token = generateToken({
-        id: member.id,
-        role: member.role,
-        is_dev: member.is_dev,
-        member_type: member.member_type,
-        token_version: member.token_version // <--- FIXED: Added token_version
-    })
+        // 9. Generate JWT
+        const token = generateToken({
+            id: member.id,
+            role: member.role,
+            is_dev: member.is_dev,
+            member_type: member.member_type,
+            token_version: member.token_version
+        })
 
-    return { member, token }
+        return { member, token }
+
+    } catch (err) {
+        // Fallback catch for database-level unique constraint violations (code 23505)
+        if (err.code === '23505') {
+            throw { status: 409, message: 'Email or state code already registered.' }
+        }
+        throw err
+    }
 }
 
 // ── WEBAUTHN REGISTRATION OPTIONS ────────────────

@@ -4,55 +4,105 @@ import { NOTIFICATION_TYPES } from '../../constants.js'
 import supabase from '../../config/supabase.js'
 
 export const fileExcuse = async (memberId, meetingId, reason, evidenceUrl) => {
-    // Check meeting exists
-    const meetingResult = await pool.query(
-        'SELECT * FROM meetings WHERE id = $1',
-        [meetingId]
-    )
-    if (meetingResult.rows.length === 0) {
-        throw { status: 404, message: 'Meeting not found' }
+  // 1. Check meeting exists
+  const meetingResult = await pool.query(
+    'SELECT * FROM meetings WHERE id = $1',
+    [meetingId]
+  )
+
+  if (meetingResult.rows.length === 0) {
+    throw { status: 404, message: 'Meeting not found' }
+  }
+
+  const meeting = meetingResult.rows[0]
+  const now = new Date()
+  const meetingDate = new Date(meeting.sign_in_open)
+
+  // 2. Require submission at least 7 calendar days before sign-in opens
+  const submissionDeadline = new Date(meetingDate)
+  submissionDeadline.setDate(submissionDeadline.getDate() - 7)
+
+  if (now > submissionDeadline) {
+    throw {
+      status: 400,
+      message: 'Excuse requests must be submitted at least 7 days before the meeting.'
     }
+  }
 
-    const meeting = meetingResult.rows[0]
-    const now = new Date()
-    const signInOpen = new Date(meeting.sign_in_open)
+  // 3. Check member exists and has enough tokens
+  const memberResult = await pool.query(
+    'SELECT id, token_balance FROM members WHERE id = $1',
+    [memberId]
+  )
 
-    // Check excuse window is still open
-    if (now >= signInOpen) {
-        throw { status: 400, message: 'Excuse window has closed for this meeting.' }
+  if (memberResult.rows.length === 0) {
+    throw { status: 404, message: 'Member not found' }
+  }
+
+  const member = memberResult.rows[0]
+
+  if (member.token_balance < 2) {
+    throw {
+      status: 400,
+      message: 'You need at least 2 tokens to file an excuse request.'
     }
+  }
 
-    // Check member hasn't already filed an excuse
-    const existing = await pool.query(
-        'SELECT id FROM excuse_requests WHERE member_id = $1 AND meeting_id = $2',
-        [memberId, meetingId]
-    )
-    if (existing.rows.length > 0) {
-        throw { status: 409, message: 'You have already filed an excuse for this meeting.' }
+  // 4. Check excuse window is still open
+  if (now >= meetingDate) {
+    throw {
+      status: 400,
+      message: 'Excuse window has closed for this meeting.'
     }
+  }
 
-    // Check member hasn't already signed in
-    const attendance = await pool.query(
-        'SELECT id FROM attendance WHERE member_id = $1 AND meeting_id = $2',
-        [memberId, meetingId]
-    )
-    if (attendance.rows.length > 0) {
-        throw { status: 409, message: 'You have already signed in for this meeting.' }
+  // 5. Check member hasn't already filed an excuse
+  const existing = await pool.query(
+    `SELECT id FROM excuse_requests
+     WHERE member_id = $1 AND meeting_id = $2`,
+    [memberId, meetingId]
+  )
+
+  if (existing.rows.length > 0) {
+    throw {
+      status: 409,
+      message: 'You have already filed an excuse for this meeting.'
     }
+  }
 
-    // Evidence is compulsory
-    if (!evidenceUrl) {
-        throw { status: 400, message: 'Evidence is required to file an excuse.' }
+  // 6. Check member hasn't already signed in
+  const attendance = await pool.query(
+    `SELECT id FROM attendance
+     WHERE member_id = $1 AND meeting_id = $2`,
+    [memberId, meetingId]
+  )
+
+  if (attendance.rows.length > 0) {
+    throw {
+      status: 409,
+      message: 'You have already signed in for this meeting.'
     }
+  }
 
-    const result = await pool.query(
-        `INSERT INTO excuse_requests (member_id, meeting_id, reason, evidence_url)
-        VALUES ($1, $2, $3, $4)
-        RETURNING *`,
-        [memberId, meetingId, reason, evidenceUrl]
-    )
+  // 7. Validate required fields
+  if (!reason?.trim()) {
+    throw { status: 400, message: 'A reason is required.' }
+  }
 
-    return result.rows[0]
+  if (!evidenceUrl) {
+    throw { status: 400, message: 'Evidence is required to file an excuse.' }
+  }
+
+  // 8. Create excuse request
+  const result = await pool.query(
+    `INSERT INTO excuse_requests
+      (member_id, meeting_id, reason, evidence_url)
+     VALUES ($1, $2, $3, $4)
+     RETURNING *`,
+    [memberId, meetingId, reason.trim(), evidenceUrl]
+  )
+
+  return result.rows[0]
 }
 
 export const getMyExcuses = async (memberId) => {
