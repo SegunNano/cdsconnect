@@ -1,6 +1,10 @@
-import { Search } from 'lucide-react'
+import { Search, X } from 'lucide-react'
 
-export function SearchBar({ value, onChange, placeholder = 'Search...' }) {
+export function SearchBar({
+    value,
+    onChange,
+    placeholder = 'Search...'
+}) {
     return (
         <div style={{
             background: '#ffffff',
@@ -13,6 +17,7 @@ export function SearchBar({ value, onChange, placeholder = 'Search...' }) {
             marginBottom: '12px'
         }}>
             <Search size={16} color="#8fa396" />
+
             <input
                 type="text"
                 value={value}
@@ -20,6 +25,7 @@ export function SearchBar({ value, onChange, placeholder = 'Search...' }) {
                 placeholder={placeholder}
                 style={{
                     flex: 1,
+                    minWidth: 0,
                     border: 'none',
                     outline: 'none',
                     fontSize: '0.85rem',
@@ -28,6 +34,28 @@ export function SearchBar({ value, onChange, placeholder = 'Search...' }) {
                     background: 'transparent'
                 }}
             />
+
+            {value && (
+                <button
+                    type="button"
+                    onClick={() => onChange('')}
+                    aria-label="Clear search"
+                    title="Clear search"
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        border: 'none',
+                        background: 'transparent',
+                        color: '#8fa396',
+                        cursor: 'pointer',
+                        padding: '4px',
+                        borderRadius: '6px'
+                    }}
+                >
+                    <X size={16} />
+                </button>
+            )}
         </div>
     )
 }
