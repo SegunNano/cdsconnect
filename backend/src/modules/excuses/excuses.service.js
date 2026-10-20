@@ -290,3 +290,92 @@ export const reviewExcuse = async (coordinatorId, excuseId, decision) => {
 
     return { status: 'rejected', message: 'Excuse rejected.' }
 }
+
+export const checkExcuseEligibility = async (memberId) => {
+    // Get member with stream
+    const memberResult = await pool.query(
+        `SELECT 
+            m.id, m.token_balance, m.is_active,
+            s.service_end, s.is_active AS stream_active
+        FROM members m
+        LEFT JOIN streams s ON m.stream_id = s.id
+        WHERE m.id = $1`,
+        [memberId]
+    )
+
+    if (memberResult.rows.length === 0) {
+        throw { status: 404, message: 'Member not found.' }
+    }
+
+    const member = memberResult.rows[0]
+
+    // 1. Has service ended?
+    const serviceEnded = member.service_end
+        ? new Date() > new Date(member.service_end + 'T23:59:59Z')
+        : false
+
+    if (serviceEnded || !member.stream_active) {
+        return {
+            eligible: false,
+            reason: 'Your service year has ended. You cannot file an excuse.'
+        }
+    }
+
+    // 2. Sufficient tokens (minimum 2)?
+    if (member.token_balance < 2) {
+        return {
+            eligible: false,
+            reason: `You need at least 2 tokens to file an excuse. You currently have ${member.token_balance}.`
+        }
+    }
+
+    // 3. Get next upcoming meeting (within excuse window — more than 5 days away)
+    const upcomingResult = await pool.query(
+        `SELECT * FROM meetings
+        WHERE sign_in_open > NOW()
+        ORDER BY meeting_date ASC
+        LIMIT 1`
+    )
+
+    if (upcomingResult.rows.length === 0) {
+        return {
+            eligible: false,
+            reason: 'No upcoming meetings to file an excuse for.'
+        }
+    }
+
+    const nextMeeting = upcomingResult.rows[0]
+
+    // 4. Is it within 5 days of the meeting?
+    const fiveDaysBefore = new Date(nextMeeting.sign_in_open)
+    fiveDaysBefore.setDate(fiveDaysBefore.getDate() - 5)
+
+    if (new Date() > fiveDaysBefore) {
+        return {
+            eligible: false,
+            reason: `The deadline to file an excuse for "${nextMeeting.title}" has passed. Excuses must be submitted at least 5 working days before the meeting.`
+        }
+    }
+
+    // 5. Already applied for this meeting?
+    const existingExcuse = await pool.query(
+        `SELECT id, status FROM excuse_requests
+        WHERE member_id = $1 AND meeting_id = $2`,
+        [memberId, nextMeeting.id]
+    )
+
+    if (existingExcuse.rows.length > 0) {
+        const existing = existingExcuse.rows[0]
+        return {
+            eligible: false,
+            reason: `You have already filed an excuse for "${nextMeeting.title}".`,
+            existing_status: existing.status
+        }
+    }
+
+    return {
+        eligible: true,
+        meeting: nextMeeting,
+        token_balance: member.token_balance
+    }
+}

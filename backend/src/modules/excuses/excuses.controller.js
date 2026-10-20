@@ -3,7 +3,8 @@ import {
     getMyExcuses,
     getPendingExcuses,
     getAllExcuses,
-    reviewExcuse
+    reviewExcuse,
+    checkExcuseEligibility
 } from './excuses.service.js'
 
 export const file = async (req, res, next) => {
@@ -55,4 +56,11 @@ export const review = async (req, res, next) => {
     } catch (err) {
         next(err)
     }
+}
+
+export const checkEligibility = async (req, res, next) => {
+    try {
+        const data = await checkExcuseEligibility(req.member.id)
+        res.status(200).json({ success: true, data })
+    } catch (err) { next(err) }
 }

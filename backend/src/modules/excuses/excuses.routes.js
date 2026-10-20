@@ -1,7 +1,7 @@
 import multer from 'multer'
 import supabase from '../../config/supabase.js'
 import { Router } from 'express'
-import { file, getMyExcuseList, getPending, getAll, review } from './excuses.controller.js'
+import { file, getMyExcuseList, getPending, getAll, review, checkEligibility } from './excuses.controller.js'
 import authMiddleware from '../../middlewares/auth.middleware.js'
 import staffMiddleware from '../../middlewares/staff.middleware.js'
 import { requireRole } from '../../middlewares/role.middleware.js'
@@ -62,6 +62,7 @@ router.get('/me', getMyExcuseList)
 
 // Coordinator
 router.get('/pending', staffMiddleware, getPending)
+router.get('/eligibility', checkEligibility)
 router.post('/review', staffMiddleware, review)
 
 // Dev
