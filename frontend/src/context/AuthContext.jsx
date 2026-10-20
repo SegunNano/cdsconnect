@@ -25,7 +25,7 @@ export const AuthProvider = ({ children }) => {
                 setMember(memberData)
             })
             .catch((err) => {
-                console.error('Session restoration failed:', err.response?.data || err.message)
+                // console.error('Session restoration failed:', err.response?.data || err.message)
                 // Only wipe token if server explicitly rejects it with a 401
                 if (err.response?.status === 401) {
                     localStorage.removeItem('token')
@@ -62,7 +62,7 @@ export const AuthProvider = ({ children }) => {
         try {
             await api.post('/auth/logout')
         } catch (err) {
-            console.error('Logout error:', err)
+            // console.error('Logout error:', err)
         } finally {
             setMember(null)
             setToken(null)

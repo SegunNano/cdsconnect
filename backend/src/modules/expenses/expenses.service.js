@@ -2,17 +2,29 @@ import pool from '../../config/db.js'
 import { createNotification } from '../notifications/notifications.service.js'
 
 export const logExpense = async (coordinatorId, amount, description) => {
-    // Check treasury has enough
-    const incomeResult = await pool.query(
-        'SELECT COALESCE(SUM(naira_value), 0) AS total FROM topups'
-    )
+
     const expensesResult = await pool.query(
         'SELECT COALESCE(SUM(amount_naira), 0) AS total FROM expenses'
     )
-
-    const totalIncome = parseInt(incomeResult.rows[0].total)
+    
+    const tokenIncomeResult = await pool.query(
+        'SELECT COALESCE(SUM(naira_value), 0) AS total FROM topups'
+    )
+    const externalIncomeResult = await pool.query(
+        'SELECT COALESCE(SUM(amount_naira), 0) AS total FROM income'
+    )
+    
     const totalExpenses = parseInt(expensesResult.rows[0].total)
+    const totalIncome = parseInt(tokenIncomeResult.rows[0].total) + parseInt(externalIncomeResult.rows[0].total)
     const balance = totalIncome - totalExpenses
+    
+    if (amount > balance) {
+        throw {
+            status: 400,
+            message: `Insufficient funds. Current balance is ₦${(totalIncome - totalExpenses).toLocaleString()}.`
+        }
+    }
+
 
     if (amount > balance) {
         throw {
