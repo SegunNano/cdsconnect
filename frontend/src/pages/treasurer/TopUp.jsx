@@ -8,6 +8,7 @@ import { HeaderBar } from '../../components/common/HeaderBar'
 import { SearchBar } from '../../components/common/SearchBar'
 import { MemberListItem } from '../../components/members/MemberListItem'
 import { TopUpModalCard } from '../../components/tokens/TopUpModalCard'
+import { TopUpConfirmModal } from '../../components/tokens/TopUpConfirmModal' // Import the new confirm modal
 
 export default function TopUp() {
     const navigate = useNavigate()
@@ -17,6 +18,10 @@ export default function TopUp() {
     const [loading, setLoading] = useState(true)
     const [selected, setSelected] = useState(null)
     const [tokens, setTokens] = useState(1)
+    
+    // State to toggle between the input modal and the confirmation modal overlay
+    const [showConfirmModal, setShowConfirmModal] = useState(false)
+
     const [topping, setTopping] = useState(false)
     const [success, setSuccess] = useState(null)
     const [error, setError] = useState('')
@@ -45,12 +50,24 @@ export default function TopUp() {
         ))
     }, [search, members])
 
-    const handleTopUp = async () => {
+    // Intercepts initial submit to open the confirmation modal popup
+    const handleInitialSubmit = () => {
+        if (!tokens || tokens <= 0) {
+            setError('Please enter a valid token amount.')
+            return
+        }
+        setError('')
+        setShowConfirmModal(true) // Opens the confirmation overlay modal
+    }
+
+    // Fires the actual API call when confirmed inside the overlay modal
+    const handleConfirmTopUp = async () => {
         setTopping(true)
         setError('')
         try {
             const result = await topUpMember(selected.id, tokens)
             setSuccess(result.data)
+            setShowConfirmModal(false)
             setSelected(null)
             setTokens(1)
             setMembers(prev => prev.map(m =>
@@ -60,6 +77,7 @@ export default function TopUp() {
             ))
         } catch (err) {
             setError(err.response?.data?.message || 'Something went wrong')
+            setShowConfirmModal(false) // Close confirm modal on error so they can see it
         } finally {
             setTopping(false)
         }
@@ -104,8 +122,8 @@ export default function TopUp() {
                     </div>
                 )}
 
-                {/* ACTIVE TOP UP CARD */}
-                {selected && (
+                {/* FIRST MODAL: Enter Tokens */}
+                {selected && !showConfirmModal && (
                     <TopUpModalCard
                         selected={selected}
                         tokens={tokens}
@@ -114,7 +132,20 @@ export default function TopUp() {
                         error={error}
                         topping={topping}
                         onCancel={() => { setSelected(null); setError('') }}
-                        onSubmit={handleTopUp}
+                        onSubmit={handleInitialSubmit}
+                    />
+                )}
+
+                {/* SECOND MODAL: Confirmation Overlay Popup */}
+                {showConfirmModal && selected && (
+                    <TopUpConfirmModal
+                        selected={selected}
+                        tokens={tokens}
+                        rate={RATE}
+                        topping={topping}
+                        error={error}
+                        onCancel={() => setShowConfirmModal(false)}
+                        onConfirm={handleConfirmTopUp}
                     />
                 )}
 
@@ -129,7 +160,7 @@ export default function TopUp() {
                         Loading members...
                     </div>
                 )}
-              {!loading && filtered.length === 0 && (
+                {!loading && filtered.length === 0 && (
                     <div style={{
                         textAlign: 'center',
                         color: '#8fa396',
@@ -146,7 +177,12 @@ export default function TopUp() {
                             key={member.id}
                             member={member}
                             isSelected={selected?.id === member.id}
-                            onClick={() => { setSelected(member); setSuccess(null); setError('') }}
+                            onClick={() => { 
+                                setSelected(member); 
+                                setShowConfirmModal(false);
+                                setSuccess(null); 
+                                setError('') 
+                            }}
                         />
                     ))}
                 </div>
