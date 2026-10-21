@@ -36,7 +36,7 @@ export default function Treasury() {
         expenses: ''
     })
 
-    const canLog = CAN_LOG.includes(member?.role) || member?.is_dev
+    const canLog = CAN_LOG.includes(member?.role)
 
     useEffect(() => {
         api.get('/expenses/summary')
@@ -167,6 +167,7 @@ export default function Treasury() {
                     submitting={submitting}
                     onSubmit={handleSubmit}
                     inputStyle={inputStyle}
+                    onClose={() => { setShowForm(false); setError('') }}
                     labelStyle={labelStyle}
                 />
 
