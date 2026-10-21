@@ -1,318 +1,174 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
-import {
-    ArrowLeft, TrendingUp, TrendingDown, Plus, AlertCircle
-} from 'lucide-react'
+import { ArrowLeft, Plus } from 'lucide-react'
 import api from '../../services/api'
 
+import { TreasuryForm } from '../../components/treasury/TreasuryForm'
+import { TabContentRenderer } from '../../components/treasury/TreasuryLists'
+
 const CAN_LOG = ['coordinator', 'treasurer', 'financial_secretary']
+const PAGE_SIZE = 5
 
 export default function Treasury() {
     const { member } = useAuth()
     const navigate = useNavigate()
     const [summary, setSummary] = useState(null)
     const [loading, setLoading] = useState(true)
+    const [activeTab, setActiveTab] = useState('general')
     const [showForm, setShowForm] = useState(false)
-    const [logType, setLogType] = useState('expense') // 'expense' | 'income'
+    const [logType, setLogType] = useState('expense')
     const [form, setForm] = useState({ amount: '', description: '', source: '' })
     const [submitting, setSubmitting] = useState(false)
     const [error, setError] = useState('')
 
-    const canLog = CAN_LOG.includes(member?.role)
+    // Pagination per tab
+    const [visibleCounts, setVisibleCounts] = useState({
+        tokens: PAGE_SIZE,
+        income: PAGE_SIZE,
+        expenses: PAGE_SIZE
+    })
+
+    // Date filters per tab
+    const [dateFilters, setDateFilters] = useState({
+        tokens: '',
+        income: '',
+        expenses: ''
+    })
+
+    const canLog = CAN_LOG.includes(member?.role) || member?.is_dev
 
     useEffect(() => {
-        const fetch = async () => {
-            try {
-                const result = await api.get('/expenses/summary')
-                setSummary(result.data.data)
-            } catch (err) {
-                console.error(err)
-            } finally {
-                setLoading(false)
-            }
-        }
-        fetch()
+        api.get('/expenses/summary')
+            .then(res => setSummary(res.data.data))
+            .catch(console.error)
+            .finally(() => setLoading(false))
     }, [])
 
     const handleSubmit = async (e) => {
         e.preventDefault()
         setSubmitting(true)
         setError('')
-
-        const numericAmount = parseInt(form.amount, 10)
-
         try {
             if (logType === 'expense') {
                 const result = await api.post('/expenses', {
-                    amount: numericAmount,
+                    amount: parseInt(form.amount),
                     description: form.description
                 })
                 setSummary(prev => ({
                     ...prev,
-                    total_expenses: (prev.total_expenses || 0) + numericAmount,
-                    balance: (prev.balance || 0) - numericAmount,
-                    expenses: [result.data.data.expense, ...(prev.expenses || [])]
+                    total_expenses: prev.total_expenses + parseInt(form.amount),
+                    balance: prev.balance - parseInt(form.amount),
+                    expenses: [result.data.data.expense, ...prev.expenses]
                 }))
             } else {
                 const result = await api.post('/income', {
-                    amount: numericAmount,
+                    amount: parseInt(form.amount),
                     description: form.description,
                     source: form.source
                 })
-                const newIncome = result.data.data.income || result.data.data
                 setSummary(prev => ({
                     ...prev,
-                    external_income: (prev.external_income || 0) + numericAmount,
-                    balance: (prev.balance || 0) + numericAmount,
-                    external_income_list: [newIncome, ...(prev.external_income_list || [])]
+                    external_income: prev.external_income + parseInt(form.amount),
+                    total_income: prev.total_income + parseInt(form.amount),
+                    balance: prev.balance + parseInt(form.amount),
+                    external_income_list: [result.data.data, ...prev.external_income_list]
                 }))
             }
-
             setForm({ amount: '', description: '', source: '' })
             setShowForm(false)
         } catch (err) {
-            setError(err.response?.data?.message || `Failed to log ${logType}`)
+            setError(err.response?.data?.message || 'Failed to log')
         } finally {
             setSubmitting(false)
         }
     }
 
     const inputStyle = {
-        width: '100%',
-        background: '#f2f4f7',
-        border: 'none',
-        borderRadius: '12px',
-        padding: '13px 14px',
-        fontSize: '0.85rem',
-        color: '#0d1b12',
-        outline: 'none',
+        width: '100%', background: '#f2f4f7', border: 'none',
+        borderRadius: '12px', padding: '13px 14px', fontSize: '0.85rem',
+        color: '#0d1b12', outline: 'none',
         fontFamily: "'Plus Jakarta Sans', sans-serif"
     }
 
     const labelStyle = {
-        display: 'block',
-        fontSize: '0.68rem',
-        fontWeight: 600,
-        color: '#4a5e52',
-        textTransform: 'uppercase',
-        letterSpacing: '0.5px',
-        marginBottom: '6px'
+        display: 'block', fontSize: '0.68rem', fontWeight: 600,
+        color: '#4a5e52', textTransform: 'uppercase',
+        letterSpacing: '0.5px', marginBottom: '6px'
+    }
+
+    const tabs = [
+        { key: 'general', label: 'General' },
+        { key: 'tokens', label: 'Tokens' },
+        { key: 'income', label: 'Income' },
+        { key: 'expenses', label: 'Expenses' }
+    ]
+
+    const loadMore = (tab) => {
+        setVisibleCounts(prev => ({ ...prev, [tab]: prev[tab] + PAGE_SIZE }))
     }
 
     return (
         <div style={{
-            minHeight: '100vh',
-            background: '#f2f4f7',
+            minHeight: '100vh', background: '#f2f4f7',
             fontFamily: "'Plus Jakarta Sans', sans-serif",
-            maxWidth: '390px',
-            margin: '0 auto',
-            paddingBottom: '100px'
+            maxWidth: '390px', margin: '0 auto', paddingBottom: '100px'
         }}>
-
             {/* HEADER */}
-
-            <div
-                style={{
-                    background: '#ffffff',
-                    padding: '52px 20px 16px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: '16px',
-                    boxShadow: '0 1px 0 #e8ece9'
-                }}
-            >
-                {/* Header title */}
-                <div
-                    style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '12px',
-                        minWidth: 0
-                    }}
-                >
-                    <div
-                        onClick={() => navigate('/')}
-                        style={{
-                            width: '36px',
-                            height: '36px',
-                            flexShrink: 0,
-                            background: '#f2f4f7',
-                            borderRadius: '50%',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            cursor: 'pointer'
-                        }}
-                    >
+            <div style={{
+                background: '#ffffff', padding: '52px 20px 16px',
+                display: 'flex', alignItems: 'center',
+                justifyContent: 'space-between', boxShadow: '0 1px 0 #e8ece9'
+            }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div onClick={() => navigate('/')} style={{
+                        width: '36px', height: '36px', background: '#f2f4f7',
+                        borderRadius: '50%', display: 'flex', alignItems: 'center',
+                        justifyContent: 'center', cursor: 'pointer'
+                    }}>
                         <ArrowLeft size={18} color="#4a5e52" />
                     </div>
-                    
                     <div>
-                        <div style={{
-                            fontSize: '1rem',
-                            fontWeight: 700,
-                            color: '#0d1b12'
-                        }}>
-                            Treasury
-                        </div>
-                    
-                        <div style={{
-                            fontSize: '0.72rem',
-                            color: '#8fa396'
-                        }}>
-                            Group finances
-                        </div>
+                        <div style={{ fontSize: '1rem', fontWeight: 700, color: '#0d1b12' }}>Treasury</div>
+                        <div style={{ fontSize: '0.72rem', color: '#8fa396' }}>Group finances</div>
                     </div>
                 </div>
-                    
                 {canLog && (
                     <button
-                        onClick={() => setShowForm(!showForm)}
+                        onClick={() => { setShowForm(!showForm); setError('') }}
                         style={{
                             background: showForm ? '#f2f4f7' : '#008751',
-                            border: 'none',
-                            borderRadius: '10px',
-                            padding: '8px 14px',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            fontSize: '0.78rem',
-                            fontWeight: 600,
+                            border: 'none', borderRadius: '10px',
+                            padding: '8px 14px', cursor: 'pointer',
+                            display: 'flex', alignItems: 'center', gap: '6px',
+                            fontSize: '0.78rem', fontWeight: 600,
                             color: showForm ? '#4a5e52' : 'white',
-                            fontFamily: "'Plus Jakarta Sans', sans-serif",
-                            whiteSpace: 'nowrap',
-                            flexShrink: 0
+                            fontFamily: "'Plus Jakarta Sans', sans-serif"
                         }}
                     >
                         <Plus size={14} color={showForm ? '#4a5e52' : 'white'} />
-                        {showForm ? 'Cancel' : 'Log Transaction'}
+                        {showForm ? 'Cancel' : 'Log'}
                     </button>
                 )}
             </div>
 
-
             <div style={{ padding: '16px 20px 0' }}>
 
-                {/* LOG TRANSACTION FORM */}
-                {showForm && canLog && (
-                    <div style={{
-                        background: '#ffffff',
-                        borderRadius: '18px',
-                        padding: '20px',
-                        boxShadow: '0 2px 12px rgba(0,0,0,0.07)',
-                        marginBottom: '16px'
-                    }}>
-                        {/* TOGGLE BUTTONS */}
-                        <div style={{ display: 'flex', gap: '8px', marginBottom: '14px' }}>
-                            <button
-                                type="button"
-                                onClick={() => setLogType('expense')}
-                                style={{
-                                    flex: 1, padding: '10px',
-                                    background: logType === 'expense' ? '#e53e3e' : '#f2f4f7',
-                                    color: logType === 'expense' ? 'white' : '#4a5e52',
-                                    border: 'none', borderRadius: '10px',
-                                    fontWeight: 600, fontSize: '0.82rem',
-                                    cursor: 'pointer',
-                                    fontFamily: "'Plus Jakarta Sans', sans-serif"
-                                }}
-                            >
-                                Log Expense
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setLogType('income')}
-                                style={{
-                                    flex: 1, padding: '10px',
-                                    background: logType === 'income' ? '#008751' : '#f2f4f7',
-                                    color: logType === 'income' ? 'white' : '#4a5e52',
-                                    border: 'none', borderRadius: '10px',
-                                    fontWeight: 600, fontSize: '0.82rem',
-                                    cursor: 'pointer',
-                                    fontFamily: "'Plus Jakarta Sans', sans-serif"
-                                }}
-                            >
-                                Log Income
-                            </button>
-                        </div>
-
-                        {error && (
-                            <div style={{
-                                background: '#fff0f0', color: '#e53e3e',
-                                fontSize: '0.8rem', padding: '10px 14px',
-                                borderRadius: '10px', marginBottom: '12px',
-                                display: 'flex', alignItems: 'center', gap: '6px'
-                            }}>
-                                <AlertCircle size={14} color="#e53e3e" />
-                                {error}
-                            </div>
-                        )}
-
-                        <form onSubmit={handleSubmit}>
-                            <div style={{ marginBottom: '12px' }}>
-                                <label style={labelStyle}>Amount (₦)</label>
-                                <input
-                                    type="number"
-                                    value={form.amount}
-                                    onChange={e => setForm({ ...form, amount: e.target.value })}
-                                    placeholder="e.g. 5000"
-                                    required
-                                    min="1"
-                                    style={inputStyle}
-                                />
-                            </div>
-
-                            {logType === 'income' && (
-                                <div style={{ marginBottom: '12px' }}>
-                                    <label style={labelStyle}>Source</label>
-                                    <input
-                                        type="text"
-                                        value={form.source || ''}
-                                        onChange={e => setForm({ ...form, source: e.target.value })}
-                                        placeholder="e.g. LGA donation, External sponsor"
-                                        required
-                                        style={inputStyle}
-                                    />
-                                </div>
-                            )}
-
-                            <div style={{ marginBottom: '16px' }}>
-                                <label style={labelStyle}>Description</label>
-                                <input
-                                    type="text"
-                                    value={form.description}
-                                    onChange={e => setForm({ ...form, description: e.target.value })}
-                                    placeholder={logType === 'expense' ? "e.g. Printing — clearance slips" : "e.g. CDS project support"}
-                                    required
-                                    style={inputStyle}
-                                />
-                            </div>
-
-                            <button
-                                type="submit"
-                                disabled={submitting}
-                                style={{
-                                    width: '100%',
-                                    background: submitting
-                                        ? '#c2e0cf'
-                                        : (logType === 'expense' ? '#e53e3e' : '#008751'),
-                                    border: 'none', borderRadius: '12px',
-                                    padding: '13px', cursor: submitting ? 'not-allowed' : 'pointer',
-                                    fontSize: '0.88rem', fontWeight: 700,
-                                    color: 'white',
-                                    fontFamily: "'Plus Jakarta Sans', sans-serif"
-                                }}
-                            >
-                                {submitting
-                                    ? 'Logging...'
-                                    : (logType === 'expense' ? 'Log Expense' : 'Log Income')}
-                            </button>
-                        </form>
-                    </div>
-                )}
+                {/* LOG FORM */}
+                <TreasuryForm
+                    showForm={showForm}
+                    canLog={canLog}
+                    logType={logType}
+                    setLogType={setLogType}
+                    setError={setError}
+                    error={error}
+                    form={form}
+                    setForm={setForm}
+                    submitting={submitting}
+                    onSubmit={handleSubmit}
+                    inputStyle={inputStyle}
+                    labelStyle={labelStyle}
+                />
 
                 {loading ? (
                     <div style={{ textAlign: 'center', color: '#8fa396', padding: '40px 0', fontSize: '0.82rem' }}>
@@ -322,225 +178,80 @@ export default function Treasury() {
                     <>
                         {/* BALANCE CARD */}
                         <div style={{
-                            background: '#008751',
-                            borderRadius: '18px',
-                            padding: '20px',
-                            marginBottom: '12px',
+                            background: '#008751', borderRadius: '18px',
+                            padding: '20px', marginBottom: '12px',
                             boxShadow: '0 4px 20px rgba(0,135,81,0.25)'
                         }}>
-                            <div style={{
-                                fontSize: '0.72rem', color: 'rgba(255,255,255,0.7)',
-                                textTransform: 'uppercase', letterSpacing: '0.8px',
-                                marginBottom: '6px'
-                            }}>
+                            <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '6px' }}>
                                 Current Balance
                             </div>
-                            <div style={{
-                                fontSize: '2.2rem', fontWeight: 800,
-                                color: 'white', lineHeight: 1, marginBottom: '6px'
-                            }}>
-                                ₦{(summary.balance || 0).toLocaleString()}
+                            <div style={{ fontSize: '2.2rem', fontWeight: 800, color: 'white', lineHeight: 1, marginBottom: '6px' }}>
+                                ₦{summary.balance.toLocaleString()}
                             </div>
                             <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.6)' }}>
-                                Treasurer should be holding this amount
+                                All income minus expenses
                             </div>
                         </div>
 
-                        {/* 3-COLUMN SUMMARY CARDS */}
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', marginBottom: '12px' }}>
-                            <div style={{ background: '#ffffff', borderRadius: '14px', padding: '14px', boxShadow: '0 2px 12px rgba(0,0,0,0.07)' }}>
-                                <div style={{ fontSize: '0.6rem', fontWeight: 600, color: '#8fa396', textTransform: 'uppercase', marginBottom: '6px' }}>Token Income</div>
-                                <div style={{ fontSize: '1rem', fontWeight: 800, color: '#008751' }}>₦{(summary.token_income || summary.total_income || 0).toLocaleString()}</div>
-                            </div>
-                            <div style={{ background: '#ffffff', borderRadius: '14px', padding: '14px', boxShadow: '0 2px 12px rgba(0,0,0,0.07)' }}>
-                                <div style={{ fontSize: '0.6rem', fontWeight: 600, color: '#8fa396', textTransform: 'uppercase', marginBottom: '6px' }}>External</div>
-                                <div style={{ fontSize: '1rem', fontWeight: 800, color: '#4f46e5' }}>₦{(summary.external_income || 0).toLocaleString()}</div>
-                            </div>
-                            <div style={{ background: '#ffffff', borderRadius: '14px', padding: '14px', boxShadow: '0 2px 12px rgba(0,0,0,0.07)' }}>
-                                <div style={{ fontSize: '0.6rem', fontWeight: 600, color: '#8fa396', textTransform: 'uppercase', marginBottom: '6px' }}>Spent</div>
-                                <div style={{ fontSize: '1rem', fontWeight: 800, color: '#e53e3e' }}>₦{(summary.total_expenses || 0).toLocaleString()}</div>
-                            </div>
-                        </div>
-
-                        {/* EXPENSE LIST */}
-                        <div style={{
-                            fontSize: '0.75rem', fontWeight: 700, color: '#8fa396',
-                            textTransform: 'uppercase', letterSpacing: '0.8px',
-                            marginBottom: '10px'
-                        }}>
-                            Expense History
-                        </div>
-
-                        {!summary.expenses || summary.expenses.length === 0 ? (
-                            <div style={{
-                                background: '#ffffff', borderRadius: '14px',
-                                padding: '24px', textAlign: 'center',
-                                color: '#8fa396', fontSize: '0.82rem',
-                                boxShadow: '0 2px 12px rgba(0,0,0,0.07)'
-                            }}>
-                                No expenses logged yet
-                            </div>
-                        ) : (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                {summary.expenses.map(expense => (
-                                    <div
-                                        key={expense.id}
-                                        style={{
-                                            background: '#ffffff',
-                                            borderRadius: '12px',
-                                            padding: '14px 16px',
-                                            boxShadow: '0 2px 12px rgba(0,0,0,0.07)',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '12px'
-                                        }}
-                                    >
-                                        <div style={{
-                                            width: '40px', height: '40px',
-                                            background: '#fff0f0', borderRadius: '12px',
-                                            display: 'flex', alignItems: 'center',
-                                            justifyContent: 'center', flexShrink: 0
-                                        }}>
-                                            <TrendingDown size={18} color="#e53e3e" />
-                                        </div>
-                                        <div style={{ flex: 1 }}>
-                                            <div style={{
-                                                fontSize: '0.85rem', fontWeight: 600,
-                                                color: '#0d1b12', marginBottom: '2px'
-                                            }}>
-                                                {expense.description}
-                                            </div>
-                                            <div style={{ fontSize: '0.7rem', color: '#8fa396' }}>
-                                                By {expense.first_name} {expense.last_name} · {new Date(expense.created_at).toLocaleDateString('en-GB', {
-                                                    day: 'numeric', month: 'short', year: 'numeric'
-                                                })}
-                                            </div>
-                                        </div>
-                                        <div style={{
-                                            fontSize: '0.95rem', fontWeight: 800,
-                                            color: '#e53e3e'
-                                        }}>
-                                            -₦{(expense.amount_naira || expense.amount || 0).toLocaleString()}
-                                        </div>
+                        {/* SUMMARY CHIPS */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginBottom: '16px' }}>
+                            {[
+                                { label: 'Token Income', value: summary.token_income, color: '#008751', bg: '#e6f4ee' },
+                                { label: 'External', value: summary.external_income, color: '#4f46e5', bg: '#eef2ff' },
+                                { label: 'Spent', value: summary.total_expenses, color: '#e53e3e', bg: '#fff0f0' }
+                            ].map(item => (
+                                <div key={item.label} style={{
+                                    background: '#ffffff', borderRadius: '12px',
+                                    padding: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
+                                }}>
+                                    <div style={{ fontSize: '0.58rem', fontWeight: 600, color: '#8fa396', textTransform: 'uppercase', marginBottom: '5px' }}>
+                                        {item.label}
                                     </div>
-                                ))}
-                            </div>
-                        )}
-
-                        {/* TOPUPS LIST */}
-                        <div style={{
-                            fontSize: '0.75rem', fontWeight: 700, color: '#8fa396',
-                            textTransform: 'uppercase', letterSpacing: '0.8px',
-                            marginBottom: '10px', marginTop: '16px'
-                        }}>
-                            Token Income History
+                                    <div style={{ fontSize: '0.92rem', fontWeight: 800, color: item.color }}>
+                                        ₦{item.value.toLocaleString()}
+                                    </div>
+                                </div>
+                            ))}
                         </div>
 
-                        {!summary.topups || summary.topups.length === 0 ? (
-                            <div style={{
-                                background: '#ffffff', borderRadius: '14px',
-                                padding: '24px', textAlign: 'center',
-                                color: '#8fa396', fontSize: '0.82rem',
-                                boxShadow: '0 2px 12px rgba(0,0,0,0.07)'
-                            }}>
-                                No income recorded yet
-                            </div>
-                        ) : (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                {summary.topups.map(topup => (
-                                    <div
-                                        key={topup.id}
-                                        style={{
-                                            background: '#ffffff',
-                                            borderRadius: '12px',
-                                            padding: '14px 16px',
-                                            boxShadow: '0 2px 12px rgba(0,0,0,0.07)',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '12px'
-                                        }}
-                                    >
-                                        <div style={{
-                                            width: '40px', height: '40px',
-                                            background: '#e6f4ee', borderRadius: '12px',
-                                            display: 'flex', alignItems: 'center',
-                                            justifyContent: 'center', flexShrink: 0
-                                        }}>
-                                            <TrendingUp size={18} color="#008751" />
-                                        </div>
-                                        <div style={{ flex: 1 }}>
-                                            <div style={{
-                                                fontSize: '0.85rem', fontWeight: 600,
-                                                color: '#0d1b12', marginBottom: '2px'
-                                            }}>
-                                                {topup.member_first_name} {topup.member_last_name}
-                                            </div>
-                                            <div style={{ fontSize: '0.7rem', color: '#8fa396' }}>
-                                                By {topup.treasurer_first_name} {topup.treasurer_last_name} · {new Date(topup.created_at).toLocaleDateString('en-GB', {
-                                                    day: 'numeric', month: 'short', year: 'numeric'
-                                                })}
-                                            </div>
-                                        </div>
-                                        <div style={{
-                                            fontSize: '0.95rem', fontWeight: 800,
-                                            color: '#008751'
-                                        }}>
-                                            +₦{(topup.naira_value || 0).toLocaleString()}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-
-                        {/* EXTERNAL INCOME LIST */}
+                        {/* TABS */}
                         <div style={{
-                            fontSize: '0.75rem', fontWeight: 700, color: '#8fa396',
-                            textTransform: 'uppercase', letterSpacing: '0.8px',
-                            marginBottom: '10px', marginTop: '16px'
+                            display: 'flex', background: '#ffffff',
+                            borderRadius: '14px', padding: '4px',
+                            marginBottom: '14px', gap: '2px',
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
                         }}>
-                            External Income
+                            {tabs.map(tab => (
+                                <button
+                                    key={tab.key}
+                                    onClick={() => setActiveTab(tab.key)}
+                                    style={{
+                                        flex: 1, padding: '8px 4px',
+                                        background: activeTab === tab.key ? '#008751' : 'transparent',
+                                        border: 'none', borderRadius: '10px',
+                                        cursor: 'pointer', fontSize: '0.68rem',
+                                        fontWeight: 600,
+                                        color: activeTab === tab.key ? 'white' : '#8fa396',
+                                        fontFamily: "'Plus Jakarta Sans', sans-serif",
+                                        transition: 'all 0.15s'
+                                    }}
+                                >
+                                    {tab.label}
+                                </button>
+                            ))}
                         </div>
 
-                        {!summary.external_income_list || summary.external_income_list.length === 0 ? (
-                            <div style={{
-                                background: '#ffffff', borderRadius: '14px',
-                                padding: '24px', textAlign: 'center',
-                                color: '#8fa396', fontSize: '0.82rem',
-                                boxShadow: '0 2px 12px rgba(0,0,0,0.07)'
-                            }}>
-                                No external income recorded yet
-                            </div>
-                        ) : (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                {summary.external_income_list.map(item => (
-                                    <div key={item.id} style={{
-                                        background: '#ffffff', borderRadius: '12px',
-                                        padding: '14px 16px', boxShadow: '0 2px 12px rgba(0,0,0,0.07)',
-                                        display: 'flex', alignItems: 'center', gap: '12px'
-                                    }}>
-                                        <div style={{
-                                            width: '40px', height: '40px',
-                                            background: '#eef2ff', borderRadius: '12px',
-                                            display: 'flex', alignItems: 'center',
-                                            justifyContent: 'center', flexShrink: 0
-                                        }}>
-                                            <TrendingUp size={18} color="#4f46e5" />
-                                        </div>
-                                        <div style={{ flex: 1 }}>
-                                            <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#0d1b12', marginBottom: '2px' }}>
-                                                {item.description}
-                                            </div>
-                                            <div style={{ fontSize: '0.7rem', color: '#8fa396' }}>
-                                                From {item.source} · By {item.first_name} {item.last_name} · {new Date(item.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
-                                            </div>
-                                        </div>
-                                        <div style={{ fontSize: '0.95rem', fontWeight: 800, color: '#4f46e5' }}>
-                                            +₦{(item.amount_naira || item.amount || 0).toLocaleString()}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
+                        {/* TAB CONTENT RENDERER */}
+                        <TabContentRenderer
+                            activeTab={activeTab}
+                            summary={summary}
+                            dateFilters={dateFilters}
+                            setDateFilters={setDateFilters}
+                            visibleCounts={visibleCounts}
+                            setVisibleCounts={setVisibleCounts}
+                            pageSize={PAGE_SIZE}
+                            loadMore={loadMore}
+                        />
                     </>
                 )}
             </div>
