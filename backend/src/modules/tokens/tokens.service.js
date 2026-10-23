@@ -168,8 +168,6 @@ export const transferTokens = async (senderId, recipientStateCode, tokensToTrans
 
     try {
         await client.query('BEGIN')
-
-        // Row lock on sender to avoid race conditions or double spending
         const senderResult = await client.query(
             'SELECT id, first_name, last_name, token_balance FROM members WHERE id = $1 FOR UPDATE',
             [senderId]
