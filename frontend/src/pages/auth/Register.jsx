@@ -26,7 +26,13 @@ export default function Register() {
     const [selectedStream, setSelectedStream] = useState(null)
     const [error, setError] = useState('')
     const [loading, setLoading] = useState(false)
+    const validateStateCode = (code) => {
+        const regex = /^[A-Z]{2,3}\/[A-Z0-9]{3}\/\d{4,5}$/
+        return regex.test(code.toUpperCase())
+    }
 
+
+    
     useEffect(() => {
         const fetchStreams = async () => {
             try {
@@ -38,7 +44,7 @@ export default function Register() {
         }
         fetchStreams()
     }, [])
-
+    
     const handleChange = (e) => {
         const { name, value } = e.target
         let updatedForm = { ...form, [name]: value }
@@ -56,14 +62,14 @@ export default function Register() {
                 // Preserve user's unique 4-5 digit code if already entered
                 const existingParts = form.state_code.split('/')
                 const userNumber = existingParts[2] || ''
-
+                
                 updatedForm.state_code = `${generatedPrefix}/${userNumber}`
             }
         }
-
+        
         setForm(updatedForm)
     }
-
+    
     const handleSubmit = async (e) => {
         e.preventDefault()
         if (!form.stream_id) {
@@ -78,9 +84,13 @@ export default function Register() {
             setError('PIN must be at least 4 digits')
             return
         }
+        if (!validateStateCode(form.state_code)) {
+            setError('Invalid state code.')
+            return
+        }
         setLoading(true)
         setError('')
-
+        
         try {
             const result = await registerService(form)
             login(result.data.member, result.data.token)

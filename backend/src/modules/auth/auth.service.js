@@ -51,6 +51,16 @@ export const registerMember = async (data) => {
         throw { status: 400, message: 'State code is required.' }
     }
 
+    // Validate state code format — e.g. LA/26B/1879
+    const stateCodeRegex = /^[A-Z]{2,3}\/[A-Z0-9]{3}\/\d{4,5}$/
+    
+    if (!stateCodeRegex.test(cleanStateCode)) {
+        throw {
+            status: 400,
+            message: 'Invalid state code format. Expected format: LA/26B/1879 — two or three letters, slash, three alphanumeric characters, slash, four or five digits.'
+        }
+    }
+
     // 3. Validate PIN
     const pinValidation = validatePin(pin)
     if (!pinValidation.valid) {

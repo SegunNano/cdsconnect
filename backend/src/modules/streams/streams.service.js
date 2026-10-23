@@ -9,9 +9,13 @@ export const getAllStreams = async () => {
 
 export const getActiveStreams = async () => {
     const result = await pool.query(
-        `SELECT * FROM streams 
-        WHERE is_active = true 
-        ORDER BY year DESC, batch ASC, stream ASC`
+        `SELECT 
+            id, year, batch, stream,
+            callup_date, service_end
+        FROM streams
+        WHERE is_active = true
+        ORDER BY callup_date DESC
+        LIMIT 1`
     )
     return result.rows
 }

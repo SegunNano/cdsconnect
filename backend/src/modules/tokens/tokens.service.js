@@ -3,7 +3,6 @@ import { RATE, NOTIFICATION_TYPES } from '../../constants.js'
 import { createNotification } from '../notifications/notifications.service.js'
 
 export const topUpTokens = async (treasurerId, memberId, tokensToAdd) => {
-    // Verify treasurer exists
     const treasurerResult = await pool.query(
         'SELECT id, role FROM members WHERE id = $1',
         [treasurerId]
@@ -12,7 +11,6 @@ export const topUpTokens = async (treasurerId, memberId, tokensToAdd) => {
         throw { status: 404, message: 'Treasurer not found' }
     }
 
-    // Verify member exists
     const memberResult = await pool.query(
         'SELECT id, first_name, last_name, token_balance FROM members WHERE id = $1',
         [memberId]
@@ -24,7 +22,6 @@ export const topUpTokens = async (treasurerId, memberId, tokensToAdd) => {
     const member = memberResult.rows[0]
     const nairaValue = tokensToAdd * RATE
 
-    // Add tokens to member balance
     const updatedMember = await pool.query(
         `UPDATE members 
         SET token_balance = token_balance + $1 
@@ -33,7 +30,6 @@ export const topUpTokens = async (treasurerId, memberId, tokensToAdd) => {
         [tokensToAdd, memberId]
     )
 
-    // Record topup
     await pool.query(
         `INSERT INTO topups (member_id, tokens_added, naira_value, performed_by)
         VALUES ($1, $2, $3, $4)`,
@@ -45,7 +41,7 @@ export const topUpTokens = async (treasurerId, memberId, tokensToAdd) => {
         'Tokens Added',
         `${tokensToAdd} token(s) have been added to your account. New balance: ${updatedMember.rows[0].token_balance} tokens.`,
         NOTIFICATION_TYPES.TOPUP
-    )
+    ).catch(err => console.error('Notification error:', err))
 
     return {
         member: updatedMember.rows[0],
@@ -70,49 +66,81 @@ export const getMemberTopUpHistory = async (memberId) => {
     return result.rows
 }
 
-export const getMyTopUpHistory = async (memberId)=> {
-        // Get topups
-        const topupsResult = await pool.query(
-            `SELECT 
-                'topup' AS type,
-                t.tokens_added AS tokens,
-                t.naira_value,
-                t.created_at,
-                m.first_name AS performed_by_first,
-                m.last_name AS performed_by_last
-            FROM topups t
-            JOIN members m ON t.performed_by = m.id
-            WHERE t.member_id = $1`,
-            [memberId]
-        )
+export const getMyTopUpHistory = async (memberId) => {
+    // 1. Top-ups
+    const topupsResult = await pool.query(
+        `SELECT 
+            'topup' AS type,
+            t.tokens_added AS tokens,
+            t.naira_value,
+            t.created_at,
+            m.first_name AS performed_by_first,
+            m.last_name AS performed_by_last
+        FROM topups t
+        JOIN members m ON t.performed_by = m.id
+        WHERE t.member_id = $1`,
+        [memberId]
+    )
 
-        // Get deductions from attendance
-        const deductionsResult = await pool.query(
-            `SELECT 
-                'deduction' AS type,
-                a.tokens_deducted AS tokens,
-                (a.tokens_deducted * $2) AS naira_value,
-                a.signed_in_at AS created_at,
-                mt.title AS meeting_title,
-                a.is_late,
-                CASE 
-                    WHEN a.excuse_id IS NOT NULL THEN 'excuse'
-                    WHEN a.marked_present_by IS NOT NULL THEN 'manual'
-                    ELSE 'attendance'
-                END AS deduction_type
-            FROM attendance a
-            JOIN meetings mt ON a.meeting_id = mt.id
-            WHERE a.member_id = $1`,
-            [memberId, RATE]
-        )
+    // 2. Deductions (Attendance)
+    const deductionsResult = await pool.query(
+        `SELECT 
+            'deduction' AS type,
+            a.tokens_deducted AS tokens,
+            (a.tokens_deducted * $2) AS naira_value,
+            a.signed_in_at AS created_at,
+            mt.title AS meeting_title,
+            a.is_late,
+            CASE 
+                WHEN a.excuse_id IS NOT NULL THEN 'excuse'
+                WHEN a.marked_present_by IS NOT NULL THEN 'manual'
+                ELSE 'attendance'
+            END AS deduction_type
+        FROM attendance a
+        JOIN meetings mt ON a.meeting_id = mt.id
+        WHERE a.member_id = $1`,
+        [memberId, RATE]
+    )
 
-        // Combine and sort by date
-        const history = [
-            ...topupsResult.rows,
-            ...deductionsResult.rows
-        ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+    // 3. Transfers Sent
+    const transfersSentResult = await pool.query(
+        `SELECT 
+            'transfer_sent' AS type,
+            tt.tokens AS tokens,
+            tt.created_at,
+            m.first_name AS recipient_name,
+            m.last_name AS recipient_last,
+            m.state_code AS recipient_state_code
+        FROM token_transfers tt
+        JOIN members m ON tt.recipient_id = m.id
+        WHERE tt.sender_id = $1`,
+        [memberId]
+    )
 
-     return history
+    // 4. Transfers Received
+    const transfersReceivedResult = await pool.query(
+        `SELECT 
+            'transfer_received' AS type,
+            tt.tokens AS tokens,
+            tt.created_at,
+            m.first_name AS sender_name,
+            m.last_name AS sender_last,
+            m.state_code AS sender_state_code
+        FROM token_transfers tt
+        JOIN members m ON tt.sender_id = m.id
+        WHERE tt.recipient_id = $1`,
+        [memberId]
+    )
+
+    // Combine & sort all timeline events
+    const history = [
+        ...topupsResult.rows,
+        ...deductionsResult.rows,
+        ...transfersSentResult.rows,
+        ...transfersReceivedResult.rows
+    ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+
+    return history
 }
 
 export const getAllTopUps = async () => {
@@ -130,3 +158,100 @@ export const getAllTopUps = async () => {
     )
     return result.rows
 }
+
+export const transferTokens = async (senderId, recipientStateCode, tokensToTransfer) => {
+    if (tokensToTransfer < 1) {
+        throw { status: 400, message: 'Must transfer at least 1 token.' }
+    }
+
+    const client = await pool.connect()
+
+    console.log({senderId, recipientStateCode, tokensToTransfer})
+
+    try {
+        await client.query('BEGIN')
+
+        // Row lock on sender to avoid race conditions or double spending
+        const senderResult = await client.query(
+            'SELECT id, first_name, last_name, token_balance FROM members WHERE id = $1 FOR UPDATE',
+            [senderId]
+        )
+        const sender = senderResult.rows[0]
+
+        if (sender.token_balance < tokensToTransfer) {
+            throw {
+                status: 400,
+                message: `Insufficient tokens. You have ${sender.token_balance} token${sender.token_balance !== 1 ? 's' : ''}.`
+            }
+        }
+
+        const recipientResult = await client.query(
+            `SELECT id, first_name, last_name, token_balance, is_active, member_type
+            FROM members WHERE state_code = $1`,
+            [recipientStateCode.toUpperCase().trim()]
+        )
+
+        if (recipientResult.rows.length === 0) {
+            throw { status: 404, message: 'Member with that state code not found.' }
+        }
+
+        const recipient = recipientResult.rows[0]
+
+        if (recipient.id === senderId) {
+            throw { status: 400, message: 'You cannot transfer tokens to yourself.' }
+        }
+
+        if (!recipient.is_active) {
+            throw { status: 400, message: 'That member account is no longer active.' }
+        }
+
+        if (recipient.member_type !== 'corps_member') {
+            throw { status: 400, message: 'Tokens can only be transferred to corps members.' }
+        }
+
+        await client.query(
+            'UPDATE members SET token_balance = token_balance - $1 WHERE id = $2',
+            [tokensToTransfer, senderId]
+        )
+
+        await client.query(
+            'UPDATE members SET token_balance = token_balance + $1 WHERE id = $2',
+            [tokensToTransfer, recipient.id]
+        )
+
+        await client.query(
+            `INSERT INTO token_transfers (sender_id, recipient_id, tokens)
+            VALUES ($1, $2, $3)`,
+            [senderId, recipient.id, tokensToTransfer]
+        )
+
+        await client.query('COMMIT')
+
+        await createNotification(
+            senderId,
+            'Tokens Sent',
+            `You sent ${tokensToTransfer} token${tokensToTransfer !== 1 ? 's' : ''} to ${recipient.first_name} ${recipient.last_name} (${recipientStateCode.toUpperCase()}).`,
+            'token_transfer'
+        ).catch(err => console.error('Notification error:', err))
+
+        await createNotification(
+            recipient.id,
+            'Tokens Received 🎉',
+            `${sender.first_name} ${sender.last_name} sent you ${tokensToTransfer} token${tokensToTransfer !== 1 ? 's' : ''}.`,
+            'token_transfer'
+        ).catch(err => console.error('Notification error:', err))
+
+        return {
+            sent: tokensToTransfer,
+            recipient_name: `${recipient.first_name} ${recipient.last_name}`,
+            new_balance: sender.token_balance - tokensToTransfer
+        }
+
+    } catch (err) {
+        await client.query('ROLLBACK')
+        throw err
+    } finally {
+        client.release()
+    }
+}
+

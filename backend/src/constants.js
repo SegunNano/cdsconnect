@@ -36,7 +36,8 @@ export const NOTIFICATION_TYPES = {
     LOW_TOKEN: 'low_token',
     CLEARANCE_READY: 'clearance_ready',
     EXPENSE_LOGGED: 'expense_logged',
-    REINSTATEMENT: 'reinstatement'
+    REINSTATEMENT: 'reinstatement',
+    TOKEN_TRANSFER: 'token_transfer'
 }
 
 export const EXCUSE_STATUS = {
