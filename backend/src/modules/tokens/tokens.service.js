@@ -166,8 +166,6 @@ export const transferTokens = async (senderId, recipientStateCode, tokensToTrans
 
     const client = await pool.connect()
 
-    console.log({senderId, recipientStateCode, tokensToTransfer})
-
     try {
         await client.query('BEGIN')
 

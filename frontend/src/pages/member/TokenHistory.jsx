@@ -1,17 +1,20 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, TrendingUp, TrendingDown, Coins, ArrowRightLeft, Send, X } from 'lucide-react'
+import { ArrowLeft, TrendingUp, TrendingDown, Coins, ArrowRightLeft, Send, X, Gift, PartyPopper } from 'lucide-react'
 import { getMyTokenHistory, transferTokens } from '../../services/tokens.service'
 import { useAuth } from '../../context/AuthContext'
 import { RATE } from '../../constants'
+import { getMyProfile } from '../../services/members.service'
+import StateCodeInput from '../../components/common/StateCodeInput'
+import { TokenCounter } from '../../components/tokens/TokenCounter'
 
 export default function TokenHistory() {
     const navigate = useNavigate()
-    const { member, setMember } = useAuth() // Assuming setMember or a refresh function exists to update balance
+    const { member, setMember } = useAuth()
     const [history, setHistory] = useState([])
     const [loading, setLoading] = useState(true)
 
-    // Modal state for gifting tokens
+    // Modal state
     const [showGiftModal, setShowGiftModal] = useState(false)
     const [recipientStateCode, setRecipientStateCode] = useState('')
     const [transferAmount, setTransferAmount] = useState(1)
@@ -22,9 +25,14 @@ export default function TokenHistory() {
     const fetchHistory = async () => {
         try {
             const result = await getMyTokenHistory()
-            setHistory(result.data)
+            const historyArray = Array.isArray(result) 
+                ? result 
+                : (result?.data?.history || result?.history || result?.data || [])
+            
+            setHistory(Array.isArray(historyArray) ? historyArray : [])
         } catch (err) {
             console.error(err)
+            setHistory([])
         } finally {
             setLoading(false)
         }
@@ -34,15 +42,16 @@ export default function TokenHistory() {
         fetchHistory()
     }, [])
 
+
     const handleTransfer = async (e) => {
         e.preventDefault()
         setTransferError('')
         setTransferSuccess('')
 
         const parsedTokens = parseInt(transferAmount, 10)
-        
+
         if (isNaN(parsedTokens) || parsedTokens < 1) {
-            setTransferError('Please enter a valid number of tokens (at least 1).')
+            setTransferError('Please enter a valid number of tokens.')
             return
         }
 
@@ -50,23 +59,32 @@ export default function TokenHistory() {
 
         try {
             const res = await transferTokens(recipientStateCode.trim(), parsedTokens)
-            setTransferSuccess(`Successfully sent ${parsedTokens} token(s) to ${res.recipient_name}!`)
-            
-            // 1. Immediately update local member state balance if setMember is available
-            if (setMember && member) {
-                setMember(prev => ({
-                    ...prev,
-                    token_balance: prev.token_balance - parsedTokens
-                }))
+            const data = res?.data || res
+            const recipientName = data?.recipient_name || 'member'
+
+            setTransferSuccess(`Successfully sent ${parsedTokens} token(s) to ${recipientName}!`)
+
+            // 1. Fetch fresh profile from server
+            const memberRes = await getMyProfile()
+            const freshMemberData = memberRes?.data || memberRes
+
+            // 2. Safely update member state using whichever method exists in your AuthContext
+            if (typeof setMember === 'function') {
+                setMember(freshMemberData)
+            } else if (member && freshMemberData?.token_balance !== undefined) {
+                // Fallback: If setMember isn't a function, mutate or force sync if possible, 
+                // otherwise reload window cleanly to refresh AuthContext
+                window.location.reload()
             }
 
-            // 2. Clear form, close modal, and refresh history list
+            // 3. Refresh history timeline
+            await fetchHistory()
+
             setTimeout(() => {
                 setShowGiftModal(false)
                 setRecipientStateCode('')
                 setTransferAmount(1)
                 setTransferSuccess('')
-                fetchHistory() // Pulls latest history from backend including the new transfer
             }, 1200)
 
         } catch (err) {
@@ -78,19 +96,19 @@ export default function TokenHistory() {
 
     const totalTopups = history
         .filter(h => h.type === 'topup')
-        .reduce((sum, h) => sum + parseInt(h.tokens), 0)
+        .reduce((sum, h) => sum + parseInt(h.tokens || 0), 0)
 
     const totalDeductions = history
         .filter(h => h.type === 'deduction')
-        .reduce((sum, h) => sum + parseInt(h.tokens), 0)
+        .reduce((sum, h) => sum + parseInt(h.tokens || 0), 0)
 
     const totalTransfersSent = history
         .filter(h => h.type === 'transfer_sent')
-        .reduce((sum, h) => sum + parseInt(h.tokens), 0)
+        .reduce((sum, h) => sum + parseInt(h.tokens || 0), 0)
 
     const totalTransfersReceived = history
         .filter(h => h.type === 'transfer_received')
-        .reduce((sum, h) => sum + parseInt(h.tokens), 0)
+        .reduce((sum, h) => sum + parseInt(h.tokens || 0), 0)
 
     const getItemConfig = (item) => {
         switch (item.type) {
@@ -98,8 +116,8 @@ export default function TokenHistory() {
                 return {
                     icon: <TrendingUp size={18} color="#008751" />,
                     iconBg: '#e6f4ee',
-                    title: `Top-up by ${item.performed_by_first} ${item.performed_by_last}`,
-                    subtitle: `₦${parseInt(item.naira_value).toLocaleString()} paid`,
+                    title: `Top-up by ${item.performed_by_first || ''} ${item.performed_by_last || ''}`,
+                    subtitle: `₦${parseInt(item.naira_value || 0).toLocaleString()} paid`,
                     amount: `+${item.tokens}`,
                     color: '#008751'
                 }
@@ -107,7 +125,7 @@ export default function TokenHistory() {
                 return {
                     icon: <ArrowRightLeft size={18} color="#e53e3e" />,
                     iconBg: '#fff0f0',
-                    title: `Sent to ${item.recipient_name} ${item.recipient_last || ''}`,
+                    title: `Sent to ${item.recipient_name || ''} ${item.recipient_last || ''}`,
                     subtitle: item.recipient_state_code,
                     amount: `-${item.tokens}`,
                     color: '#e53e3e'
@@ -116,7 +134,7 @@ export default function TokenHistory() {
                 return {
                     icon: <ArrowRightLeft size={18} color="#4f46e5" />,
                     iconBg: '#eef2ff',
-                    title: `Received from ${item.sender_name} ${item.sender_last || ''}`,
+                    title: `Received from ${item.sender_name || ''} ${item.sender_last || ''}`,
                     subtitle: item.sender_state_code,
                     amount: `+${item.tokens}`,
                     color: '#4f46e5'
@@ -126,7 +144,7 @@ export default function TokenHistory() {
                 return {
                     icon: <TrendingDown size={18} color="#e53e3e" />,
                     iconBg: '#fff0f0',
-                    title: item.meeting_title,
+                    title: item.meeting_title || 'Deduction',
                     subtitle: item.deduction_type === 'excuse' ? 'Excused absence'
                         : item.deduction_type === 'manual' ? 'Manual marking'
                         : item.is_late ? 'Late attendance' : 'Attendance',
@@ -165,7 +183,6 @@ export default function TokenHistory() {
                     </div>
                 </div>
 
-                {/* GIFT BUTTON */}
                 <button
                     onClick={() => { setShowGiftModal(true); setTransferError(''); setTransferSuccess('') }}
                     style={{
@@ -298,7 +315,7 @@ export default function TokenHistory() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     {history.map((item, index) => {
                         const config = getItemConfig(item)
-                        const date = new Date(item.created_at)
+                        const date = item.created_at ? new Date(item.created_at) : new Date()
 
                         return (
                             <div
@@ -363,8 +380,9 @@ export default function TokenHistory() {
                     }} onClick={e => e.stopPropagation()}>
                         
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                            <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0d1b12' }}>
-                                Gift Tokens 🎁
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.95rem', fontWeight: 700, color: '#0d1b12' }}>
+                                <Gift size={18} color="#008751" />
+                                Gift Tokens
                             </div>
                             <button onClick={() => setShowGiftModal(false)} style={{
                                 background: '#f2f4f7', border: 'none', borderRadius: '50%',
@@ -387,46 +405,34 @@ export default function TokenHistory() {
                         {transferSuccess && (
                             <div style={{
                                 background: '#e6f4ee', color: '#008751', fontSize: '0.8rem',
-                                padding: '10px 14px', borderRadius: '10px', marginBottom: '12px', fontWeight: 600
+                                padding: '10px 14px', borderRadius: '10px', marginBottom: '12px', fontWeight: 600,
+                                display: 'flex', alignItems: 'center', gap: '8px'
                             }}>
+                                <PartyPopper size={16} color="#008751" />
                                 {transferSuccess}
                             </div>
                         )}
 
                         <form onSubmit={handleTransfer}>
-                            <div style={{ marginBottom: '12px' }}>
-                                <label style={{ display: 'block', fontSize: '0.68rem', fontWeight: 600, color: '#4a5e52', textTransform: 'uppercase', marginBottom: '6px' }}>
+                            <div style={{ marginBottom: '16px' }}>
+                                <label style={{ display: 'block', fontSize: '0.68rem', fontWeight: 600, color: '#4a5e52', textTransform: 'uppercase', marginBottom: '8px' }}>
                                     Recipient State Code
                                 </label>
-                                <input
-                                    type="text"
+                                <StateCodeInput
                                     value={recipientStateCode}
-                                    onChange={e => setRecipientStateCode(e.target.value)}
-                                    placeholder="e.g. LA/26A/1234"
-                                    required
-                                    style={{
-                                        width: '100%', background: '#f2f4f7', border: 'none',
-                                        borderRadius: '12px', padding: '12px 14px', fontSize: '0.85rem',
-                                        color: '#0d1b12', outline: 'none', fontFamily: "'Plus Jakarta Sans', sans-serif"
-                                    }}
+                                    onChange={setRecipientStateCode}
+                                    disabled={transferring}
                                 />
                             </div>
 
                             <div style={{ marginBottom: '20px' }}>
-                                <label style={{ display: 'block', fontSize: '0.68rem', fontWeight: 600, color: '#4a5e52', textTransform: 'uppercase', marginBottom: '6px' }}>
+                                <label style={{ display: 'block', fontSize: '0.68rem', fontWeight: 600, color: '#4a5e52', textTransform: 'uppercase', marginBottom: '8px' }}>
                                     Number of Tokens
                                 </label>
-                                <input
-                                    type="number"
-                                    min="1"
-                                    value={transferAmount}
-                                    onChange={e => setTransferAmount(e.target.value)}
-                                    required
-                                    style={{
-                                        width: '100%', background: '#f2f4f7', border: 'none',
-                                        borderRadius: '12px', padding: '12px 14px', fontSize: '0.85rem',
-                                        color: '#0d1b12', outline: 'none', fontFamily: "'Plus Jakarta Sans', sans-serif"
-                                    }}
+                                <TokenCounter
+                                    tokens={transferAmount}
+                                    rate={RATE}
+                                    onChange={setTransferAmount}
                                 />
                             </div>
 

@@ -16,7 +16,8 @@ export const getMyTopUps = async () => {
 }
 export const getMyTokenHistory = async () => {
     const response = await api.get('/tokens/history')
-    return response.data
+    // Return array payload directly regardless of backend format wrapper
+    return response.data?.data || response.data
 }
 
 
