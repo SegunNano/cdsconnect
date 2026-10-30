@@ -25,6 +25,24 @@ pool.on('connect', () => {
     console.log('PostgreSQL connected')
 })
 
+// --- DATABASE ACTIVITY TRACKER ---
+let lastDbActivity = Date.now()
+
+// Save the original query method
+const originalQuery = pool.query.bind(pool)
+
+// Override pool.query so it automatically updates the timestamp on EVERY call
+pool.query = async (...args) => {
+    lastDbActivity = Date.now()
+    return originalQuery(...args)
+}
+
+// Helper to check how long it's been since the database was last hit
+export function getLastDbActivity() {
+    return lastDbActivity
+}
+// ---------------------------------
+
 pool.query('SELECT 1')
     .then(() => console.log('Database is ready'))
     .catch(err => console.error('Database connection failed:', err.message))

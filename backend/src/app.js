@@ -4,6 +4,8 @@ import helmet from 'helmet'
 import rateLimit from 'express-rate-limit'
 import { globalSanitizer } from './middlewares/sanitizers.js'
 import dotenv from 'dotenv'
+import pool, { getLastDbActivity } from './config/db.js'
+
 dotenv.config()
 
 import authRoutes from './modules/auth/auth.routes.js'
@@ -39,6 +41,21 @@ if (process.env.NODE_ENV === 'development') {
         next()
     })
 }
+
+// ── HEALTH CHECK (Placed above CORS & Rate Limiting for optimal speed) ──
+const DB_IDLE_LIMIT = 6 * 60 * 60 * 1000 // 6 hours
+
+app.get('/api/health', async (req, res) => {
+    try {
+        const idleFor = Date.now() - getLastDbActivity()
+        if (idleFor > DB_IDLE_LIMIT) {
+            await pool.query('SELECT 1')
+        }
+        res.status(200).json({ status: 'ok' })
+    } catch (err) {
+        res.status(500).json({ status: 'error' })
+    }
+})
 
 // ── 2. CORS ──────────────────────────────────────
 const allowedOrigins = [
@@ -94,7 +111,6 @@ app.use('/api/income', incomeRoutes)
 app.use('/api/verify', verifyRoutes)
 app.use('/api/coordinator', coordinatorRoutes)
 app.use('/api/certificates', certificateRoutes)
-
 
 // ── 7. ERROR HANDLER ─────────────────────────────
 app.use(errorMiddleware)
