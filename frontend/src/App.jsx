@@ -63,7 +63,6 @@ export default function App() {
                     <Route path="/clearance/:meetingId" element={<ProtectedRoute><ClearanceSlip /></ProtectedRoute>} />
                     <Route path="/signout" element={<ProtectedRoute><SignOutPanel /></ProtectedRoute>} />
                     <Route path="/topup" element={<ProtectedRoute><TopUp /></ProtectedRoute>} />
-                    <Route path="/dev" element={<ProtectedRoute><DevDashboard /></ProtectedRoute>} />
                     <Route path="/tokens" element={<ProtectedRoute><TokenHistory /></ProtectedRoute>} />
                     <Route path="/treasury" element={<ProtectedRoute><Treasury /></ProtectedRoute>} />
                     <Route path="/verify/:qrToken" element={<VerifySlip />} />

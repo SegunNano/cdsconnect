@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import authMiddleware from '../../middlewares/auth.middleware.js'
+import { requireRole } from '../../middlewares/role.middleware.js'
 import {
     overview, members, attendanceReport,
     membersPdf, attendancePdf
@@ -8,6 +9,7 @@ import {
 const router = Router()
 
 router.use(authMiddleware)
+router.use(requireRole('coordinator'))
 
 // Staff only
 router.get('/overview', overview)
