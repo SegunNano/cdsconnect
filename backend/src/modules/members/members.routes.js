@@ -19,13 +19,16 @@ router.use(authMiddleware)
 
 // Member routes
 router.get('/me', getMyProfile)
-router.patch('/me', authMiddleware, updateProfile)
+router.patch('/me', updateProfile)
 
 // Dev only routes
 router.get('/', devOrRole('treasurer', 'financial_secretary'), getMembers)
-router.patch('/:id/role', devMiddleware, updateRole)
-router.patch('/:id/dev', devMiddleware, toggleDev)
-router.patch('/:id/extend', devMiddleware, extendService)
-router.patch('/:id/deactivate', devMiddleware, deactivate)
+
+
+router.use(devMiddleware)
+router.patch('/:id/role', updateRole)
+router.patch('/:id/dev', toggleDev)
+router.patch('/:id/extend', extendService)
+router.patch('/:id/deactivate', deactivate)
 
 export default router

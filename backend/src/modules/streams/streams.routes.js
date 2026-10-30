@@ -10,11 +10,12 @@ router.get('/active', getActive)
 
 // Auth required
 router.use(authMiddleware)
+router.use(devMiddleware)
 
 // Dev only
-router.get('/', devMiddleware, getAll)
-router.post('/', devMiddleware, create)
-router.patch('/:id/toggle', devMiddleware, toggleActive)
-router.patch('/:streamId/certificates', devMiddleware, updateCertificate)
+router.get('/', getAll)
+router.post('/', create)
+router.patch('/:id/toggle', toggleActive)
+router.patch('/:streamId/certificates', updateCertificate)
 
 export default router

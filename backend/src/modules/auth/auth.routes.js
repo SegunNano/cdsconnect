@@ -15,8 +15,6 @@ const router = Router()
 router.post('/register', register)
 
 // WebAuthn device registration — after initial registration
-router.get('/webauthn/register/options', authMiddleware, getWebAuthnRegistrationOptions)
-router.post('/webauthn/register/verify', authMiddleware, verifyWebAuthnRegistration)
 
 // WebAuthn login
 router.post('/webauthn/login/options', getWebAuthnLoginOptions)
@@ -25,8 +23,10 @@ router.post('/webauthn/login/verify', verifyWebAuthnLogin)
 // PIN login — fallback
 router.post('/login/pin', pinLogin)
 
-
-router.post('/logout', authMiddleware, async (req, res, next) => {
+router.use(authMiddleware)
+router.get('/webauthn/register/options', getWebAuthnRegistrationOptions)
+router.post('/webauthn/register/verify', verifyWebAuthnRegistration)
+router.post('/logout', async (req, res, next) => {
     try {
         // Increment token_version — invalidates all existing tokens
         await pool.query(

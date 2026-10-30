@@ -20,13 +20,14 @@ router.use(authMiddleware)
 router.post('/signin', memberSignIn)
 router.get('/me', getMyAttendance)
 router.get('/today', getTodayStatus)
-router.get('/meeting/:meetingId', getMeetingAttendanceList)
+// router.get('/meeting/:meetingId', getMeetingAttendanceList)
 router.get('/today/status', getTodayAttendance)
 router.get('/suspension', getSuspensionStatus)
 
 // Dev only
-router.post('/mark-present', devMiddleware, manualMarkPresent)
-router.post('/reinstate', devMiddleware, reinstate)
+router.use(devMiddleware)
+router.post('/mark-present', manualMarkPresent)
+router.post('/reinstate', reinstate)
 router.get('/suspension/:memberId', getSuspensionStatus)
 
 export default router

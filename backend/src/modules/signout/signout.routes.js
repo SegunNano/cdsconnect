@@ -6,12 +6,13 @@ import { requireRole } from '../../middlewares/role.middleware.js'
 const router = Router()
 
 router.use(authMiddleware)
+router.use(requireRole('president', 'vice_president'))
 
 // Today's meeting
 router.get('/today', getToday)
 
 // President and VP only
-router.get('/list/:meetingId', requireRole('president', 'vice_president'), getSignOutList)
-router.post('/confirm', requireRole('president', 'vice_president'), signOut)
+router.get('/list/:meetingId', getSignOutList)
+router.post('/confirm', signOut)
 
 export default router

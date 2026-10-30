@@ -16,7 +16,7 @@ router.use(authMiddleware)
 // Member
 const upload = multer({ storage: multer.memoryStorage() })
 
-router.post('/upload', authMiddleware, upload.single('evidence'), async (req, res, next) => {
+router.post('/upload', upload.single('evidence'), async (req, res, next) => {
     try {
         const file = req.file
         if (!file) throw { status: 400, message: 'No file uploaded' }

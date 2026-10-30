@@ -35,7 +35,7 @@ export default function BottomNav({ member }) {
         ...(member?.role === 'president' || member?.role === 'vice_president'
             ? [{ path: '/signout', label: 'Sign Out', icon: LogOut }]
             : []),
-        ...(TREASURY_ROLES.includes(member?.role) || member?.is_dev
+        ...(TREASURY_ROLES.includes(member?.role)
             ? [{ path: '/treasury', label: 'Treasury', icon: DollarSign }]
             : []),
         ...(showCertsTab
