@@ -11,7 +11,6 @@ import {
 } from './attendance.controller.js'
 import authMiddleware from '../../middlewares/auth.middleware.js'
 import devMiddleware from '../../middlewares/dev.middleware.js'
-import { requireRole } from '../../middlewares/role.middleware.js'
 
 const router = Router()
 

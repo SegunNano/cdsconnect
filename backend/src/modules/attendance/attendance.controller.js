@@ -113,14 +113,14 @@ export const reinstate = async (req, res, next) => {
 
 export const getSuspensionStatus = async (req, res, next) => {
     try {
-        const memberId = req.params.memberId || req.member.id
+        const memberId = req.member.is_dev && req.params.memberId
+            ? req.params.memberId
+            : req.member.id
         const isSuspended = await checkIfSuspended(memberId)
         const missedMeeting = isSuspended ? await getMissedMeeting(memberId) : null
         res.status(200).json({
             success: true,
             data: { is_suspended: isSuspended, missed_meeting: missedMeeting }
         })
-    } catch (err) {
-        next(err)
-    }
+    } catch (err) { next(err) }
 }

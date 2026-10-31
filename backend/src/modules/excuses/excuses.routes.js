@@ -4,17 +4,18 @@ import { Router } from 'express'
 import { file, getMyExcuseList, getPending, getAll, review, checkEligibility } from './excuses.controller.js'
 import authMiddleware from '../../middlewares/auth.middleware.js'
 import staffMiddleware from '../../middlewares/staff.middleware.js'
-import { requireRole } from '../../middlewares/role.middleware.js'
 import devMiddleware from '../../middlewares/dev.middleware.js'
-import { fileTypeFromBuffer } from 'file-type'
 import crypto from 'crypto'
 
 const router = Router()
 
 router.use(authMiddleware)
 
-// Member
-const upload = multer({ storage: multer.memoryStorage() })
+// Member - Multer memory storage with strict 5MB size limit (Fixes F-04)
+const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 5 * 1024 * 1024, files: 1 }
+})
 
 router.post('/upload', upload.single('evidence'), async (req, res, next) => {
     try {
@@ -35,7 +36,8 @@ router.post('/upload', upload.single('evidence'), async (req, res, next) => {
         const extension = detected.ext
         const fileName = `${randomName}.${extension}`
 
-        const { data, error } = await supabase.storage
+        // 1. Upload file buffer to Supabase storage
+        const { error } = await supabase.storage
             .from('evidence')
             .upload(fileName, file.buffer, {
                 contentType: detected.mime
@@ -43,13 +45,10 @@ router.post('/upload', upload.single('evidence'), async (req, res, next) => {
 
         if (error) throw { status: 500, message: error.message }
 
-        const { data: urlData } = supabase.storage
-            .from('evidence')
-            .getPublicUrl(fileName)
-
+        // 2. Store PATH ONLY instead of a permanent public URL (Fixes F-03)
         res.status(200).json({
             success: true,
-            data: { url: urlData.publicUrl }
+            data: { url: fileName } 
         })
     } catch (err) {
         next(err)
@@ -58,7 +57,6 @@ router.post('/upload', upload.single('evidence'), async (req, res, next) => {
 
 router.post('/', file)
 router.get('/me', getMyExcuseList)
-
 
 // Coordinator
 router.get('/pending', staffMiddleware, getPending)
