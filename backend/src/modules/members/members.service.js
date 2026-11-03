@@ -321,7 +321,6 @@ export const devResetMemberPin = async (devId, memberId) => {
     const pinHash = await hashPin(tempPin)
 
 
-
     await pool.query(
         `UPDATE members
         SET pin_hash = $1,
@@ -330,11 +329,14 @@ export const devResetMemberPin = async (devId, memberId) => {
         [pinHash, memberId]
     )
 
+    // Lost phone: also unbind the old device so PIN login works on the new one
+        await pool.query(
             `UPDATE members
             SET credential_id = NULL, public_key = NULL,
                 sign_count = 0, webauthn_challenge = NULL
             WHERE id = $1`,
             [memberId]
+        )
 
     await sendMail({
         to: member.email,
@@ -347,7 +349,7 @@ export const devResetMemberPin = async (devId, memberId) => {
             contact your CDS dev.</p>`
     })
 
-    return { success: true, device_reset: alsoResetDevice }
+    return { success: true, device_reset: true }
 }
 
 export const devUpdateMemberDetails = async (memberId, { state_code, stream_id }) => {
