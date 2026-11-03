@@ -1,6 +1,18 @@
 import pool from '../../config/db.js'
 import { ROLES } from '../../constants.js'
 import { cleanInput } from '../../middlewares/sanitizers.js'
+import crypto from 'crypto'
+import { hashPin, validatePin } from '../../utils/pin.js'
+import { sendMail } from '../../utils/mailer.js'
+
+const generateTempPin = () => {
+    let pin
+    do {
+        pin = String(crypto.randomInt(0, 10000)).padStart(4, '0')
+    } while (!validatePin(pin).valid)
+    return pin
+}
+
 
 export const getMemberForLogin = async (email) => {
     const result = await pool.query(
@@ -287,3 +299,91 @@ export const updateMemberProfile = async (memberId, data) => {
 
     return await getMe(memberId);
 };
+
+
+
+
+export const devResetMemberPin = async (devId, memberId) => {
+    if (parseInt(devId) === parseInt(memberId)) {
+        throw { status: 400, message: 'Use Profile to change your own PIN.' }
+    }
+
+    const result = await pool.query(
+        'SELECT id, first_name, email FROM members WHERE id = $1',
+        [memberId]
+    )
+    if (result.rows.length === 0) {
+        throw { status: 404, message: 'Member not found.' }
+    }
+    const member = result.rows[0]
+
+    const tempPin = generateTempPin()
+    const pinHash = await hashPin(tempPin)
+
+
+
+    await pool.query(
+        `UPDATE members
+        SET pin_hash = $1,
+            token_version = token_version + 1   -- logs out any stolen session
+        WHERE id = $2`,
+        [pinHash, memberId]
+    )
+
+    // Lost phone: also unbind the old device so PIN login works on the new one
+        await pool.query(
+            `UPDATE members
+            SET credential_id = NULL, public_key = NULL,
+                sign_count = 0, webauthn_challenge = NULL
+            WHERE id = $1`,
+            [memberId]
+        )
+
+    await sendMail({
+        to: member.email,
+        subject: 'Your CDSConnect PIN has been reset',
+        html: `
+            <p>Hi ${member.first_name},</p>
+            <p>Your new PIN is <strong style="font-size:20px">${tempPin}</strong></p>
+            <p>Sign in with it, then change it under <b>Profile → Change PIN</b>
+            so that only you know it. If you did not ask for this reset,
+            contact your CDS dev.</p>`
+    })
+
+    return { success: true, device_reset: alsoResetDevice }
+}
+
+export const devUpdateMemberDetails = async (memberId, { state_code, stream_id }) => {
+    const code = state_code?.trim().toUpperCase()
+
+    if (code && !/^[A-Z]{2}\/\d{2}[A-Z]\/\d{4}$/.test(code)) {
+        throw { status: 400, message: 'Invalid state code format. Use LA/26B/1879.' }
+    }
+
+    if (code) {
+        const dup = await pool.query(
+            'SELECT id FROM members WHERE state_code = $1 AND id != $2',
+            [code, memberId]
+        )
+        if (dup.rows.length > 0) {
+            throw { status: 409, message: 'That state code belongs to another member.' }
+        }
+    }
+
+    if (stream_id) {
+        const s = await pool.query('SELECT id FROM streams WHERE id = $1', [stream_id])
+        if (s.rows.length === 0) {
+            throw { status: 400, message: 'Invalid stream.' }
+        }
+    }
+
+    await pool.query(
+        `UPDATE members
+        SET state_code = COALESCE($1, state_code),
+            stream_id = COALESCE($2, stream_id)
+        WHERE id = $3`,
+        [code || null, stream_id || null, memberId]
+    )
+
+    return await getMe(memberId)
+}

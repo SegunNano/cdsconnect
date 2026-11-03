@@ -16,3 +16,4 @@ export const getRpId = (urlString) => {
     return 'localhost'
   }
 }
+

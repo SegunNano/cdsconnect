@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { Users, Calendar, Layers, Settings } from 'lucide-react'
 import {
@@ -27,6 +26,8 @@ export default function DevDashboard() {
     const [selectedMember, setSelectedMember] = useState(null)
     const [search, setSearch] = useState('')
     const [certCost, setCertCost] = useState({})
+    const [editForm, setEditForm] = useState({})
+    const [alsoResetDevice, setAlsoResetDevice] = useState({})
 
     // Add the handler
     const handleUnlockCertificates = async (streamId, cost) => {
@@ -118,6 +119,7 @@ export default function DevDashboard() {
                         <MembersTab
                             members={members}
                             search={search}
+                            streams={streams}
                             setSearch={setSearch}
                             loading={loading}
                             selectedMember={selectedMember}
@@ -150,6 +152,9 @@ export default function DevDashboard() {
                                     )
                                 )
                             }}
+                            onMemberUpdated={(updated) =>
+                                setMembers(prev => prev.map(m => m.id === updated.id ? { ...m, ...updated } : m))
+                            }
                             currentMemberId={member?.id}
                         />
                     </>

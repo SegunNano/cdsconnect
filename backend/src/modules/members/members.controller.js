@@ -5,7 +5,8 @@ import {
     toggleDevAccess,
     extendServiceYear,
     deactivateMember,
-    updateMemberProfile
+    updateMemberProfile,
+    devResetMemberPin
 } from './members.service.js'
 
 export const getMyProfile = async (req, res, next) => {
@@ -70,4 +71,13 @@ export const updateProfile = async (req, res, next) => {
     } catch (err) {
         next(err)
     }
+}
+
+export const resetPinByDev = async (req, res, next) => {
+    try {
+        const data = await devResetMemberPin(
+            req.member.id, req.params.id, 
+        )
+        res.status(200).json({ success: true, data })
+    } catch (err) { next(err) }
 }
