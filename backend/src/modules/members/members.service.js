@@ -330,14 +330,11 @@ export const devResetMemberPin = async (devId, memberId) => {
         [pinHash, memberId]
     )
 
-    // Lost phone: also unbind the old device so PIN login works on the new one
-        await pool.query(
             `UPDATE members
             SET credential_id = NULL, public_key = NULL,
                 sign_count = 0, webauthn_challenge = NULL
             WHERE id = $1`,
             [memberId]
-        )
 
     await sendMail({
         to: member.email,
