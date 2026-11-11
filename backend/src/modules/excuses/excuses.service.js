@@ -2,6 +2,8 @@ import pool from '../../config/db.js'
 import { createNotification } from '../notifications/notifications.service.js'
 import { NOTIFICATION_TYPES } from '../../constants.js'
 import supabase from '../../config/supabase.js'
+import { emailLayout } from '../../utils/emailTemplate.js'
+import { sendMailSafe } from '../../utils/mailer.js'
 
 // Helper function to attach temporary signed URLs to excuse rows
 async function attachSignedUrls(rows) {

@@ -10,6 +10,8 @@ import {
     verifyAuthenticationResponse
 } from '@simplewebauthn/server'
 import { getRpId } from '../../utils/utils.js'
+import { emailLayout } from '../../utils/emailTemplate.js'
+import { sendMailSafe } from '../../utils/mailer.js'
 
 const RP_NAME = 'CDSConnect'
 const ORIGIN = process.env.FRONTEND_URL || 'http://localhost:5173'

@@ -4,6 +4,8 @@ import { cleanInput } from '../../middlewares/sanitizers.js'
 import crypto from 'crypto'
 import { hashPin, validatePin } from '../../utils/pin.js'
 import { sendMail } from '../../utils/mailer.js'
+import { emailLayout } from '../../utils/emailTemplate.js'
+import { sendMailSafe } from '../../utils/mailer.js'
 
 const generateTempPin = () => {
     let pin
