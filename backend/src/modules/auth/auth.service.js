@@ -236,6 +236,23 @@ export const verifyRegistration = async (memberId, credential) => {
         ]
     )
 
+    const w = await pool.query(
+        `UPDATE members SET welcome_sent = true
+        WHERE id = $1 AND welcome_sent = false
+        RETURNING first_name, email`, [memberId])
+        
+    if (w.rows.length) {
+        sendMailSafe({
+            to: w.rows[0].email,
+            subject: 'Welcome to CDSConnect',
+            html: emailLayout({
+                greeting: w.rows[0].first_name,
+                paragraphs: ['Your account is set up and your device is bound. You can now sign in to meetings, track your tokens and download clearance slips.'],
+                button: { label: 'Open CDSConnect', url: process.env.FRONTEND_URL }
+            })
+        })
+    }
+
     return { verified: true, credentialId: id }
 }
 

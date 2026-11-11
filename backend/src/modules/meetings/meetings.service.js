@@ -61,6 +61,26 @@ export const createMeeting = async (data) => {
         NOTIFICATION_TYPES.MEETING_CREATED
     )
 
+    const hours = Math.floor((new Date(meeting.sign_in_open) - Date.now()) / 36e5)
+    if (hours >= 1) {
+        const { rows } = await pool.query(
+            "SELECT first_name, email FROM members WHERE is_active=true AND member_type='corps_member'")
+        for (const m of rows) {
+            await enqueueBulk({
+                to: m.email,
+                subject: `New meeting: ${meeting.title}`,
+                html: emailLayout({
+                    greeting: m.first_name,
+                    paragraphs: [
+                        `<b>${esc(meeting.title)}</b> is scheduled for <b>${meeting.meeting_date}</b>.`,
+                        'Make sure you have enough tokens to sign in. File an excuse at least 5 days ahead if you cannot attend.'
+                    ],
+                    button: { label: 'Open CDSConnect', url: process.env.FRONTEND_URL }
+                })
+            }, { kind: 'meeting', priority: 2, expiresInHours: hours })
+        }
+    }
+
     return formatMeeting(meeting)
 }
 

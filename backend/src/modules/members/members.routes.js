@@ -4,7 +4,6 @@ import {
     getMembers,
     updateRole,
     toggleDev,
-    extendService,
     deactivate,
     updateProfile,
     resetPinByDev
@@ -30,7 +29,6 @@ router.get('/', devOrRole('treasurer', 'financial_secretary'), getMembers)
 router.use(devMiddleware)
 router.patch('/:id/role', updateRole)
 router.patch('/:id/dev', toggleDev)
-router.patch('/:id/extend', extendService)
 router.patch('/:id/deactivate', deactivate)
 router.post('/:id/reset-pin', resetPinByDev)
 router.patch('/:id/details', async (req, res, next) => {

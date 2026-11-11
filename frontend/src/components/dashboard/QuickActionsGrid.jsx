@@ -12,7 +12,7 @@ export function QuickActionsGrid({ onNavigate, meeting }) {
         }] : []),
         { 
             icon: <Wallet size={20} color="#008751" />, 
-            label: 'Transactions', 
+            label: 'Wallet', 
             bg: '#e6f4ee', 
             path: '/tokens' 
         }

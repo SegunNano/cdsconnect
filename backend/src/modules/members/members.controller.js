@@ -3,7 +3,6 @@ import {
     getAllMembers,
     updateMemberRole,
     toggleDevAccess,
-    extendServiceYear,
     deactivateMember,
     updateMemberProfile,
     devResetMemberPin
@@ -45,15 +44,6 @@ export const toggleDev = async (req, res, next) => {
     }
 }
 
-export const extendService = async (req, res, next) => {
-    try {
-        const { new_end_date, reason } = req.body
-        const member = await extendServiceYear(req.params.id, new_end_date, reason)
-        res.status(200).json({ success: true, data: member })
-    } catch (err) {
-        next(err)
-    }
-}
 
 export const deactivate = async (req, res, next) => {
     try {

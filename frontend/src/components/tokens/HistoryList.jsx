@@ -11,7 +11,7 @@ export default function HistoryList({ history, loading }) {
 
     return (
         <>
-            <div style={sectionTitle}>Transactions</div>
+            <div style={sectionTitle}>Wallet</div>
 
             {loading && (
                 <div style={{ textAlign: 'center', color: '#8fa396', fontSize: '0.82rem', padding: '40px 0' }}>Loading...</div>

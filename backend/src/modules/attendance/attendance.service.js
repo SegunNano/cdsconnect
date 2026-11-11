@@ -1,6 +1,7 @@
 import pool from '../../config/db.js'
 import { RATE } from '../../constants.js'
 import { issueClearance } from '../../utils/clearance.js'
+import { sendClearedEmail } from '../../utils/clearanceEmail.js';
 // Haversine formula — distance between two coordinates in meters
 // Calculates distance between two lat/lng coordinates in meters
  export function getDistances(lat1, lon1, lat2, lon2) {
@@ -165,8 +166,8 @@ export const reinstateMember = async (devId, memberId) => {
     )
 
     // Issue clearance
-    const { issueClearance } = await import('../../utils/clearance.js')
     await issueClearance(memberId, missedMeeting.id)
+    sendClearedEmail(memberId, meetingId)
 
     // Notify member
     const { createNotification } = await import('../notifications/notifications.service.js')
@@ -487,6 +488,7 @@ export const markMemberPresent = async (devId, memberId, meetingId, reason) => {
     )
 
     await issueClearance(memberId, meetingId)
+    sendClearedEmail(memberId, meetingId)
 
     return result.rows[0]
 }

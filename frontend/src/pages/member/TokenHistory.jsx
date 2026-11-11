@@ -61,7 +61,7 @@ export default function TokenHistory() {
                     <ArrowLeft size={18} color="#4a5e52" />
                 </div>
                 <div>
-                    <div style={{ fontSize: '1rem', fontWeight: 700, color: '#0d1b12' }}>Tokens</div>
+                    <div style={{ fontSize: '1rem', fontWeight: 700, color: '#0d1b12' }}>Wallet</div>
                     <div style={{ fontSize: '0.72rem', color: '#8fa396' }}>Balance, purchases and history</div>
                 </div>
             </div>

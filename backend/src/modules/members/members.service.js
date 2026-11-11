@@ -234,20 +234,6 @@ export const toggleDevAccess = async (adminId, targetMemberId) => {
 
 
 
-export const extendServiceYear = async (memberId, newEndDate, reason) => {
-    const result = await pool.query(
-        `UPDATE members 
-        SET service_end = $1, extension_reason = $2
-        WHERE id = $3
-        RETURNING id, first_name, last_name, service_end`,
-        [newEndDate, reason, memberId]
-    )
-    if (result.rows.length === 0) {
-        throw { status: 404, message: 'Member not found' }
-    }
-    return result.rows[0]
-}
-
 export const deactivateMember = async (memberId) => {
     const result = await pool.query(
         `UPDATE members 
@@ -341,47 +327,12 @@ export const devResetMemberPin = async (devId, memberId) => {
         await sendMail({
             to: member.email,
             subject: 'Your CDSConnect PIN has been reset',
-            html: `
-            <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f2f4f7; padding: 30px 0; color: #0d1b12;">
-                <div style="max-width: 500px; margin: 0 auto; background: #ffffff; border-radius: 8px; overflow: hidden; border: 1px solid #d0d8d3;">
-                    
-                    <!-- Header -->
-                    <div style="background-color: #008751; padding: 20px; text-align: center;">
-                        <h2 style="color: #ffffff; margin: 0; font-size: 18px; letter-spacing: 0.5px;">CDSCONNECT</h2>
-                        <p style="color: #e6f4ee; margin: 4px 0 0 0; font-size: 12px;">InfoTech CDS Group · Lagos State</p>
-                    </div>
-            
-                    <!-- Body Content -->
-                    <div style="padding: 24px;">
-                        <p style="font-size: 15px; margin-top: 0;">Hi <b>${member.first_name}</b>,</p>
-                        <p style="font-size: 14px; color: #4a5568; line-height: 1.5;">
-                            Your temporary security PIN has been generated for your CDSConnect account.
-                        </p>
-            
-                        <!-- PIN Box Container -->
-                        <div style="background-color: #f8fdf9; border: 1px dashed #008751; border-radius: 6px; padding: 16px; text-align: center; margin: 20px 0;">
-                            <span style="font-size: 12px; color: #8fa396; text-transform: uppercase; display: block; margin-bottom: 6px; letter-spacing: 0.5px;">Temporary PIN</span>
-                            <span style="font-size: 26px; font-weight: bold; color: #008751; letter-spacing: 2px;">${tempPin}</span>
-                        </div>
-            
-                        <p style="font-size: 14px; color: #4a5568; line-height: 1.5;">
-                            Sign in with this code, then navigate to <b>Profile → Change PIN</b> immediately to set a private PIN only you know.
-                        </p>
-            
-                        <hr style="border: none; border-top: 1px solid #e8ece9; margin: 20px 0;" />
-            
-                        <p style="font-size: 12px; color: #8fa396; margin-bottom: 0; line-height: 1.4;">
-                            If you did not request this password/PIN reset, please contact your CDS developer or group executive right away.
-                        </p>
-                    </div>
-            
-                    <!-- Footer -->
-                    <div style="background-color: #f8fdf9; padding: 12px; text-align: center; border-top: 1px solid #e8ece9;">
-                        <p style="font-size: 11px; color: #8fa396; margin: 0;">CDSConnect automated security service</p>
-                    </div>
-            
-                </div>
-            </div>`
+            html: emailLayout({
+                greeting: member.first_name,
+                paragraphs: ['Your temporary security PIN has been generated for your account.'],
+                highlight: { label: 'Temporary PIN', value: tempPin },
+                footnote: 'Sign in, then go to <b>Profile → Change PIN</b> to set a private PIN. If you did not request this, contact your CDS developer right away.'
+            })
         })
 
     return { success: true }
