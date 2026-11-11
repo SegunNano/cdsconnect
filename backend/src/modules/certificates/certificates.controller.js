@@ -161,6 +161,12 @@ export const markCollateDone = async (req, res, next) => {
             [streamId]
         )
 
+        await pool.query(
+            `UPDATE email_jobs SET status = 'expired'
+            WHERE status = 'pending' AND kind = 'certificates' AND stream_id = $1`,
+            [streamId]
+        )
+
         if (result.rowCount === 0) {
             return res.status(404).json({
                 success: false,

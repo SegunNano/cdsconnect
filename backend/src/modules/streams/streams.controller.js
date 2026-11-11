@@ -5,6 +5,8 @@ import {
     toggleStreamActive
 } from './streams.service.js'
 import pool from '../../config/db.js'
+import { enqueueBulk } from '../../utils/mailer.js'
+import { emailLayout } from '../../utils/emailTemplate.js'
 
 export const updateCertificate = async (req, res, next) => {
     try {
@@ -21,6 +23,9 @@ export const updateCertificate = async (req, res, next) => {
             RETURNING *`,
             [certificate_cost_tokens, req.params.streamId]
         )
+        if (!r.rows.length) {
+            throw { status: 409, message: 'Certificates are already unlocked or closed for this batch.' }
+        }
 
         // Notify all members of that stream
         const members = await pool.query(
@@ -38,6 +43,13 @@ export const updateCertificate = async (req, res, next) => {
                 'certificate_ready'
             )
         ))
+        for (const m of members) {
+            await enqueueBulk({
+                to: m.email,
+                subject: 'Your batch certificates are available',
+                html: emailLayout({ /* your layout from before */ })
+            }, { kind: 'certificates', streamId, priority: 1 })
+        }
 
         res.status(200).json({ success: true, data: result.rows[0] })
     } catch (err) {

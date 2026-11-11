@@ -132,13 +132,6 @@ export const payForCertificates = async (memberId) => {
         }
     }
 
-    if (status.has_paid) {
-        throw {
-            status: 409,
-            message: 'You have already paid for your certificates.'
-        }
-    }
-
     if (status.token_balance < status.certificate_cost_tokens) {
         throw {
             status: 400,
@@ -146,20 +139,42 @@ export const payForCertificates = async (memberId) => {
         }
     }
 
-    // Deduct tokens.
-    await pool.query(
-        'UPDATE members SET token_balance = token_balance - $1 WHERE id = $2',
-        [status.certificate_cost_tokens, memberId]
-    )
+    const client = await pool.connect()
+    try {
+        await client.query('BEGIN')
 
-    // Record payment.
-    await pool.query(
-        `INSERT INTO certificate_payments (member_id, stream_id, tokens_paid)
-         VALUES ($1, $2, $3)`,
-        [memberId, status.stream_id, status.certificate_cost_tokens]
-    )
+        // 1. Insert payment record
+        await client.query(
+            `INSERT INTO certificate_payments (member_id, stream_id, tokens_paid) VALUES ($1, $2, $3)`,
+            [memberId, status.stream_id, status.certificate_cost_tokens]
+        )
 
-    // Notify member.
+        // 2. Safely deduct tokens atomically
+        const d = await client.query(
+            `UPDATE members SET token_balance = token_balance - $1
+             WHERE id = $2 AND token_balance >= $1 RETURNING id`,
+            [status.certificate_cost_tokens, memberId]
+        )
+        if (!d.rows.length) throw { status: 400, message: 'Insufficient tokens.' }
+
+        // 3. Expire pending email job for this member
+        await client.query(
+            `UPDATE email_jobs SET status = 'expired'
+             WHERE status = 'pending' AND kind = 'certificates' AND stream_id = $1
+               AND to_email = (SELECT email FROM members WHERE id = $2)`,
+            [status.stream_id, memberId]
+        )
+
+        await client.query('COMMIT')
+    } catch (err) {
+        await client.query('ROLLBACK')
+        if (err.code === '23505') throw { status: 409, message: 'You have already paid for your certificates.' }
+        throw err
+    } finally {
+        client.release()
+    }
+
+    // 4. Notify member safely outside the transaction block
     await createNotification(
         memberId,
         'Certificates Ready 🎓',
@@ -169,7 +184,6 @@ export const payForCertificates = async (memberId) => {
 
     return { success: true, is_exco: status.is_exco }
 }
-
 // ── GET ALL PAID MEMBERS ──────────────────────────────────────────
 export const getPaidMembers = async () => {
     const result = await pool.query(
