@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Coins } from 'lucide-react'
+import { Coins, ChevronDown } from 'lucide-react'
 import { getAllMembers, topUpMember } from '../../services/tokens.service'
 import { RATE, MAX_TOKENS_PER_TOPUP } from '../../constants'
 import { SearchBar } from '../common/SearchBar'
@@ -18,6 +18,9 @@ export default function DirectTopUp() {
     const [success, setSuccess] = useState(null)
     const [error, setError] = useState('')
 
+    // Pagination limit when not searching
+    const [visibleCount, setVisibleCount] = useState(10)
+
     useEffect(() => {
         getAllMembers()
             .then(res => setMembers(res.data.filter(m => m.member_type === 'corps_member')))
@@ -32,6 +35,14 @@ export default function DirectTopUp() {
             m.state_code.toLowerCase().includes(q)
         )
     }, [members, search])
+
+    // If search is active, show all matches. If not, slice up to visibleCount (default 10)
+    const displayedMembers = useMemo(() => {
+        if (search.trim()) {
+            return filtered
+        }
+        return filtered.slice(0, visibleCount)
+    }, [filtered, search, visibleCount])
 
     const select = (member) => {
         setSelected(member); setConfirming(false); setSuccess(null); setError('')
@@ -114,7 +125,7 @@ export default function DirectTopUp() {
             )}
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {filtered.map(member => (
+                {displayedMembers.map(member => (
                     <MemberListItem
                         key={member.id} member={member}
                         isSelected={selected?.id === member.id}
@@ -122,6 +133,25 @@ export default function DirectTopUp() {
                     />
                 ))}
             </div>
+
+            {/* SHOW MORE BUTTON (Only visible when not actively searching and more members exist) */}
+            {!search.trim() && visibleCount < filtered.length && (
+                <button
+                    onClick={() => setVisibleCount(prev => prev + 10)}
+                    style={{
+                        width: '100%', marginTop: '14px', padding: '12px',
+                        background: '#ffffff', border: '1px solid #d0dcd4',
+                        borderRadius: '12px', fontSize: '0.78rem', fontWeight: 700,
+                        color: '#008751', cursor: 'pointer', display: 'flex',
+                        alignItems: 'center', justifyContent: 'center', gap: '6px',
+                        boxShadow: '0 2px 6px rgba(0,0,0,0.04)',
+                        fontFamily: "'Plus Jakarta Sans', sans-serif"
+                    }}
+                >
+                    <ChevronDown size={16} color="#008751" />
+                    Show More ({filtered.length - visibleCount} remaining)
+                </button>
+            )}
         </>
     )
 }

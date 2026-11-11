@@ -41,17 +41,6 @@ export function MemberListItem({ member, isSelected, onClick }) {
                     {member.state_code}
                 </div>
             </div>
-
-            <div style={{
-                background: isZeroBalance ? '#fff0f0' : '#e6f4ee',
-                color: isZeroBalance ? '#e53e3e' : '#008751',
-                fontSize: '0.72rem',
-                fontWeight: 700,
-                padding: '4px 10px',
-                borderRadius: '20px'
-            }}>
-                {member.token_balance} token{member.token_balance !== 1 ? 's' : ''}
-            </div>
         </div>
     )
 }

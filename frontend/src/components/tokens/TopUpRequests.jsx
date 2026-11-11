@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { RefreshCw, ExternalLink, Check, X } from 'lucide-react'
+import { RefreshCw, ExternalLink, Check, X, ChevronDown, ChevronUp, Hourglass, CheckCircle2, XCircle } from 'lucide-react'
 import { getTopUpRequests } from '../../services/tokens.service'
 import { timeAgo, ageInHours, formatDate } from '../../utils/dates'
 import Toast from '../common/Toast'
@@ -12,7 +12,7 @@ const FILTERS = [
     { key: 'approved', label: 'Approved' },
     { key: 'rejected', label: 'Rejected' }
 ]
-const PAGE = 20
+const PAGE = 5
 
 const Row = ({ label, children }) => (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', fontSize: '0.78rem', padding: '3px 0' }}>
@@ -24,59 +24,75 @@ const Row = ({ label, children }) => (
 )
 
 function RequestCard({ request: r, onApprove, onReject }) {
+    const [expanded, setExpanded] = useState(false)
     const pending = r.status === 'pending'
-    const stale = pending && ageInHours(r.created_at) > 24
-    const accent = stale ? '#d4900a' : r.status === 'rejected' ? '#e53e3e' : '#008751'
+    const approved = r.status === 'approved'
 
     return (
-        <div style={{ ...card, borderLeft: `4px solid ${accent}` }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
-                <div>
-                    <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#0d1b12' }}>
-                        {r.member_first_name} {r.member_last_name}
+        <div style={{ ...card, cursor: 'pointer', transition: 'all 0.2s ease' }} onClick={() => setExpanded(prev => !prev)}>
+            {/* COLLAPSED HEADER VIEW */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                    {/* STATUS ICON */}
+                    <div style={{ marginTop: '2px' }}>
+                        {pending && <Hourglass size={14} color="#8fa396" />}
+                        {approved && <CheckCircle2 size={14} color="#008751" />}
+                        {!pending && !approved && <XCircle size={14} color="#e53e3e" />}
                     </div>
-                    <div style={{ fontSize: '0.7rem', color: '#8fa396' }}>{r.state_code}</div>
+                    <div>
+                        <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#0d1b12' }}>
+                            {r.member_first_name} {r.member_last_name}
+                        </div>
+                        <div style={{ fontSize: '0.7rem', color: '#8fa396' }}>
+                            {r.state_code} &bull; <strong style={{ color: '#008751' }}>{r.tokens_requested} token{r.tokens_requested !== 1 ? 's' : ''}</strong>
+                        </div>
+                    </div>
                 </div>
-                <div style={{ fontSize: '0.68rem', fontWeight: 600, color: stale ? '#d4900a' : '#8fa396' }}>
-                    {timeAgo(r.created_at)}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <div style={{ fontSize: '0.68rem', fontWeight: 600, color: '#8fa396', textAlign: 'right' }}>
+                        {timeAgo(r.created_at)}
+                    </div>
+                    {expanded ? <ChevronUp size={16} color="#8fa396" /> : <ChevronDown size={16} color="#8fa396" />}
                 </div>
             </div>
 
-            <div style={{ fontSize: '1rem', fontWeight: 800, color: '#008751', marginBottom: '6px' }}>
-                {r.tokens_requested} token{r.tokens_requested !== 1 ? 's' : ''}
-                <span style={{ fontSize: '0.78rem', color: '#8fa396', fontWeight: 600 }}>
-                    {' · ₦'}{Number(r.naira_value).toLocaleString()}
-                </span>
-            </div>
+            {/* EXPANDED FULL DETAILS */}
+            {expanded && (
+                <div style={{ marginTop: '12px', borderTop: '1px solid #edf2ef', paddingTop: '10px' }} onClick={e => e.stopPropagation()}>
+                    <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#008751', marginBottom: '8px' }}>
+                        ₦{Number(r.naira_value).toLocaleString()}
+                    </div>
 
-            <Row label="Paid by">{r.sender_name}</Row>
-            <Row label="Reference">{r.transfer_reference}<CopyButton text={r.transfer_reference} /></Row>
-            <Row label="Proof">
-                {r.proof_url
-                    ? <a href={r.proof_url} target="_blank" rel="noreferrer" style={{ color: '#008751', display: 'flex', alignItems: 'center', gap: '4px', textDecoration: 'none' }}>
-                        View <ExternalLink size={12} />
-                      </a>
-                    : <span style={{ color: '#8fa396', fontWeight: 400 }}>{pending ? 'None attached' : 'Deleted after review'}</span>}
-            </Row>
+                    <Row label="Paid by">{r.sender_name}</Row>
+                    <Row label="Reference">{r.transfer_reference}<CopyButton text={r.transfer_reference} /></Row>
+                    <Row label="Proof">
+                        {r.proof_url
+                            ? <a href={r.proof_url} target="_blank" rel="noreferrer" style={{ color: '#008751', display: 'flex', alignItems: 'center', gap: '4px', textDecoration: 'none' }}>
+                                View <ExternalLink size={12} />
+                              </a>
+                            : <span style={{ color: '#8fa396', fontWeight: 400 }}>{pending ? 'None attached' : 'Deleted after review'}</span>}
+                    </Row>
 
-            {!pending && (
-                <div style={{ fontSize: '0.72rem', color: '#4a5e52', marginTop: '8px' }}>
-                    {r.status === 'approved'
-                        ? `Approved ${r.tokens_approved ?? r.tokens_requested} token(s)`
-                        : 'Rejected'}
-                    {r.reviewer_first_name ? ` by ${r.reviewer_first_name}` : ''} · {formatDate(r.reviewed_at)}
-                    {r.treasurer_note && <div style={{ marginTop: '2px' }}>Note: {r.treasurer_note}</div>}
-                </div>
-            )}
+                    {!pending && (
+                        <div style={{ fontSize: '0.72rem', color: '#4a5e52', marginTop: '8px', background: '#f8faf9', padding: '8px', borderRadius: '8px' }}>
+                            {approved
+                                ? `Approved ${r.tokens_approved ?? r.tokens_requested} token(s)`
+                                : 'Rejected'}
+                            {r.reviewer_first_name ? ` by ${r.reviewer_first_name}` : ''} &bull; {formatDate(r.reviewed_at)}
+                            {r.treasurer_note && <div style={{ marginTop: '2px' }}>Note: {r.treasurer_note}</div>}
+                        </div>
+                    )}
 
-            {pending && (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '12px' }}>
-                    <button onClick={() => onReject(r)} style={{ ...btn('#fff0f0', '#e53e3e'), padding: '10px' }}>
-                        <X size={14} /> Reject
-                    </button>
-                    <button onClick={() => onApprove(r)} style={{ ...btn('#008751', 'white'), padding: '10px' }}>
-                        <Check size={14} /> Approve
-                    </button>
+                    {pending && (
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '12px' }}>
+                            <button onClick={() => onReject(r)} style={{ ...btn('#fff0f0', '#e53e3e'), padding: '10px' }}>
+                                <X size={14} /> Reject
+                            </button>
+                            <button onClick={() => onApprove(r)} style={{ ...btn('#008751', 'white'), padding: '10px' }}>
+                                <Check size={14} /> Approve
+                            </button>
+                        </div>
+                    )}
                 </div>
             )}
         </div>
@@ -89,7 +105,7 @@ export default function TopUpRequests({ onChanged }) {
     const [requests, setRequests] = useState([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState('')
-    const [review, setReview] = useState(null)     // { request, action }
+    const [review, setReview] = useState(null)
     const [toast, setToast] = useState(null)
 
     const load = useCallback(async () => {
@@ -143,12 +159,6 @@ export default function TopUpRequests({ onChanged }) {
                 </button>
             </div>
 
-            {status === 'pending' && requests.length > 0 && (
-                <div style={{ fontSize: '0.68rem', color: '#8fa396', marginBottom: '10px' }}>
-                    Oldest first. Check each against your bank alert. Proof links last 5 minutes, so tap refresh if one expires.
-                </div>
-            )}
-
             {error && (
                 <div style={{ background: '#fff0f0', color: '#e53e3e', fontSize: '0.8rem', padding: '10px 14px', borderRadius: '10px', marginBottom: '12px' }}>
                     {error}
@@ -180,7 +190,7 @@ export default function TopUpRequests({ onChanged }) {
                     onClick={() => setLimit(l => l + PAGE)} disabled={loading}
                     style={{ ...btn('#ffffff', '#4a5e52', loading), border: '1px solid #e8ece9', marginTop: '10px', padding: '11px', fontSize: '0.78rem' }}
                 >
-                    Load more
+                    Show More
                 </button>
             )}
 
