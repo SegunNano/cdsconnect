@@ -48,7 +48,7 @@ export const EXCUSE_STATUS = {
     INCOME_LOGGED: 'income_logged'
 }
 
-export const PROOF_BUCKET = 'topup-proofs'
+export const PROOF_BUCKET = 'evidence'
 export const MAX_TOKENS = 10
 export const RETENTION_DAYS = 30
 export const DIRECT_TOPUP_ROLES = ['treasurer', 'financial_secretary']
