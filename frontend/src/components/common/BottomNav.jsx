@@ -32,7 +32,9 @@ export default function BottomNav({ member }) {
         { path: '/attendance', label: 'Record', icon: Calendar },
         { path: '/clearance', label: 'Clearance', icon: FileText },
         { path: '/profile', label: 'Profile', icon: User },
-        { path: '/topup', label: 'Top Up', icon: Coins, dot: pendingTopUps > 0 },
+        ...(DIRECT_TOPUP_ROLES.includes(member?.role)
+            ? [{ path: '/topup', label: 'Top Up', icon: Coins, dot: pendingTopUps > 0 }]
+            : []),
         ...(member?.role === 'president' || member?.role === 'vice_president'
             ? [{ path: '/signout', label: 'Sign Out', icon: LogOut }]
             : []),
