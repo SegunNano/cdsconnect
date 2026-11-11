@@ -1,22 +1,52 @@
 import { Router } from 'express'
-import { topUp, getMyTopUps, getAll, history, transfer } from './tokens.controller.js'
+import multer from 'multer'
+import {
+    topUp,
+    transfer,
+    history,
+    getAll,
+    submitRequest,
+    cancelRequest,
+    getMyRequests,
+    getPendingCount,
+    getTreasurerRequests,
+    reviewRequest
+} from './tokens.controller.js'
 import authMiddleware from '../../middlewares/auth.middleware.js'
 import { requireRole } from '../../middlewares/role.middleware.js'
 import devMiddleware from '../../middlewares/dev.middleware.js'
 
 const router = Router()
 
+// Configure multer memory storage for single file proof upload (5MB max cap)
+const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 5 * 1024 * 1024, files: 1 }
+})
+
+
+
 router.use(authMiddleware)
 
-// Member
-router.get('/me', getMyTopUps)
+// --- MEMBER TOKEN ACTIONS ---
 router.post('/transfer', transfer)
-
-// Treasurer and financial secretary only
-router.post('/topup', requireRole('treasurer', 'financial_secretary'), topUp)
 router.get('/history', history)
 
-// Dev only
+// Phase 2: Top-up Requests (Member Side)
+router.post('/requests', upload.single('proof'), submitRequest)
+router.get('/requests/me', getMyRequests)
+router.patch('/requests/:id/cancel', cancelRequest)
+
+router.use(requireRole('treasurer', 'financial_secretary'))
+// --- TREASURER / FINANCIAL SECRETARY ROUTES ---
+router.post('/topup', topUp)
+
+// Phase 2: Top-up Requests Reviewer Dashboard
+router.get('/requests/pending-count', getPendingCount)
+router.get('/requests', getTreasurerRequests)
+router.post('/requests/:id/review', reviewRequest)
+
+// Dev only route
 router.get('/', devMiddleware, getAll)
 
 export default router

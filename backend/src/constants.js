@@ -47,3 +47,10 @@ export const EXCUSE_STATUS = {
     REJECTED: 'rejected',
     INCOME_LOGGED: 'income_logged'
 }
+
+export const PROOF_BUCKET = 'topup-proofs'
+export const MAX_TOKENS = 10
+export const RETENTION_DAYS = 30
+export const DIRECT_TOPUP_ROLES = ['treasurer', 'financial_secretary']
+export const STATUSES = ['pending', 'approved', 'rejected', 'cancelled']
+export const ALLOWED_PROOF = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf']

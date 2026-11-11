@@ -25,3 +25,12 @@ export const ROLES = [
     "pro2",
     "coordinator"
 ]
+
+export const TREASURY_ROLES = [
+    'treasurer', 'financial_secretary',
+    'president', 'vice_president', 'secretary'
+]
+
+export const DIRECT_TOPUP_ROLES = ['treasurer', 'financial_secretary']
+export const MAX_TOKENS_PER_TOPUP = 10   // matches the backend limit
+

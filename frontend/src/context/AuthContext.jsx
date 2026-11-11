@@ -51,6 +51,11 @@ export const AuthProvider = ({ children }) => {
         setMember(memberData)
     }
 
+    const refreshMember = async () => {
+       const res = await api.get('/members/me')
+        setMember(res.data.data)
+    }
+
     const completeOnboarding = (updatedMemberData) => {
         setMember(updatedMemberData)
         if (updatedMemberData?.credential_id) {
@@ -72,7 +77,7 @@ export const AuthProvider = ({ children }) => {
     }
 
     return (
-        <AuthContext.Provider value={{ member, token, login, logout, loading, completeOnboarding }}>
+        <AuthContext.Provider value={{ member, token, login, logout, loading, completeOnboarding, refreshMember }}>
             {children}
         </AuthContext.Provider>
     )

@@ -1,191 +1,62 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Coins } from 'lucide-react'
-import { getAllMembers, topUpMember } from '../../services/tokens.service'
-import { RATE } from '../../constants'
-
 import { HeaderBar } from '../../components/common/HeaderBar'
-import { SearchBar } from '../../components/common/SearchBar'
-import { MemberListItem } from '../../components/members/MemberListItem'
-import { TopUpModalCard } from '../../components/tokens/TopUpModalCard'
-import { TopUpConfirmModal } from '../../components/tokens/TopUpConfirmModal' // Import the new confirm modal
+import DirectTopUp from '../../components/tokens/DirectTopUp'
+import TopUpRequests from '../../components/tokens/TopUpRequests'
+import usePendingTopUpCount from '../../hooks/usePendingTopUpCount'
+import { FONT } from '../../components/tokens/styles'
+
+const TABS = [
+    { key: 'direct', label: 'Direct Top Up' },
+    { key: 'requests', label: 'Requests' }
+]
 
 export default function TopUp() {
     const navigate = useNavigate()
-    const [members, setMembers] = useState([])
-    const [filtered, setFiltered] = useState([])
-    const [search, setSearch] = useState('')
-    const [loading, setLoading] = useState(true)
-    const [selected, setSelected] = useState(null)
-    const [tokens, setTokens] = useState(1)
-    
-    // State to toggle between the input modal and the confirmation modal overlay
-    const [showConfirmModal, setShowConfirmModal] = useState(false)
-
-    const [topping, setTopping] = useState(false)
-    const [success, setSuccess] = useState(null)
-    const [error, setError] = useState('')
-
-    useEffect(() => {
-        const fetch = async () => {
-            try {
-                const result = await getAllMembers()
-                const corps = result.data.filter(m => m.member_type === 'corps_member')
-                setMembers(corps)
-                setFiltered(corps)
-            } catch (err) {
-                console.error(err)
-            } finally {
-                setLoading(false)
-            }
-        }
-        fetch()
-    }, [])
-
-    useEffect(() => {
-        const q = search.toLowerCase()
-        setFiltered(members.filter(m =>
-            `${m.first_name} ${m.last_name}`.toLowerCase().includes(q) ||
-            m.state_code.toLowerCase().includes(q)
-        ))
-    }, [search, members])
-
-    // Intercepts initial submit to open the confirmation modal popup
-    const handleInitialSubmit = () => {
-        if (!tokens || tokens <= 0) {
-            setError('Please enter a valid token amount.')
-            return
-        }
-        setError('')
-        setShowConfirmModal(true) // Opens the confirmation overlay modal
-    }
-
-    // Fires the actual API call when confirmed inside the overlay modal
-    const handleConfirmTopUp = async () => {
-        setTopping(true)
-        setError('')
-        try {
-            const result = await topUpMember(selected.id, tokens)
-            setSuccess(result.data)
-            setShowConfirmModal(false)
-            setSelected(null)
-            setTokens(1)
-            setMembers(prev => prev.map(m =>
-                m.id === selected.id
-                    ? { ...m, token_balance: result.data.new_balance }
-                    : m
-            ))
-        } catch (err) {
-            setError(err.response?.data?.message || 'Something went wrong')
-            setShowConfirmModal(false) // Close confirm modal on error so they can see it
-        } finally {
-            setTopping(false)
-        }
-    }
+    const [tab, setTab] = useState('direct')
+    const { count, refresh } = usePendingTopUpCount()
 
     return (
         <div style={{
-            minHeight: '100vh',
-            background: '#f2f4f7',
-            fontFamily: "'Plus Jakarta Sans', sans-serif",
-            maxWidth: '390px',
-            margin: '0 auto',
-            paddingBottom: '40px'
+            minHeight: '100vh', background: '#f2f4f7', fontFamily: FONT,
+            maxWidth: '390px', margin: '0 auto', paddingBottom: '40px'
         }}>
-            <HeaderBar 
-                title="Top Up Tokens" 
-                subtitle="Add tokens to a member's account" 
-                onBack={() => navigate('/dashboard')} 
+            <HeaderBar
+                title="Top Up Tokens"
+                subtitle="Cash top-ups and member requests"
+                onBack={() => navigate('/')}
             />
 
             <div style={{ padding: '16px 20px 0' }}>
-                {/* SUCCESS NOTIFICATION */}
-                {success && (
-                    <div style={{
-                        background: '#e6f4ee',
-                        borderRadius: '14px',
-                        padding: '14px 16px',
-                        marginBottom: '14px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '10px'
-                    }}>
-                        <Coins size={18} color="#008751" />
-                        <div>
-                            <div style={{ fontSize: '0.82rem', fontWeight: 600, color: '#008751' }}>
-                                {success.tokens_added} token{success.tokens_added !== 1 ? 's' : ''} added — ₦{success.naira_value.toLocaleString()} collected
-                            </div>
-                            <div style={{ fontSize: '0.72rem', color: '#4a5e52' }}>
-                                New balance: {success.new_balance} tokens
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* FIRST MODAL: Enter Tokens */}
-                {selected && !showConfirmModal && (
-                    <TopUpModalCard
-                        selected={selected}
-                        tokens={tokens}
-                        setTokens={setTokens}
-                        rate={RATE}
-                        error={error}
-                        topping={topping}
-                        onCancel={() => { setSelected(null); setError('') }}
-                        onSubmit={handleInitialSubmit}
-                    />
-                )}
-
-                {/* SECOND MODAL: Confirmation Overlay Popup */}
-                {showConfirmModal && selected && (
-                    <TopUpConfirmModal
-                        selected={selected}
-                        tokens={tokens}
-                        rate={RATE}
-                        topping={topping}
-                        error={error}
-                        onCancel={() => setShowConfirmModal(false)}
-                        onConfirm={handleConfirmTopUp}
-                    />
-                )}
-
-                <SearchBar
-                    value={search}
-                    onChange={setSearch}
-                    placeholder="Search by name or state code"
-                />
-
-                {loading && (
-                    <div style={{ textAlign: 'center', color: '#8fa396', fontSize: '0.82rem', marginTop: '20px' }}>
-                        Loading members...
-                    </div>
-                )}
-                {!loading && filtered.length === 0 && (
-                    <div style={{
-                        textAlign: 'center',
-                        color: '#8fa396',
-                        fontSize: '0.82rem',
-                        padding: '40px 0'
-                    }}>
-                        {search ? 'No members match your search' : 'No members found'}
-                    </div>
-                )}
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {filtered.map(member => (
-                        <MemberListItem
-                            key={member.id}
-                            member={member}
-                            isSelected={selected?.id === member.id}
-                            onClick={() => { 
-                                setSelected(member); 
-                                setShowConfirmModal(false);
-                                setSuccess(null); 
-                                setError('') 
+                <div style={{
+                    display: 'flex', background: '#ffffff', borderRadius: '14px', padding: '4px',
+                    gap: '4px', marginBottom: '14px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
+                }}>
+                    {TABS.map(t => (
+                        <button
+                            key={t.key} onClick={() => setTab(t.key)}
+                            style={{
+                                flex: 1, padding: '10px 6px', border: 'none', borderRadius: '10px',
+                                cursor: 'pointer', fontSize: '0.78rem', fontWeight: 700, fontFamily: FONT,
+                                background: tab === t.key ? '#008751' : 'transparent',
+                                color: tab === t.key ? 'white' : '#8fa396',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
                             }}
-                        />
+                        >
+                            {t.label}
+                            {t.key === 'requests' && count > 0 && (
+                                <span style={{
+                                    background: '#e53e3e', color: 'white', borderRadius: '10px',
+                                    fontSize: '0.62rem', padding: '1px 6px', fontWeight: 800
+                                }}>
+                                    {count}
+                                </span>
+                            )}
+                        </button>
                     ))}
                 </div>
+
+                {tab === 'direct' ? <DirectTopUp /> : <TopUpRequests onChanged={refresh} />}
             </div>
         </div>
     )

@@ -6,10 +6,11 @@ import {
 } from 'lucide-react'
 import api from '../../services/api'
 
-const TREASURY_ROLES = [
-    'treasurer', 'financial_secretary',
-    'president', 'vice_president', 'secretary'
-]
+
+import usePendingTopUpCount from '../../hooks/usePendingTopUpCount'
+import { DIRECT_TOPUP_ROLES, TREASURY_ROLES } from '../../constants'
+
+
 
 export default function BottomNav({ member }) {
     const navigate = useNavigate()
@@ -24,14 +25,14 @@ export default function BottomNav({ member }) {
         }
     }, [member])
 
+    const { count: pendingTopUps } = usePendingTopUpCount(DIRECT_TOPUP_ROLES.includes(member?.role))
+
     const tabs = [
         { path: '/home', label: 'Home', icon: Home },
         { path: '/attendance', label: 'Record', icon: Calendar },
         { path: '/clearance', label: 'Clearance', icon: FileText },
         { path: '/profile', label: 'Profile', icon: User },
-        ...(member?.role === 'treasurer' || member?.role === 'financial_secretary'
-            ? [{ path: '/topup', label: 'Top Up', icon: Coins }]
-            : []),
+        { path: '/topup', label: 'Top Up', icon: Coins, dot: pendingTopUps > 0 },
         ...(member?.role === 'president' || member?.role === 'vice_president'
             ? [{ path: '/signout', label: 'Sign Out', icon: LogOut }]
             : []),
@@ -84,8 +85,12 @@ export default function BottomNav({ member }) {
                             alignItems: 'center',
                             justifyContent: 'center',
                             background: isActive ? '#e6f4ee' : 'transparent',
-                            borderRadius: '8px'
+                            borderRadius: '8px',
+                            position: 'relative'
                         }}>
+                            {tab.dot && (
+                                 <span style={{ position: 'absolute', top: '2px', right: '2px', width: '8px', height: '8px', background: '#e53e3e', borderRadius: '50%' }} />
+                            )}
                             <Icon size={18} color={isActive ? '#008751' : '#8fa396'} />
                         </div>
                         <div style={{

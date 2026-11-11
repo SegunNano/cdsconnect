@@ -344,7 +344,7 @@ export const loginWithPin = async (email, pin, clientCredentialId = null) => {
 
     const pinMatch = await comparePin(pin, authMember.pin_hash)
     if (!pinMatch) {
-        throw { status: 401, message: 'Incorrect PIN' }
+        throw { status: 401, message: 'Incorrect Email/PIN' }
     }
 
     const member = await getMe(authMember.id)
