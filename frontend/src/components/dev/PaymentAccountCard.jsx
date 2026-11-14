@@ -3,6 +3,7 @@ import { Landmark, Pencil, ShieldCheck, CheckCircle } from 'lucide-react'
 import { getPaymentAccount, updatePaymentAccount } from '../../services/paymentAccount.service'
 import { formatDate } from '../../utils/dates'
 import { labelStyle, inputStyle, btn, errorBox } from '../tokens/styles'
+import PinInput from '../common/PinInput'
 
 const EMPTY = { bankName: '', accountNumber: '', accountName: '' }
 
@@ -159,15 +160,15 @@ export default function PaymentAccountCard({ card, sectionHead }) {
                             {form.bankName.trim()} · {form.accountNumber} · {form.accountName.trim()}
                         </div>
 
-                        <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
                             <ShieldCheck size={13} /> Enter your PIN to confirm
                         </label>
-                        <input
-                            type="password" inputMode="numeric" autoComplete="off"
-                            maxLength={6} value={pin}
-                            onChange={e => setPin(e.target.value.replace(/\D/g, ''))}
-                            style={{ ...inputStyle, marginBottom: '14px', letterSpacing: '4px' }}
-                        />
+                        
+                        {/* Integrated PinInput Component */}
+                        <div style={{ marginBottom: '14px' }}>
+                            <PinInput value={pin} onChange={setPin} />
+                        </div>
+
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr', gap: '10px' }}>
                             <button onClick={() => { setMode('edit'); setError('') }} disabled={saving} style={btn('#f2f4f7', '#4a5e52', saving)}>
                                 Back
