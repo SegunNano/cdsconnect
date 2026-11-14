@@ -1,4 +1,5 @@
 import { ShieldAlert, CheckCircle2, XCircle } from 'lucide-react'
+import PaymentAccountCard from './PaymentAccountCard'
 
 export default function SettingsTab({ regStatus, card, sectionHead, onToggle }) {
     const isRegOpen = regStatus?.registration_open
@@ -68,6 +69,8 @@ export default function SettingsTab({ regStatus, card, sectionHead, onToggle }) 
                     </div>
                 </div>
             </div>
+
+            <PaymentAccountCard card={card} sectionHead={sectionHead} />
         </>
     )
 }

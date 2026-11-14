@@ -4,10 +4,11 @@ import ModalShell from '../common/ModalShell'
 import { TokenCounter } from './TokenCounter'
 import CopyButton from './CopyButton'
 import { RATE, MAX_TOKENS_PER_TOPUP } from '../../constants'
-import { PAYMENT_ACCOUNT, hasPaymentAccount } from '../../config/paymentAccount'
+// import { PAYMENT_ACCOUNT, hasPaymentAccount } from '../../config/paymentAccount'
 import { useAuth } from '../../context/AuthContext'
 import { submitTopUpRequest } from '../../services/tokens.service'
 import { FONT, card, labelStyle, inputStyle, btn, errorBox } from './styles'
+import usePaymentAccount from '../../hooks/usePaymentAccount'
 
 const MAX_FILE = 5 * 1024 * 1024
 
@@ -41,6 +42,7 @@ export default function BuyTokensModal({ onClose, onSubmitted }) {
 
     const amount = tokens * RATE
     const tooMany = tokens > MAX_TOKENS_PER_TOPUP
+const account = usePaymentAccount(step === 'pay')
 
     const pickFile = (e) => {
         const file = e.target.files?.[0]
@@ -119,16 +121,20 @@ export default function BuyTokensModal({ onClose, onSubmitted }) {
             {/* STEP 2: PAY */}
             {step === 'pay' && (
                 <>
-                    {hasPaymentAccount ? (
-                        <div style={{ ...card, background: '#f8fdf9', padding: '4px 14px', marginBottom: '14px' }}>
-                            {PAYMENT_ACCOUNT.bankName && <PayRow label="Bank" value={PAYMENT_ACCOUNT.bankName} />}
-                            <PayRow label="Account number" value={PAYMENT_ACCOUNT.accountNumber} copy={PAYMENT_ACCOUNT.accountNumber} />
-                            <PayRow label="Account name" value={PAYMENT_ACCOUNT.accountName} />
-                            <PayRow label="Amount to send" value={`₦${amount.toLocaleString()}`} copy={amount} />
+                    {account === undefined && (
+                        <div style={{ fontSize: '0.8rem', color: '#8fa396', padding: '16px 0', textAlign: 'center' }}>
+                            Loading payment details...
                         </div>
-                    ) : (
-                        <div style={errorBox}>
-                            Payment details are not available yet. Please contact the treasurer.
+                    )}
+                    {account === null && (
+                        <div style={errorBox}>Payment details are not available right now. Please contact the treasurer.</div>
+                    )}
+                    {account && (
+                        <div style={{ ...card, background: '#f8fdf9', padding: '4px 14px', marginBottom: '14px' }}>
+                            <PayRow label="Bank" value={account.bank_name} />
+                            <PayRow label="Account number" value={account.account_number} copy={account.account_number} />
+                            <PayRow label="Account name" value={account.account_name} />
+                            <PayRow label="Amount to send" value={`₦${amount.toLocaleString()}`} copy={amount} />
                         </div>
                     )}
                     <div style={{ fontSize: '0.75rem', color: '#4a5e52', lineHeight: 1.5, marginBottom: '14px' }}>
@@ -136,10 +142,7 @@ export default function BuyTokensModal({ onClose, onSubmitted }) {
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr', gap: '10px' }}>
                         <button onClick={() => setStep('amount')} style={btn('#f2f4f7', '#4a5e52')}>Back</button>
-                        <button
-                            onClick={() => setStep('details')} disabled={!hasPaymentAccount}
-                            style={btn('#008751', 'white', !hasPaymentAccount)}
-                        >
+                        <button onClick={() => setStep('details')} disabled={!account} style={btn('#008751', 'white', !account)}>
                             I have paid
                         </button>
                     </div>

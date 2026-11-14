@@ -4,7 +4,7 @@ import MemberLayout from './MemberLayout'
 
 const NO_LAYOUT_PATHS = ['/dev', '/coordinator']
 
-export default function ProtectedRoute({ children, requireDev = false }) {
+export default function ProtectedRoute({ children, requireDev = false, roles }) {
     const { member, loading } = useAuth()
     const location = useLocation()
 
@@ -26,6 +26,9 @@ export default function ProtectedRoute({ children, requireDev = false }) {
     if (!member) return <Navigate to="/login" replace />
 
     if (requireDev && !member.is_dev) return <Navigate to="/" replace />
+
+    // Role-gated pages: exact role only
+    if (roles && !roles.includes(member.role)) return <Navigate to="/" replace />
 
     if (location.pathname === '/coordinator' && member.member_type !== 'staff') {
         return <Navigate to="/" replace />

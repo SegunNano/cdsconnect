@@ -18,6 +18,7 @@ import TokenHistory from './pages/member/TokenHistory'
 import Treasury from './pages/member/Treasury'
 import UnderConstruction from './pages/public/UnderConstruction' 
 import CertificateCollate from './pages/member/CertificateCollate'
+import { ROUTE_ROLES } from './constants'
 
 // Set to true to override all routes, or false to restore normal app flow
 const IS_MAINTENANCE_MODE = import.meta.env.VITE_MAINTENANCE_MODE === 'true'
@@ -61,12 +62,12 @@ export default function App() {
                     <Route path="/excuse" element={<ProtectedRoute><ExcuseForm /></ProtectedRoute>} />
                     <Route path="/clearance" element={<ProtectedRoute><ClearanceSlip /></ProtectedRoute>} />
                     <Route path="/clearance/:meetingId" element={<ProtectedRoute><ClearanceSlip /></ProtectedRoute>} />
-                    <Route path="/signout" element={<ProtectedRoute><SignOutPanel /></ProtectedRoute>} />
-                    <Route path="/topup" element={<ProtectedRoute><TopUp /></ProtectedRoute>} />
                     <Route path="/tokens" element={<ProtectedRoute><TokenHistory /></ProtectedRoute>} />
-                    <Route path="/treasury" element={<ProtectedRoute><Treasury /></ProtectedRoute>} />
+                    <Route path="/topup" element={<ProtectedRoute roles={ROUTE_ROLES.topup}><TopUp /></ProtectedRoute>} />
+                    <Route path="/treasury" element={<ProtectedRoute roles={ROUTE_ROLES.treasury}><Treasury /></ProtectedRoute>} />
+                    <Route path="/signout" element={<ProtectedRoute roles={ROUTE_ROLES.signout}><SignOutPanel /></ProtectedRoute>} />
+                    <Route path="/certificates/collate" element={<ProtectedRoute roles={ROUTE_ROLES.certificates}><CertificateCollate /></ProtectedRoute>} />
                     <Route path="/verify/:qrToken" element={<VerifySlip />} />
-                    <Route path="/certificates/collate" element={<ProtectedRoute><CertificateCollate /></ProtectedRoute>} />
 
 
                     {/* Coordinator */}
