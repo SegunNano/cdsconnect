@@ -513,18 +513,19 @@ export const getElectionState = async (memberId) => {
 export const getAdminState = async () => {
     const electable = await getElectablePositions()
     const election = await getOpenElection()
-
+    
     if (!election) {
         const { rows: [last] } = await pool.query(
             "SELECT * FROM elections WHERE status = 'closed' ORDER BY id DESC LIMIT 1")
-        return {
-            election: null, electable,
-            last_result: last
+
+            return {
+                election: null, electable,
+                last_result: last
                 ? { title: last.title, closed_at: last.closed_at, ...(await buildResults(last)) }
                 : null
+            }
         }
-    }
-
+        
     const positions = await getPositions(election.id)
     const { rows: apps } = await pool.query(
         `SELECT c.id, c.role, c.manifesto, c.photo_path, m.first_name, m.last_name, m.state_code

@@ -18,6 +18,9 @@ import TokenHistory from './pages/member/TokenHistory'
 import Treasury from './pages/member/Treasury'
 import UnderConstruction from './pages/public/UnderConstruction' 
 import CertificateCollate from './pages/member/CertificateCollate'
+import Election from './pages/member/Election'
+
+
 import { ROUTE_ROLES } from './constants'
 
 // Set to true to override all routes, or false to restore normal app flow
@@ -67,6 +70,7 @@ export default function App() {
                     <Route path="/treasury" element={<ProtectedRoute roles={ROUTE_ROLES.treasury}><Treasury /></ProtectedRoute>} />
                     <Route path="/signout" element={<ProtectedRoute roles={ROUTE_ROLES.signout}><SignOutPanel /></ProtectedRoute>} />
                     <Route path="/certificates/collate" element={<ProtectedRoute roles={ROUTE_ROLES.certificates}><CertificateCollate /></ProtectedRoute>} />
+                    <Route path="/election" element={<ProtectedRoute><Election /></ProtectedRoute>} />  
                     <Route path="/verify/:qrToken" element={<VerifySlip />} />
 
 

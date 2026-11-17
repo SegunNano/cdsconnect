@@ -50,7 +50,9 @@ export default function ElectionCard({ card, sectionHead }) {
     const [reason, setReason] = useState('')
 
     const load = useCallback(
-        () => getElectionAdmin().then(res => setData(res.data)).catch(() => setData(null)),
+        () => getElectionAdmin()
+            .then(res => setData(res))
+            .catch(() => setData(null)),
         []
     )
     useEffect(() => { load() }, [load])
@@ -84,7 +86,7 @@ export default function ElectionCard({ card, sectionHead }) {
         setError('')
         try {
             const res = await electionPhase({ action: phase.action, pin })
-            setData(res.data)
+            setData(res) // Changed from res.data to res
             setPhase(null)
             setPin('')
         } catch (err) {
@@ -101,7 +103,7 @@ export default function ElectionCard({ card, sectionHead }) {
         setError('')
         try {
             const res = await removeElectionCandidate(removing.id, reason.trim())
-            setData(res.data)
+            setData(res) // Changed from res.data to res
             setRemoving(null)
             setReason('')
         } catch (err) {
