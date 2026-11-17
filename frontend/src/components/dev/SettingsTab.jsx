@@ -1,3 +1,4 @@
+import ElectionCard from './ElectionCard'
 import PaymentAccountCard from './PaymentAccountCard'
 import SystemControlsCard from './SystemControlsCard'
 
@@ -8,6 +9,7 @@ export default function SettingsTab({ regStatus, card, sectionHead, onToggle }) 
         <>
             <SystemControlsCard card={card} sectionHead={sectionHead} isRegOpen={isRegOpen} onToggle={onToggle} />
             <PaymentAccountCard card={card} sectionHead={sectionHead} />
+            <ElectionCard card={card} sectionHead={sectionHead} />
         </>
     )
 }

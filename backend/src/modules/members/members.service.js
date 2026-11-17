@@ -6,6 +6,7 @@ import { hashPin, validatePin } from '../../utils/pin.js'
 import { sendMail } from '../../utils/mailer.js'
 import { emailLayout } from '../../utils/emailTemplate.js'
 import { sendMailSafe } from '../../utils/mailer.js'
+import { isActiveCandidate } from '../election/election.service.js'
 
 const generateTempPin = () => {
     let pin
@@ -191,6 +192,11 @@ export const updateMemberRole = async (memberId, role) => {
 export const toggleDevAccess = async (adminId, targetMemberId) => {
     if (adminId === targetMemberId) {
         throw { status: 400, message: 'You cannot change your own dev access' }
+    }
+
+    // in toggleDevAccess, inside the branch that GRANTS dev (when !isCurrentlyDev):
+    if (await isActiveCandidate(targetMemberId)) {
+        throw { status: 409, message: 'This member is a candidate in the current election, so they cannot be made a dev until it closes.' }
     }
 
     const member = await pool.query(
