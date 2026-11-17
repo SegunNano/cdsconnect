@@ -15,7 +15,6 @@ export const BREAKOUT_SESSIONS = [
 ]
 
 export const ROLES = [
-    "member",
     "president",
     "vice_president",
     "general_secretary",
@@ -24,19 +23,23 @@ export const ROLES = [
     "financial_secretary",
     "pro1",
     "pro2",
+    "member",
     "coordinator"
 ]
+
+export const ELECTED_ROLES = ROLES.filter(role => !['member', 'coordinator'].includes(role))
 
 export const NOTIFICATION_TYPES = {
     EXCUSE_SUBMITTED: 'excuse_submitted',
     EXCUSE_APPROVED: 'excuse_approved',
     EXCUSE_REJECTED: 'excuse_rejected',
-    TOPUP: 'topup',
     MEETING_CREATED: 'meeting_created',
-    LOW_TOKEN: 'low_token',
     CLEARANCE_READY: 'clearance_ready',
     EXPENSE_LOGGED: 'expense_logged',
     REINSTATEMENT: 'reinstatement',
+    ELECTION: 'election',
+    TOPUP: 'topup',
+    LOW_TOKEN: 'low_token',
     TOKEN_TRANSFER: 'token_transfer'
 }
 

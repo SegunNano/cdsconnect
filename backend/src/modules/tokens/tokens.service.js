@@ -3,6 +3,7 @@ import { RATE, NOTIFICATION_TYPES, PROOF_BUCKET, MAX_TOKENS, DIRECT_TOPUP_ROLES,
 import { createNotification } from '../notifications/notifications.service.js'
 import crypto from 'crypto'
 import supabase from '../../config/supabase.js'
+import { withTransaction } from '../../utils/transaction.js'
 
 
 // ── HELPERS ──────────────────────────────────────────────────────
@@ -20,20 +21,6 @@ const parseTokens = (value) => {
     return n
 }
 
-const withTransaction = async (fn) => {
-    const client = await pool.connect()
-    try {
-        await client.query('BEGIN')
-        const result = await fn(client)
-        await client.query('COMMIT')
-        return result
-    } catch (err) {
-        await client.query('ROLLBACK')
-        throw err
-    } finally {
-        client.release()
-    }
-}
 
 // The single place tokens are credited: manual top-up, approvals, and
 // later the Paystack webhook. Must run inside a transaction.

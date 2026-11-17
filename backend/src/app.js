@@ -27,6 +27,7 @@ import errorMiddleware from './middlewares/error.middleware.js'
 import incomeRoutes from './modules/income/income.routes.js'
 import coordinatorRoutes from './modules/coordinator/coordinator.routes.js'
 import certificateRoutes from './modules/certificates/certificates.routes.js'
+import electionRoutes from './modules/election/election.routes.js'
 
 const app = express()
 
@@ -111,6 +112,8 @@ app.use('/api/income', incomeRoutes)
 app.use('/api/verify', verifyRoutes)
 app.use('/api/coordinator', coordinatorRoutes)
 app.use('/api/certificates', certificateRoutes)
+app.use('/api/election', electionRoutes)
+
 
 // ── 7. ERROR HANDLER ─────────────────────────────
 app.use(errorMiddleware)
