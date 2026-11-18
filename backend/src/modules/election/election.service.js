@@ -7,7 +7,7 @@ import { checkIfSuspended } from '../attendance/attendance.service.js'
 import { createNotification } from '../notifications/notifications.service.js'
 import { ELECTED_ROLES, NOTIFICATION_TYPES } from '../../constants.js'
 
-const BUCKET = 'election-photos'
+const BUCKET = 'evidence'
 const ALLOWED_PHOTO = ['image/jpeg', 'image/png', 'image/webp']
 const label = (role) => role.replace(/_/g, ' ')
 
