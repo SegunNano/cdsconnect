@@ -57,7 +57,7 @@ export const handleCastVote = async (req, res, next) => {
     try {
         const result = await electionService.castVote(req.member.id, {
             role: req.body.role,
-            candidateId: req.body.candidate_id
+            candidateId: req.body.candidateId
         })
         res.json(result)
     } catch (err) {

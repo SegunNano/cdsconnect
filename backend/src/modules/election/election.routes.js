@@ -15,8 +15,10 @@ const corpsOnly = (req, res, next) =>
         ? next()
         : res.status(403).json({ success: false, message: 'Only corps members can take part.' })
 
+
+        
 router.use(authMiddleware)
-// router.use(corpsOnly)
+router.use(corpsOnly)
 
 
 

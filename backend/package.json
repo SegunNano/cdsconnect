@@ -12,6 +12,7 @@
     "seed:coordinator": "node database/seeds/003_coordinator.seed.js",
     "seed:clearance": "node database/seeds/004_clearance_slips.seed.js",
     "seed:reset-pin": "node database/seeds/005_reset_member_pin.seed.js",
+    "seed:election_applicant": "node database/seeds/006_election_applicant.seed.js",
     "job": "node scripts/runJob.js"
   },
   "keywords": [],

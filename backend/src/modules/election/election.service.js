@@ -453,22 +453,23 @@ export const getElectionStatus = async () => {
 
 export const getElectionState = async (memberId) => {
     const e = await getVisibleElection()
-    if (!e) return null
 
+    if (!e) return null
+    
     const positions = await getPositions(e.id)
     const base = {
         id: e.id, title: e.title, status: e.status,
         min_months_left: e.min_months_left, closed_at: e.closed_at, positions
     }
-
+    
     if (e.status === 'closed') return { ...base, results: await buildResults(e) }
-
+    
     const { rows: [mine] } = await pool.query(
         `SELECT id, role, manifesto, photo_path FROM election_candidates
-         WHERE election_id = $1 AND member_id = $2 AND status = 'active'`, [e.id, memberId])
-
-    if (e.status === 'applications') {
-        const urls = await signUrls([mine?.photo_path])
+        WHERE election_id = $1 AND member_id = $2 AND status = 'active'`, [e.id, memberId])
+        
+        if (e.status === 'applications') {
+            const urls = await signUrls([mine?.photo_path])
         return {
             ...base,
             my_application: mine

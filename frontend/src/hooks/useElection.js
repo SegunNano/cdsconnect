@@ -8,9 +8,11 @@ export default function useElection() {
 
     const load = useCallback(async () => {
         try {
-            setState(await getElection())
+            const res = await getElection()
+            setState(res)
             setError('')
         } catch (err) {
+            console.error('getElection error:', err)
             setError(err.response?.data?.message || 'Could not load the election.')
             setState(prev => (prev === undefined ? null : prev))
         }

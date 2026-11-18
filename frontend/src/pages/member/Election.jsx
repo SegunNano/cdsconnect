@@ -19,6 +19,7 @@ export default function Election() {
     const { member } = useAuth()
     const { state, error, reload } = useElection()
 
+
     // The coordinator is staff and doesn't take part
     if (member && member.member_type !== 'corps_member') return <Navigate to="/" replace />
 
