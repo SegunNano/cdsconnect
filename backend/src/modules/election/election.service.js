@@ -31,9 +31,14 @@ const uploadPhoto = async (file) => {
         throw { status: 400, message: 'The photo must be a JPG, PNG or WebP image.' }
     }
     const path = `${crypto.randomBytes(16).toString('hex')}.${type.ext}`
-    const { error } = await supabase.storage.from(BUCKET)
+    
+    const { data, error } = await supabase.storage.from(BUCKET)
         .upload(path, file.buffer, { contentType: type.mime })
-    if (error) throw { status: 500, message: 'Could not upload the photo. Try again.' }
+
+    if (error) {
+        console.error('SUPABASE STORAGE UPLOAD ERROR:', error) // <-- ADD THIS LINE
+        throw { status: 500, message: 'Could not upload the photo. Try again.' }
+    }
     return path
 }
 
