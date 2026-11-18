@@ -8,7 +8,12 @@ export const removeElectionCandidate = async (id, reason) =>
 
 const multipart = { headers: { 'Content-Type': 'multipart/form-data' } }
 
-export const getElectionStatus = async () => (await api.get('/election/status')).data.data
+// export const getElectionStatus = async () => (await api.get('/election/status')).data.data
+export const getElectionStatus = async () => {
+    const res = await api.get('/election/status')
+    console.log('election status:', res.data)
+    return res.data
+}
 export const getElection = async () => (await api.get('/election')).data
 
 export const applyToElection = async ({ role, manifesto, photo }) => {

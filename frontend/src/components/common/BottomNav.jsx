@@ -53,12 +53,12 @@ export default function BottomNav({ member }) {
     const firstRun = useRef(true)
     const [edges, setEdges] = useState({ left: false, right: false })
 
-    // Safe optional chaining protects against initial undefined hook resolutions
+    // The "needed right now" tabs come first, so they're visible without scrolling
     const tabs = [
         { path: '/home', label: 'Home', icon: Home },
-        ...(flags?.election?.visible
+        ...(flags.election?.visible
             ? [{ path: '/election', label: 'Election', icon: Vote, dot: flags.election.status === 'voting' }] : []),
-        ...(flags?.signOutToday ? [{ path: '/signout', label: 'Sign Out', icon: LogOut }] : []),
+        ...(flags.signOutToday ? [{ path: '/signout', label: 'Sign Out', icon: LogOut }] : []),
         { path: '/attendance', label: 'Record', icon: Calendar },
         { path: '/clearance', label: 'Clearance', icon: FileText },
         { path: '/profile', label: 'Profile', icon: User },
@@ -66,7 +66,7 @@ export default function BottomNav({ member }) {
             ? [{ path: '/topup', label: 'Top Up', icon: Coins, dot: pendingTopUps > 0 }] : []),
         ...(ROUTE_ROLES.treasury.includes(role)
             ? [{ path: '/treasury', label: 'Treasury', icon: DollarSign }] : []),
-        ...(flags?.certs ? [{ path: '/certificates/collate', label: 'Certs', icon: Award }] : []),
+        ...(flags.certs ? [{ path: '/certificates/collate', label: 'Certs', icon: Award }] : []),
         ...(member?.is_dev ? [{ path: '/dev', label: 'Dev', icon: Settings2 }] : [])
     ]
 
