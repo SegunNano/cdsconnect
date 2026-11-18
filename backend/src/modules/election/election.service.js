@@ -375,6 +375,8 @@ export const withdrawApplication = async (memberId) => {
 
 // ── MEMBER: VOTE ─────────────────────────────────────────────────
 export const castVote = async (memberId, { role, candidateId }) => {
+
+    console.log({ role, candidateId, body:req.body })
     const id = Number(candidateId)
     if (!Number.isInteger(id)) throw { status: 400, message: 'Choose a candidate.' }
 
