@@ -55,6 +55,7 @@ export const handleWithdrawApplication = async (req, res, next) => {
 
 export const handleCastVote = async (req, res, next) => {
     try {
+        console.log(req.body)
         const result = await electionService.castVote(req.member.id, {
             role: req.body.role,
             candidateId: req.body.candidateId
