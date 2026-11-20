@@ -1,7 +1,7 @@
 import { createNotificationForAll } from '../notifications/notifications.service.js'
 import { DEFAULT_RADIUS_METERS, NOTIFICATION_TYPES } from '../../constants.js'
 import pool from '../../config/db.js'
-import { emailLayout } from '../../utils/emailTemplate.js'
+import { emailLayout, esc } from '../../utils/emailTemplate.js'
 import { enqueueBulk, sendMailSafe } from '../../utils/mailer.js'
 
 const formatMeeting = (meeting) => ({
