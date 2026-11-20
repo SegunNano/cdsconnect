@@ -47,7 +47,7 @@ export const updateCertificate = async (req, res, next) => {
             await enqueueBulk({
                 to: m.email,
                 subject: 'Your batch certificates are available',
-                html: emailLayout({ /* your layout from before */ })
+                html: emailLayout(`Certificates for your batch are open. Pay <b>${cost} token${cost !== 1 ? 's' : ''}</b> from your home screen to complete your service and receive your certificate.`)
             }, { kind: 'certificates', streamId, priority: 1 })
         }
 

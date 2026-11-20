@@ -1,9 +1,12 @@
 import {
     getCertificateStatus, payForCertificates,
     buildMembershipCertificate, buildExcellenceCertificate,
-    getPaidMembers
+    getPaidMembers,
+    buildCollationPdf
 } from './certificates.service.js'
 import pool from '../../config/db.js'
+import { generateCollationPdf } from '../../utils/collation.pdf.js'
+
 
 export const getStatus = async (req, res, next) => {
     try {
@@ -180,5 +183,25 @@ export const markCollateDone = async (req, res, next) => {
         })
     } catch (err) {
         next(err)
+    }
+}
+
+
+export const downloadCollationPdf = async (req, res, next) => {
+    try {
+        const streamId = Number(req.params.streamId)
+        if (!Number.isInteger(streamId) || streamId <= 0) {
+            return res.status(400).json({ message: 'Invalid stream ID.' })
+        }
+
+        const buffer = await buildCollationPdf(streamId)
+        res.set({
+            'Content-Type': 'application/pdf',
+            'Content-Disposition': `attachment; filename="paid-certificates-${streamId}.pdf"`,
+            'Content-Length': buffer.length
+        })
+        return res.send(buffer)
+    } catch (err) {
+        return next(err)
     }
 }

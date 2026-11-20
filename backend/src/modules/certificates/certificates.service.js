@@ -4,6 +4,8 @@ import {
     generateExcellenceCertificate,
     generateMembershipCertificate
 } from '../../utils/certificate-pdf.js'
+import { generateCollationPdf } from '../../utils/collation.pdf.js'
+
 
 
 // ── BUILD MEMBERSHIP CERTIFICATE ──────────────────────────────────
@@ -178,7 +180,7 @@ export const payForCertificates = async (memberId) => {
     await createNotification(
         memberId,
         'Certificates Ready 🎓',
-        `Your certificate${status.is_exco ? 's are' : ' is'} ready. Download ${status.is_exco ? 'them' : 'it'} from the Clearance section.`,
+        `Your payment is recorded. Your executives will hand over your certificate${status.is_exco ? 's' : ''} in person.`,
         'certificate_ready'
     )
 
@@ -205,4 +207,13 @@ export const getPaidMembers = async () => {
     )
 
     return result.rows
+}
+
+
+
+export const buildCollationPdf = async (streamId) => {
+    const streams = await getCollateData()
+    const stream = streams.find(s => s.stream_id === streamId)
+    if (!stream) throw { status: 404, message: 'No paid members found for that batch.' }
+    return generateCollationPdf(stream)
 }

@@ -22,19 +22,27 @@ router.use(authMiddleware)
 // Member routes
 router.get('/status', getStatus)
 router.post('/pay', pay)
-router.get('/download/membership', downloadMembership)
-router.get('/download/excellence', downloadExcellence)
+// router.get('/download/membership', downloadMembership)
+// router.get('/download/excellence', downloadExcellence)
 
-// Secretary/Exco routes
-router.get('/paid-members', requireRole('secretary'), paidMembersList)
+
+router.use(requireRole(...COLLATE_ROLES))
 
 // Certificate collation routes
+router.get('/paid-members', paidMembersList)
 router.get('/collate-status', collateStatus)
-router.get('/collate', requireRole(...COLLATE_ROLES), collate)
-router.patch(
-    '/collate/:streamId/done',
-    requireRole(...COLLATE_ROLES),
-    markCollateDone
-)
+router.get('/collate', collate)
+router.patch('/collate/:streamId/done', markCollateDone)
+router.get('/collate/:streamId/pdf', async (req, res, next) => {
+    try {
+        const buffer = await buildCollationPdf(Number(req.params.streamId))
+        res.set({
+            'Content-Type': 'application/pdf',
+            'Content-Disposition': `attachment; filename="paid-certificates-${req.params.streamId}.pdf"`,
+            'Content-Length': buffer.length
+        })
+        res.send(buffer)
+    } catch (err) { next(err) }
+})
 
 export default router
