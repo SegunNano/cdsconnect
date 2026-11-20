@@ -75,7 +75,7 @@ export const createMeeting = async (data) => {
                     greeting: m.first_name,
                     paragraphs: [
                         `<b>${esc(meeting.title)}</b> is scheduled for <b>${meeting.meeting_date}</b>.`,
-                        'Make sure you have enough tokens to sign in. File an excuse at least 5 days ahead if you cannot attend.'
+                        'Make sure you have enough tokens to sign in. File an excuse at least 7 days ahead if you cannot attend.'
                     ],
                     button: { label: 'Open CDSConnect', url: process.env.FRONTEND_URL }
                 })
