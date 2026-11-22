@@ -16,6 +16,6 @@ router.get('/payment-account', getAccount)
 router.use(devMiddleware)
 
 router.patch('/registration/toggle', toggle)
-router.put('/payment-account', pinAttempts, updateAccount)
+router.put('/payment-account', pinAttempts("account"), updateAccount)
 
 export default router
