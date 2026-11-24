@@ -6,6 +6,7 @@ import {
 } from '../../services/election.service'
 import { formatDate } from '../../utils/dates'
 import { FONT, labelStyle, inputStyle, btn, errorBox } from '../tokens/styles'
+import PinInput from '../common/PinInput'
 
 const roleLabel = (r) => r.replace(/_/g, ' ')
 const holderName = (p) => (p.holder_first ? `${p.holder_first} ${p.holder_last}` : 'Vacant')
@@ -86,7 +87,7 @@ export default function ElectionCard({ card, sectionHead }) {
         setError('')
         try {
             const res = await electionPhase({ action: phase.action, pin })
-            setData(res) // Changed from res.data to res
+            setData(res)
             setPhase(null)
             setPin('')
         } catch (err) {
@@ -103,7 +104,7 @@ export default function ElectionCard({ card, sectionHead }) {
         setError('')
         try {
             const res = await removeElectionCandidate(removing.id, reason.trim())
-            setData(res) // Changed from res.data to res
+            setData(res)
             setRemoving(null)
             setReason('')
         } catch (err) {
@@ -119,7 +120,7 @@ export default function ElectionCard({ card, sectionHead }) {
         : 'Create an election to fill vacant positions'
 
     const chip = election ? STATUS[election.status] : null
-    const pinOk = !phase?.pin || pin.length >= 4
+    const pinOk = !phase?.pin || pin.length === 4
 
     return (
         <>
@@ -290,16 +291,12 @@ export default function ElectionCard({ card, sectionHead }) {
                     {error && <div style={errorBox}>{error}</div>}
                     <div style={{ fontSize: '0.82rem', color: '#4a5e52', lineHeight: 1.5, marginBottom: '14px' }}>{phase.note}</div>
                     {phase.pin && (
-                        <>
-                            <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <div style={{ marginBottom: '16px' }}>
+                            <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginBottom: '10px' }}>
                                 <ShieldCheck size={13} /> Enter your PIN to confirm
                             </label>
-                            <input
-                                type="password" inputMode="numeric" autoComplete="off" maxLength={6} value={pin}
-                                onChange={e => setPin(e.target.value.replace(/\D/g, ''))}
-                                style={{ ...inputStyle, marginBottom: '14px', letterSpacing: '4px' }}
-                            />
-                        </>
+                            <PinInput value={pin} onChange={setPin} />
+                        </div>
                     )}
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr', gap: '10px' }}>
                         <button onClick={() => { setPhase(null); setError('') }} disabled={busy} style={btn('#f2f4f7', '#4a5e52', busy)}>Back</button>

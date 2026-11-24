@@ -3,10 +3,10 @@ const pro = 'Public Relations Officer'
 const POSITION = {
     president: 'President', vice_president: 'Vice President', secretary: 'General Secretary',
     treasurer: 'Treasurer', financial_secretary: 'Financial Secretary',
-    pro1: pro, pro2: pro,  welfare: 'Welfare Officer'
+    pro1: pro, pro2: pro,
 }
 
-const COLS = [   // [title, x, width]
+const COLS = [  
     ['S/N', 50, 28], ['Full name', 80, 170], ['State code', 252, 92],
     ['Position', 346, 106], ['Certs', 454, 34], ['Paid', 490, 55]
 ]
