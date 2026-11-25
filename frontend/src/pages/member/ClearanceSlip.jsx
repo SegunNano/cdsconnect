@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Download, Award, FileText, AlertCircle, Coins, FileCheck } from 'lucide-react'
 import api from '../../services/api'
 import { RATE } from '../../constants'
+import CertificateStatus from '../../components/clearance/CertificateStatus'
 
 export default function ClearanceSlip() {
     const navigate = useNavigate()
@@ -47,26 +48,6 @@ export default function ClearanceSlip() {
         }
     }
 
-    // Fixed certificate download using axios blob response
-    const downloadCert = async (type, memberId = null) => {
-        try {
-            const memberParam = memberId ? `?memberId=${memberId}` : ''
-            const response = await api.get(`/certificates/download/${type}${memberParam}`, {
-                responseType: 'blob'
-            })
-            const url = window.URL.createObjectURL(new Blob([response.data]))
-            const a = document.createElement('a')
-            a.href = url
-            a.setAttribute('download', `certificate-${type}-${Date.now()}.pdf`)
-            document.body.appendChild(a)
-            a.click()
-            window.URL.revokeObjectURL(url)
-            a.remove()
-        } catch (err) {
-            console.error('Download failed:', err)
-            alert('Failed to download certificate. Please try again.')
-        }
-    }
 
     // Fixed monthly clearance slip download using axios blob response
     const handleDownloadSlip = async (meetingId, meetingTitle) => {
@@ -255,84 +236,7 @@ export default function ClearanceSlip() {
                         )}
 
                         {/* PAID — DOWNLOAD */}
-                        {(certStatus.has_paid || paySuccess) && (
-                            <div style={{
-                                background: '#ffffff',
-                                borderRadius: '18px',
-                                padding: '20px',
-                                boxShadow: '0 2px 12px rgba(0,0,0,0.07)',
-                                marginBottom: '16px'
-                            }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-                                    <Award size={20} color="#008751" />
-                                    <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0d1b12' }}>
-                                        Your Certificates
-                                    </div>
-                                </div>
-
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                    {/* MEMBERSHIP CERT */}
-                                    <div style={{
-                                        background: '#f8fdf9', borderRadius: '12px',
-                                        padding: '14px', display: 'flex',
-                                        alignItems: 'center', gap: '12px'
-                                    }}>
-                                        <FileText size={20} color="#008751" />
-                                        <div style={{ flex: 1 }}>
-                                            <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#0d1b12', marginBottom: '2px' }}>
-                                                Certificate of Membership
-                                            </div>
-                                        </div>
-                                        <button
-                                            onClick={() => downloadCert('membership')}
-                                            style={{
-                                                background: '#008751', border: 'none',
-                                                borderRadius: '8px', padding: '8px 12px',
-                                                cursor: 'pointer', display: 'flex',
-                                                alignItems: 'center', gap: '4px',
-                                                fontSize: '0.72rem', fontWeight: 600,
-                                                color: 'white',
-                                                fontFamily: "'Plus Jakarta Sans', sans-serif"
-                                            }}
-                                        >
-                                            <Download size={13} color="white" />
-                                            Download
-                                        </button>
-                                    </div>
-
-                                    {/* EXCELLENCE CERT — excos only */}
-                                    {certStatus.is_exco && (
-                                        <div style={{
-                                            background: '#fffbf0', borderRadius: '12px',
-                                            padding: '14px', display: 'flex',
-                                            alignItems: 'center', gap: '12px'
-                                        }}>
-                                            <Award size={20} color="#b8860b" />
-                                            <div style={{ flex: 1 }}>
-                                                <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#0d1b12', marginBottom: '2px' }}>
-                                                    Certificate of Excellence
-                                                </div>
-                                            </div>
-                                            <button
-                                                onClick={() => downloadCert('excellence')}
-                                                style={{
-                                                    background: '#b8860b', border: 'none',
-                                                    borderRadius: '8px', padding: '8px 12px',
-                                                    cursor: 'pointer', display: 'flex',
-                                                    alignItems: 'center', gap: '4px',
-                                                    fontSize: '0.72rem', fontWeight: 600,
-                                                    color: 'white',
-                                                    fontFamily: "'Plus Jakarta Sans', sans-serif"
-                                                }}
-                                            >
-                                                <Download size={13} color="white" />
-                                                Download
-                                            </button>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        )}
+                     <CertificateStatus certStatus={certStatus} />
                     </>
                 )}
 

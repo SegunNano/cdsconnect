@@ -5,7 +5,6 @@ import UpcomingCard from './meeting-cards/UpcomingCard'
 import TodayNotOpen from './meeting-cards/TodayNotOpen'
 import { useState } from 'react'
 import { CheckCircle2, FileText, Award, AlertCircle} from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
 import api from '../../services/api'
 
 
@@ -22,7 +21,6 @@ export function MeetingCard({ meeting, member, attendance, signingIn, signInErro
     const [paying, setPaying] = useState(false)
     const [payError, setPayError] = useState('')
     const [paid, setPaid] = useState(false)
-    const navigate = useNavigate()
 
 
     const cardStyle = {
@@ -182,29 +180,10 @@ export function MeetingCard({ meeting, member, attendance, signingIn, signInErro
                             Payment Successful
                         </div>
                         <div style={{ fontSize: '0.75rem', color: '#4a5e52' }}>
-                            Your certificate{certStatus.is_exco ? 's are' : ' is'} ready
+                            Your payment is recorded. Your executives will hand over your certificate{certStatus.is_exco ? 's' : ''} in person.
                         </div>
                     </div>
                 </div>
-                <div style={{ fontSize: '0.82rem', color: '#4a5e52', textAlign: 'center', marginBottom: '14px' }}>
-                    Download your certificate{certStatus.is_exco ? 's' : ''} from the Clearance section
-                </div>
-                <button
-                    onClick={() => navigate('/clearance')}
-                    style={{
-                        width: '100%',
-                        background: '#008751', border: 'none',
-                        borderRadius: '12px', padding: '13px',
-                        cursor: 'pointer', fontSize: '0.88rem',
-                        fontWeight: 700, color: 'white',
-                        fontFamily: "'Plus Jakarta Sans', sans-serif",
-                        display: 'flex', alignItems: 'center',
-                        justifyContent: 'center', gap: '8px'
-                    }}
-                >
-                    <FileText size={16} color="white" />
-                    Go to Clearance
-                </button>
             </div>
         )
     }
