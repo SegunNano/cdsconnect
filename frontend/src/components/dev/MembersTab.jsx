@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
     ChevronRight, Shield, Smartphone, UserX, AlertCircle,
     UserCheck, X, KeyRound, Pencil
@@ -36,6 +36,19 @@ const sectionHead = {
     textTransform: 'uppercase', letterSpacing: '0.5px',
     margin: '12px 0 8px 4px'
 }
+
+const streamHeaderStyle = (open) => ({
+    background: '#ffffff',
+    borderRadius: '12px',
+    padding: '11px 14px',
+    boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: '10px',
+    cursor: 'pointer',
+    border: open ? '1.5px solid #cde8dc' : '1.5px solid transparent'
+})
 
 const Badge = ({ bg, color, children }) => (
     <span style={{
@@ -95,6 +108,15 @@ const Chevron = ({ open }) => (
     />
 )
 
+const formatStreamLabel = (stream) => {
+    if (stream.name) return stream.name
+    const year = stream.year ?? stream.stream_year
+    const batch = stream.batch ?? stream.stream_batch
+    if (year && batch) return `${year} Batch ${batch}`
+    if (year) return `${year}`
+    return `Stream ${stream.id}`
+}
+
 export default function MembersTab({
     members, streams = [], search, setSearch, loading,
     selectedMember, setSelectedMember,
@@ -108,7 +130,10 @@ export default function MembersTab({
     const staffMembers = members.filter(m => m.member_type === 'staff')
     const corpsMembers = members.filter(m => m.member_type === 'corps_member')
 
-    const q = search.toLowerCase()
+    const trimmedSearch = search.trim()
+    const isSearching = trimmedSearch.length > 0
+    const q = trimmedSearch.toLowerCase()
+
     const filtered = corpsMembers.filter(m =>
         `${m.first_name} ${m.last_name}`.toLowerCase().includes(q) ||
         m.state_code.toLowerCase().includes(q)
@@ -121,7 +146,55 @@ export default function MembersTab({
         }
     })
 
+    // Group corps members into streams (for non-search view)
+    const streamGroups = []
+    const membersByStreamKey = {}
+    const streamKeyById = {}
+    const streamKeyByYearBatch = {}
+
+    streams.forEach((s, idx) => {
+        const key = s.id != null ? `stream_${s.id}` : `stream_idx_${idx}`
+        streamGroups.push({
+            key,
+            label: formatStreamLabel(s),
+            members: []
+        })
+        membersByStreamKey[key] = streamGroups[streamGroups.length - 1].members
+        if (s.id != null) streamKeyById[String(s.id)] = key
+        const year = s.year ?? s.stream_year
+        const batch = s.batch ?? s.stream_batch
+        if (year != null && batch != null) {
+            streamKeyByYearBatch[`${year}_${batch}`] = key
+        }
+    })
+
+    const unassignedMembers = []
+    corpsMembers.forEach(m => {
+        let matchedKey = null
+        if (m.stream_id != null && streamKeyById[String(m.stream_id)]) {
+            matchedKey = streamKeyById[String(m.stream_id)]
+        } else if (m.stream_year != null && m.stream_batch != null) {
+            const ybKey = streamKeyByYearBatch[`${m.stream_year}_${m.stream_batch}`]
+            if (ybKey) matchedKey = ybKey
+        }
+
+        if (matchedKey && membersByStreamKey[matchedKey]) {
+            membersByStreamKey[matchedKey].push(m)
+        } else {
+            unassignedMembers.push(m)
+        }
+    })
+
+    if (unassignedMembers.length > 0) {
+        streamGroups.push({
+            key: 'stream_unassigned',
+            label: streamGroups.length > 0 ? 'Other / Unassigned' : 'All Corps Members',
+            members: unassignedMembers
+        })
+    }
+
     // ── UI STATE ────────────────────────────────────────────────
+    const [openStreams, setOpenStreams] = useState({})
     const [roleErrors, setRoleErrors] = useState({})
     const [devErrors, setDevErrors] = useState({})
     const [notices, setNotices] = useState({})
@@ -129,6 +202,26 @@ export default function MembersTab({
     const [localSuspensions, setLocalSuspensions] = useState({})
     const [markPresentMember, setMarkPresentMember] = useState(null)
     const [editingMember, setEditingMember] = useState(null)
+
+    useEffect(() => {
+        if (streamGroups.length === 0) return
+        setOpenStreams(prev => {
+            const next = { ...prev }
+            let changed = false
+            streamGroups.forEach((g, idx) => {
+                if (next[g.key] === undefined) {
+                    // Open the first stream by default when there are multiple streams
+                    next[g.key] = idx === 0
+                    changed = true
+                }
+            })
+            return changed ? next : prev
+        })
+    }, [streamGroups.length])
+
+    const toggleStream = (key) => {
+        setOpenStreams(prev => ({ ...prev, [key]: !prev[key] }))
+    }
 
     const setLoadingKey = (key, value) =>
         setActionLoading(prev => ({ ...prev, [key]: value }))
@@ -204,6 +297,181 @@ export default function MembersTab({
         }
     }
 
+    // ── MEMBER CARD RENDERER ────────────────────────────────────
+    const renderCorpsMemberCard = (m) => {
+        const open = selectedMember?.id === m.id
+        const isSuspended = localSuspensions[m.id]?.is_suspended ?? m.is_suspended
+        const notice = notices[m.id]
+        const isSelf = m.id === currentMemberId
+
+        return (
+            <div key={m.id}>
+                {/* ROW */}
+                <div onClick={() => setSelectedMember(open ? null : m)} style={rowStyle(open)}>
+                    <Avatar
+                        member={m}
+                        bg={m.is_active ? '#e6f4ee' : '#f2f4f7'}
+                        color={m.is_active ? '#008751' : '#8fa396'}
+                    />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{
+                            fontSize: '0.85rem', fontWeight: 600,
+                            color: m.is_active ? '#0d1b12' : '#8fa396',
+                            marginBottom: '2px', display: 'flex',
+                            alignItems: 'center', gap: '6px', flexWrap: 'wrap'
+                        }}>
+                            <span>{m.first_name} {m.last_name}</span>
+                            {m.is_dev && <Badge bg="#eef2ff" color="#4f46e5">DEV</Badge>}
+                            {!m.is_active && <Badge bg="#fff0f0" color="#e53e3e">INACTIVE</Badge>}
+                            {isSuspended && (
+                                <Badge bg="#fff0f0" color="#e53e3e">
+                                    SUSPENDED{m.reinstatement_count > 0 ? ` (×${m.reinstatement_count + 1})` : ''}
+                                </Badge>
+                            )}
+                        </div>
+                        <div style={{ fontSize: '0.7rem', color: '#8fa396' }}>
+                            {m.state_code} · {m.role?.replace('_', ' ')}
+                            {m.stream_year ? ` · ${m.stream_year} Batch ${m.stream_batch}` : ''}
+                        </div>
+                    </div>
+                    <Chevron open={open} />
+                </div>
+
+                {/* EXPANDED PANEL — all buttons stacked */}
+                {open && (
+                    <div style={panelStyle}>
+                        {notice && (
+                            <div style={{ marginBottom: '12px' }}>
+                                <Notice type={notice.type}>{notice.text}</Notice>
+                            </div>
+                        )}
+
+                        {/* ROLE */}
+                        <div style={{ marginBottom: '12px' }}>
+                            <div style={labelStyle}>Role</div>
+                            {roleErrors[m.id] && (
+                                <div style={{ marginBottom: '8px' }}>
+                                    <Notice type="error">{roleErrors[m.id]}</Notice>
+                                </div>
+                            )}
+                            <select
+                                value={m.role}
+                                onChange={e => handleRoleUpdate(m.id, e.target.value)}
+                                disabled={actionLoading[`role_${m.id}`]}
+                                style={{ ...selectStyle, opacity: actionLoading[`role_${m.id}`] ? 0.6 : 1 }}
+                            >
+                                {ROLES.map(role => {
+                                    const isTaken = takenRoles[role] &&
+                                        takenRoles[role] !== `${m.first_name} ${m.last_name}`
+                                    return (
+                                        <option key={role} value={role} disabled={isTaken}>
+                                            {role.replace('_', ' ')}
+                                            {isTaken ? ` — taken by ${takenRoles[role]}` : ''}
+                                        </option>
+                                    )
+                                })}
+                            </select>
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            {/* EDIT DETAILS */}
+                            <button
+                                onClick={() => setEditingMember(m)}
+                                style={btn('#eaf2fb', '#2b6cb0')}
+                            >
+                                <Pencil size={14} color="#2b6cb0" />
+                                Edit Details
+                            </button>
+
+                            {/* TOGGLE DEV */}
+                            {!isSelf && (
+                                <>
+                                    {devErrors[m.id] && <Notice type="error">{devErrors[m.id]}</Notice>}
+                                    <button
+                                        onClick={() => handleToggleDev(m.id)}
+                                        disabled={actionLoading[`dev_${m.id}`] || (!m.is_dev && maxDevsReached)}
+                                        style={btn(
+                                            m.is_dev ? '#fff8e6' : '#eef2ff',
+                                            m.is_dev ? '#d4900a' : '#4f46e5',
+                                            { opacity: (!m.is_dev && maxDevsReached) ? 0.5 : 1 }
+                                        )}
+                                    >
+                                        <Shield size={14} color={m.is_dev ? '#d4900a' : '#4f46e5'} />
+                                        {actionLoading[`dev_${m.id}`] ? 'Updating...'
+                                            : m.is_dev ? 'Remove Dev Access'
+                                            : maxDevsReached ? 'Dev limit reached (2/2)'
+                                            : 'Grant Dev Access'}
+                                    </button>
+                                </>
+                            )}
+
+                            {/* RESET DEVICE */}
+                            <button
+                                onClick={() => handleResetDevice(m.id)}
+                                disabled={actionLoading[`device_${m.id}`]}
+                                style={btn('#f2f4f7', '#4a5e52', {
+                                    opacity: actionLoading[`device_${m.id}`] ? 0.6 : 1
+                                })}
+                            >
+                                <Smartphone size={14} color="#4a5e52" />
+                                {actionLoading[`device_${m.id}`] ? 'Resetting...' : 'Reset Device'}
+                            </button>
+
+                            {/* RESET PIN */}
+                            <button
+                                onClick={() => handleResetPin(m)}
+                                disabled={actionLoading[`pin_${m.id}`]}
+                                style={btn('#fff8e6', '#d4900a', {
+                                    opacity: actionLoading[`pin_${m.id}`] ? 0.6 : 1
+                                })}
+                            >
+                                <KeyRound size={14} color="#d4900a" />
+                                {actionLoading[`pin_${m.id}`] ? 'Sending...' : 'Reset PIN'}
+                            </button>
+
+                            {/* MARK PRESENT */}
+                            {!isSelf && m.is_active && (
+                                <button
+                                    onClick={() => setMarkPresentMember(m)}
+                                    style={btn('#e6f4ee', '#008751')}
+                                >
+                                    <UserCheck size={14} color="#008751" />
+                                    Mark Member Present
+                                </button>
+                            )}
+
+                            {/* REINSTATE */}
+                            {isSuspended && !isSelf && (
+                                <button
+                                    onClick={() => handleReinstate(m)}
+                                    disabled={actionLoading[`reinstate_${m.id}`]}
+                                    style={btn('#fff8e6', '#d4900a', {
+                                        border: '1px solid #d4900a',
+                                        opacity: actionLoading[`reinstate_${m.id}`] ? 0.6 : 1
+                                    })}
+                                >
+                                    <UserCheck size={14} color="#d4900a" />
+                                    {actionLoading[`reinstate_${m.id}`] ? 'Reinstating...' : 'Reinstate Member'}
+                                </button>
+                            )}
+
+                            {/* DEACTIVATE */}
+                            {m.is_active && !isSelf && (
+                                <button
+                                    onClick={() => handleDeactivate(m)}
+                                    style={btn('#fff0f0', '#e53e3e')}
+                                >
+                                    <UserX size={14} color="#e53e3e" />
+                                    Deactivate Member
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                )}
+            </div>
+        )
+    }
+
     // ── RENDER ──────────────────────────────────────────────────
     return (
         <>
@@ -236,12 +504,12 @@ export default function MembersTab({
                     textAlign: 'center', color: '#8fa396', fontSize: '0.82rem',
                     boxShadow: '0 2px 12px rgba(0,0,0,0.07)'
                 }}>
-                    {search ? `No results for "${search}"` : 'No members found'}
+                    {isSearching ? `No results for "${search}"` : 'No members found'}
                 </div>
             )}
 
             {/* ── STAFF ── */}
-            {staffMembers.length > 0 && !search && (
+            {staffMembers.length > 0 && !isSearching && (
                 <>
                     <div style={sectionHead}>Staff</div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
@@ -287,182 +555,59 @@ export default function MembersTab({
                 </>
             )}
 
-            {/* ── CORPS MEMBERS ── */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {filtered.map(m => {
-                    const open = selectedMember?.id === m.id
-                    const isSuspended = localSuspensions[m.id]?.is_suspended ?? m.is_suspended
-                    const notice = notices[m.id]
-                    const isSelf = m.id === currentMemberId
-
-                    return (
-                        <div key={m.id}>
-                            {/* ROW */}
-                            <div onClick={() => setSelectedMember(open ? null : m)} style={rowStyle(open)}>
-                                <Avatar
-                                    member={m}
-                                    bg={m.is_active ? '#e6f4ee' : '#f2f4f7'}
-                                    color={m.is_active ? '#008751' : '#8fa396'}
-                                />
-                                <div style={{ flex: 1, minWidth: 0 }}>
-                                    <div style={{
-                                        fontSize: '0.85rem', fontWeight: 600,
-                                        color: m.is_active ? '#0d1b12' : '#8fa396',
-                                        marginBottom: '2px', display: 'flex',
-                                        alignItems: 'center', gap: '6px', flexWrap: 'wrap'
-                                    }}>
-                                        <span>{m.first_name} {m.last_name}</span>
-                                        {m.is_dev && <Badge bg="#eef2ff" color="#4f46e5">DEV</Badge>}
-                                        {!m.is_active && <Badge bg="#fff0f0" color="#e53e3e">INACTIVE</Badge>}
-                                        {isSuspended && (
-                                            <Badge bg="#fff0f0" color="#e53e3e">
-                                                SUSPENDED{m.reinstatement_count > 0 ? ` (×${m.reinstatement_count + 1})` : ''}
-                                            </Badge>
-                                        )}
+            {/* ── CORPS MEMBERS: FLAT WHEN SEARCHING, GROUPED BY STREAM WHEN BROWSING ── */}
+            {!loading && filtered.length > 0 && (
+                isSearching ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {filtered.map(renderCorpsMemberCard)}
+                    </div>
+                ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        {streamGroups.map(group => {
+                            const isStreamOpen = !!openStreams[group.key]
+                            return (
+                                <div key={group.key}>
+                                    <div
+                                        onClick={() => toggleStream(group.key)}
+                                        style={streamHeaderStyle(isStreamOpen)}
+                                    >
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                                            <Chevron open={isStreamOpen} />
+                                            <span style={{
+                                                fontSize: '0.8rem', fontWeight: 700, color: '#0d1b12',
+                                                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
+                                            }}>
+                                                {group.label}
+                                            </span>
+                                        </div>
+                                        <Badge bg="#e6f4ee" color="#008751">
+                                            {group.members.length}
+                                        </Badge>
                                     </div>
-                                    <div style={{ fontSize: '0.7rem', color: '#8fa396' }}>
-                                        {m.state_code} · {m.role?.replace('_', ' ')}
-                                        {m.stream_year ? ` · ${m.stream_year} Batch ${m.stream_batch}` : ''}
-                                    </div>
-                                </div>
-                                <Chevron open={open} />
-                            </div>
 
-                            {/* EXPANDED PANEL — all buttons stacked */}
-                            {open && (
-                                <div style={panelStyle}>
-                                    {notice && (
-                                        <div style={{ marginBottom: '12px' }}>
-                                            <Notice type={notice.type}>{notice.text}</Notice>
+                                    {isStreamOpen && (
+                                        <div style={{
+                                            display: 'flex', flexDirection: 'column', gap: '8px',
+                                            marginTop: '8px', paddingLeft: '4px'
+                                        }}>
+                                            {group.members.length > 0 ? (
+                                                group.members.map(renderCorpsMemberCard)
+                                            ) : (
+                                                <div style={{
+                                                    background: '#ffffff', borderRadius: '12px', padding: '14px',
+                                                    textAlign: 'center', color: '#8fa396', fontSize: '0.78rem'
+                                                }}>
+                                                    No corps members in this stream
+                                                </div>
+                                            )}
                                         </div>
                                     )}
-
-                                    {/* ROLE */}
-                                    <div style={{ marginBottom: '12px' }}>
-                                        <div style={labelStyle}>Role</div>
-                                        {roleErrors[m.id] && (
-                                            <div style={{ marginBottom: '8px' }}>
-                                                <Notice type="error">{roleErrors[m.id]}</Notice>
-                                            </div>
-                                        )}
-                                        <select
-                                            value={m.role}
-                                            onChange={e => handleRoleUpdate(m.id, e.target.value)}
-                                            disabled={actionLoading[`role_${m.id}`]}
-                                            style={{ ...selectStyle, opacity: actionLoading[`role_${m.id}`] ? 0.6 : 1 }}
-                                        >
-                                            {ROLES.map(role => {
-                                                const isTaken = takenRoles[role] &&
-                                                    takenRoles[role] !== `${m.first_name} ${m.last_name}`
-                                                return (
-                                                    <option key={role} value={role} disabled={isTaken}>
-                                                        {role.replace('_', ' ')}
-                                                        {isTaken ? ` — taken by ${takenRoles[role]}` : ''}
-                                                    </option>
-                                                )
-                                            })}
-                                        </select>
-                                    </div>
-
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                        {/* EDIT DETAILS */}
-                                        <button
-                                            onClick={() => setEditingMember(m)}
-                                            style={btn('#eaf2fb', '#2b6cb0')}
-                                        >
-                                            <Pencil size={14} color="#2b6cb0" />
-                                            Edit Details
-                                        </button>
-
-                                        {/* TOGGLE DEV */}
-                                        {!isSelf && (
-                                            <>
-                                                {devErrors[m.id] && <Notice type="error">{devErrors[m.id]}</Notice>}
-                                                <button
-                                                    onClick={() => handleToggleDev(m.id)}
-                                                    disabled={actionLoading[`dev_${m.id}`] || (!m.is_dev && maxDevsReached)}
-                                                    style={btn(
-                                                        m.is_dev ? '#fff8e6' : '#eef2ff',
-                                                        m.is_dev ? '#d4900a' : '#4f46e5',
-                                                        { opacity: (!m.is_dev && maxDevsReached) ? 0.5 : 1 }
-                                                    )}
-                                                >
-                                                    <Shield size={14} color={m.is_dev ? '#d4900a' : '#4f46e5'} />
-                                                    {actionLoading[`dev_${m.id}`] ? 'Updating...'
-                                                        : m.is_dev ? 'Remove Dev Access'
-                                                        : maxDevsReached ? 'Dev limit reached (2/2)'
-                                                        : 'Grant Dev Access'}
-                                                </button>
-                                            </>
-                                        )}
-
-                                        {/* RESET DEVICE */}
-                                        <button
-                                            onClick={() => handleResetDevice(m.id)}
-                                            disabled={actionLoading[`device_${m.id}`]}
-                                            style={btn('#f2f4f7', '#4a5e52', {
-                                                opacity: actionLoading[`device_${m.id}`] ? 0.6 : 1
-                                            })}
-                                        >
-                                            <Smartphone size={14} color="#4a5e52" />
-                                            {actionLoading[`device_${m.id}`] ? 'Resetting...' : 'Reset Device'}
-                                        </button>
-
-                                        {/* RESET PIN */}
-                                        <button
-                                            onClick={() => handleResetPin(m)}
-                                            disabled={actionLoading[`pin_${m.id}`]}
-                                            style={btn('#fff8e6', '#d4900a', {
-                                                opacity: actionLoading[`pin_${m.id}`] ? 0.6 : 1
-                                            })}
-                                        >
-                                            <KeyRound size={14} color="#d4900a" />
-                                            {actionLoading[`pin_${m.id}`] ? 'Sending...' : 'Reset PIN'}
-                                        </button>
-
-                                        {/* MARK PRESENT */}
-                                        {!isSelf && m.is_active && (
-                                            <button
-                                                onClick={() => setMarkPresentMember(m)}
-                                                style={btn('#e6f4ee', '#008751')}
-                                            >
-                                                <UserCheck size={14} color="#008751" />
-                                                Mark Member Present
-                                            </button>
-                                        )}
-
-                                        {/* REINSTATE */}
-                                        {isSuspended && !isSelf && (
-                                            <button
-                                                onClick={() => handleReinstate(m)}
-                                                disabled={actionLoading[`reinstate_${m.id}`]}
-                                                style={btn('#fff8e6', '#d4900a', {
-                                                    border: '1px solid #d4900a',
-                                                    opacity: actionLoading[`reinstate_${m.id}`] ? 0.6 : 1
-                                                })}
-                                            >
-                                                <UserCheck size={14} color="#d4900a" />
-                                                {actionLoading[`reinstate_${m.id}`] ? 'Reinstating...' : 'Reinstate Member'}
-                                            </button>
-                                        )}
-
-                                        {/* DEACTIVATE */}
-                                        {m.is_active && !isSelf && (
-                                            <button
-                                                onClick={() => handleDeactivate(m)}
-                                                style={btn('#fff0f0', '#e53e3e')}
-                                            >
-                                                <UserX size={14} color="#e53e3e" />
-                                                Deactivate Member
-                                            </button>
-                                        )}
-                                    </div>
                                 </div>
-                            )}
-                        </div>
-                    )
-                })}
-            </div>
+                            )
+                        })}
+                    </div>
+                )
+            )}
 
             {/* ── EDIT DETAILS MODAL ── */}
             {editingMember && (
