@@ -143,6 +143,7 @@ export const collateStatus = async (req, res, next) => {
 export const collate = async (req, res, next) => {
     try {
         const data = await getCollateData()
+        console.log({data})
 
         res.status(200).json({
             success: true,

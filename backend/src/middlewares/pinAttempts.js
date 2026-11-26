@@ -3,8 +3,6 @@ import rateLimit from 'express-rate-limit'
 const limiters = new Map()
 
 export const pinAttempts = (name) => {
-
-    console.log("first")
     if (!limiters.has(name)) {
         limiters.set(
             name,
