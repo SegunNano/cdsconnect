@@ -13,7 +13,7 @@ import {
     markCollateDone
 } from './certificates.controller.js'
 
-const COLLATE_ROLES = ['secretary']
+const COLLATE_ROLES = ['general_secretary']
 
 const router = Router()
 
