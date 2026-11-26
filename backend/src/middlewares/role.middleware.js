@@ -3,7 +3,7 @@ export const requireRole = (...roles) => {
 
     return (req, res, next) => {
         const userRole = String(req.member?.role || '').trim().toLowerCase()
-        
+        console.log({roles})
         
         if (!allowedRoles.includes(userRole)) {
             return res.status(403).json({
