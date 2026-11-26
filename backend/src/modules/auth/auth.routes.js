@@ -9,6 +9,7 @@ import {
 } from './auth.controller.js'
 import rateLimit, { ipKeyGenerator } from 'express-rate-limit'
 import authMiddleware from '../../middlewares/auth.middleware.js'
+import pool from '../../config/db.js'
 
 
 
