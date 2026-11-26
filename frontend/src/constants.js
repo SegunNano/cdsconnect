@@ -38,5 +38,5 @@ export const ROUTE_ROLES = {
     topup: DIRECT_TOPUP_ROLES,
     treasury:TREASURY_ROLES,
     signout: ['president', 'vice_president'],
-    certificates: ['secretary']
+    certificates: ['general_secretary']
 }

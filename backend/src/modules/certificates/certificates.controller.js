@@ -67,6 +67,8 @@ export const getCollateStatus = async () => {
     )
 
     const { paid_count, active_streams } = result.rows[0]
+console.log({ paid_count, active_streams })
+
     return {
         show_tab: parseInt(active_streams) > 0 || parseInt(paid_count) > 0,
         paid_count: parseInt(paid_count)
